@@ -8,17 +8,19 @@
 <title>Shaadi Planner</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@600;700&family=Lora:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap" rel="stylesheet" />
 <style>
+.hi{font-family:'Noto Sans Devanagari','Lora',sans-serif;font-weight:700}
+
 :root{--maroon:#6a1526;--maroon-d:#430c19;--gold:#b98a2e;--gold-s:#e7cf98;--ivory:#fbf6ee;--cream:#f3e8d6;--ink:#2e1a1c;--muted:#6b5a52;--ok:#2f7a3e;--warn:#c47a00;--bad:#b3261e;--nav:4.4rem}
 *{box-sizing:border-box}
-html{font-size:17px;-webkit-text-size-adjust:100%}
+html{font-size:18px;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--ivory);color:var(--ink);font-family:'Lora',Georgia,serif;line-height:1.45;padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 1rem);-webkit-tap-highlight-color:transparent}
 button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
 header.top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#5b1223,var(--maroon-d));color:#ffe2a3;border-bottom:2px solid var(--gold);padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem}
 header.top h1{margin:0;font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:.06em;font-weight:600}
 .who{background:rgba(255,226,163,.15);border:1px solid rgba(255,226,163,.5);color:#ffe2a3;border-radius:999px;padding:.35rem .8rem;font-size:.85rem;cursor:pointer;max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-main{max-width:46rem;margin:0 auto;padding:1rem}
+main{max-width:46rem;margin:0 auto;padding:1rem 1rem 5.5rem}
 .hero{background:radial-gradient(circle at 50% 0%,#8a2638,#5b1424 60%,#40101c);color:#fff7e6;border-radius:1.2rem;padding:1.2rem;border:1.5px solid var(--gold);box-shadow:0 8px 24px rgba(74,17,32,.25)}
 .hero .big{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:3.2rem;line-height:1;color:#ffe2a3}
 .hero .sub{opacity:.9;font-size:.95rem}
@@ -83,6 +85,20 @@ label.l{display:block;font-weight:700;font-size:.85rem;margin:.9rem 0 .3rem;font
 .money .bal b{color:var(--bad)}.money .bal.zero b{color:var(--ok)}
 a.call{display:inline-block;margin-top:.5rem;color:var(--maroon);font-weight:700;text-decoration:none;border:1.5px solid var(--maroon);border-radius:99px;padding:.3rem .9rem;font-size:.9rem}
 .big-check .task{padding:1.05rem .9rem}.big-check .t{font-size:1.15rem}.big-check .chk{width:2.5rem;height:2.5rem}
+
+.doneBtn{margin-top:.55rem;border:2px solid var(--ok);background:#fff;color:var(--ok);border-radius:.9rem;padding:.6rem 1rem;font-weight:700;cursor:pointer;min-height:3rem;display:inline-flex;align-items:center;gap:.5rem}
+.doneBtn:active{background:var(--ok);color:#fff}
+.doneTag{display:inline-flex;align-items:center;gap:.35rem;background:#e7f4e8;color:var(--ok);border-radius:99px;padding:.15rem .7rem;font-weight:700;font-size:.8rem}
+.addbig{width:100%;margin-top:1rem;background:linear-gradient(180deg,#e0bb6a,#b8893b);color:#3b1a1a;border:1.5px solid #f1d99a;border-radius:1rem;padding:.9rem;font-weight:700;font-size:1.05rem;cursor:pointer;box-shadow:0 6px 16px rgba(143,106,38,.3)}
+.fab{width:auto!important;height:auto!important;border-radius:99px!important;padding:.75rem 1.2rem;font-size:1rem!important;font-weight:700;display:flex;align-items:center;gap:.5rem}
+.sub2{display:block;font-size:.72em;opacity:.85;font-weight:600}
+nav.bottom button{font-size:.72rem;line-height:1.1}
+.grp{margin-bottom:1.3rem;overflow:hidden}
+.last-h{padding:.55rem .9rem;background:#fff3da;color:#8a5a00;font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.08em;font-weight:700;text-transform:uppercase}
+.modal{background:var(--ivory);width:min(92vw,26rem);border-radius:1.2rem;padding:1.3rem;border-top:4px solid var(--ok);margin:auto 0}
+.sheetbg.center{align-items:center}
+.toast button{margin-left:.8rem;background:#ffe2a3;color:#3b1a1a;border:0;border-radius:99px;padding:.3rem .8rem;font-weight:700;cursor:pointer}
+.more{margin-top:.8rem}
 </style>
 </head>
 <body>
@@ -97,19 +113,32 @@ var CONFIG = {
 };
 /* ================================================================ */
 
+var FUNCTIONS = [
+  { n: 'Before the wedding', hi: 'शादी से पहले', d: '' },
+  { n: 'Faldaan', hi: 'फलदान', d: '30 Nov' },
+  { n: 'Mehndi', hi: 'मेहंदी', d: '1 Dec, morning' },
+  { n: 'Engagement & Sangeet', hi: 'सगाई और संगीत', d: '1 Dec, evening' },
+  { n: 'Haldi', hi: 'हल्दी', d: '2 Dec, morning' },
+  { n: 'Varmala & Shaadi', hi: 'वरमाला और शादी', d: '2 Dec night, 7:30 PM onwards' },
+  { n: 'After the wedding', hi: 'शादी के बाद', d: '' }
+];
+var PRIO = { P0: { en: 'Critical', hi: 'बहुत ज़रूरी' }, P1: { en: 'Important', hi: 'ज़रूरी' }, P2: { en: 'Normal', hi: 'सामान्य' } };
+var STATUS = [{ v: 'Pending', en: 'Not started', hi: 'बाकी' }, { v: 'In Progress', en: 'In progress', hi: 'चल रहा है' }, { v: 'Completed', en: 'Done', hi: 'पूरा हुआ' }];
+
 var $app = document.getElementById('app');
 var LS = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-var S = { tasks: [], vendors: [], tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', big: false, sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
-var STATUS = ['Pending', 'In Progress', 'Completed'];
+var S = { tasks: [], vendors: [], tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
 function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
 function today() { return ymd(new Date()); }
-function dayNum(s) { var p = s.split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5); }
+function dayNum(s) { var p = String(s).slice(0, 10).split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5); }
 function diff(s) { return dayNum(s) - dayNum(today()); }
 function money(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
-function niceDate(s) { var p = s.split('-'); var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return +p[2] + ' ' + m[+p[1] - 1]; }
+function niceDate(s) { var p = String(s).slice(0, 10).split('-'); var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return +p[2] + ' ' + m[+p[1] - 1]; }
+function B(en, hi) { return esc(en) + ' <span class="hi">· ' + esc(hi) + '</span>'; }       // inline English · Hindi
+function B2(en, hi) { return '<span>' + esc(en) + '</span><span class="sub2 hi">' + esc(hi) + '</span>'; }  // stacked
 
 /* ---------- network ---------- */
 function api(method, payload) {
@@ -125,7 +154,7 @@ function api(method, payload) {
   });
 }
 function load(silent) {
-  if (S.pending > 0) return;
+  if (S.pending > 0) return Promise.resolve();
   return api('GET').then(function (d) {
     if (S.pending > 0) return;
     S.tasks = d.tasks; S.vendors = d.vendors; S.loaded = true; S.error = ''; S.lastSync = Date.now(); S.needPin = false;
@@ -135,40 +164,49 @@ function load(silent) {
     if (!silent || !S.loaded) { S.error = e.message === 'NOURL' ? 'The planner is not connected yet. Paste your /exec link into CONFIG.scriptUrl in index.html.' : 'Could not reach the sheet. Check your internet and tap Refresh.'; render(); }
   });
 }
-function toast(msg, err) { S.toast = { msg: msg, err: err }; renderToast(); clearTimeout(toast.t); toast.t = setTimeout(function () { S.toast = null; renderToast(); }, err ? 4500 : 1800); }
-function renderToast() { var el = document.getElementById('toast'); if (el) el.remove(); if (S.toast) { var d = document.createElement('div'); d.id = 'toast'; d.className = 'toast' + (S.toast.err ? ' err' : ''); d.textContent = S.toast.msg; document.body.appendChild(d); } }
-
-function saveFields(id, fields, okMsg) {
-  var t = S.tasks.filter(function (x) { return x.id === id; })[0]; if (!t) return;
+function toast(msg, err, undoId) { S.toast = { msg: msg, err: err, undo: undoId }; renderToast(); clearTimeout(toast.t); toast.t = setTimeout(function () { S.toast = null; renderToast(); }, undoId ? 7000 : err ? 4500 : 1800); }
+function renderToast() {
+  var el = document.getElementById('toast'); if (el) el.remove();
+  if (S.toast) { var d = document.createElement('div'); d.id = 'toast'; d.className = 'toast' + (S.toast.err ? ' err' : ''); d.innerHTML = esc(S.toast.msg) + (S.toast.undo ? '<button data-act="undo" data-id="' + esc(S.toast.undo) + '">Undo · वापस</button>' : ''); document.body.appendChild(d); }
+}
+function find(id) { return S.tasks.filter(function (x) { return x.id === id; })[0]; }
+function saveFields(id, fields, okMsg, undoId) {
+  var t = find(id); if (!t) return;
   var before = {}; Object.keys(fields).forEach(function (k) { before[k] = t[k]; t[k] = fields[k]; });
+  if (fields.status === 'Completed') t.completedOn = today(); else if (fields.status) t.completedOn = '';
+  t.updatedBy = S.me; t.updatedAt = today() + ' 00:00';
   S.pending++; render();
-  api('POST', { action: 'update', id: id, fields: fields }).then(function () { S.pending--; if (okMsg) toast(okMsg); load(true); })
-    .catch(function (e) { S.pending--; Object.keys(before).forEach(function (k) { t[k] = before[k]; }); render(); toast(e.message === 'PIN' ? 'Wrong PIN' : 'Not saved — ' + (e.message === 'BAD' ? 'try again' : e.message), true); });
+  api('POST', { action: 'update', id: id, fields: fields }).then(function () { S.pending--; if (okMsg) toast(okMsg, false, undoId); load(true); })
+    .catch(function (e) { S.pending--; Object.keys(before).forEach(function (k) { t[k] = before[k]; }); render(); toast(e.message === 'PIN' ? 'Wrong PIN' : 'Not saved — ' + (e.message === 'BAD' ? 'please try again' : e.message), true); });
 }
 
 /* ---------- helpers ---------- */
 var PR = { P0: 0, P1: 1, P2: 2 };
 function sortTasks(a, b) { var da = a.due || '9999', db = b.due || '9999'; return da < db ? -1 : da > db ? 1 : (PR[a.priority] || 1) - (PR[b.priority] || 1) || (a.task < b.task ? -1 : 1); }
 function open(t) { return t.status !== 'Completed'; }
-function cats() { var s = {}; S.tasks.forEach(function (t) { s[t.category || 'Other'] = 1; }); return Object.keys(s); }
+function cats() { var s = {}; S.tasks.forEach(function (t) { s[t.category || 'Other'] = 1; }); return Object.keys(s).sort(); }
 function owners() { var s = {}; S.tasks.forEach(function (t) { if (t.owner) s[t.owner] = 1; }); return Object.keys(s).sort(); }
+function ownerOptions() { return owners().concat(CONFIG.people).filter(function (v, i, a) { return a.indexOf(v) === i; }); }
+function doneDay(t) { return (t.status === 'Completed' ? (t.completedOn || t.updatedAt || '') : (t.updatedAt || '')).slice(0, 10); }
 
 function dueChip(t) {
   if (!t.due) return '';
   var d = diff(t.due), c = 'pill due';
   if (open(t) && d < 0) c += ' over'; else if (open(t) && d <= 3) c += ' soon';
-  var lbl = d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : d < 0 ? Math.abs(d) + 'd overdue' : niceDate(t.due);
+  var lbl = d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : d < 0 ? Math.abs(d) + ' days late' : niceDate(t.due);
   return '<span class="' + c + '">' + (open(t) && d < 0 ? '⚠ ' : '📅 ') + lbl + '</span>';
 }
+function prioPill(t) { var p = (t.priority || 'P1'); return '<span class="pill p' + p.slice(1) + '">' + (PRIO[p] ? PRIO[p].en : p) + '</span>'; }
 function taskRow(t, showCat) {
-  var cc = t.status === 'Completed' ? 'done' : t.status === 'In Progress' ? 'prog' : '';
-  return '<div class="task ' + (t.status === 'Completed' ? 'done-t' : '') + '" data-act="edit" data-id="' + esc(t.id) + '">' +
-    '<button class="chk ' + cc + '" data-act="tick" data-id="' + esc(t.id) + '" aria-label="Mark done">' + (t.status === 'Completed' ? '✓' : '') + '</button>' +
-    '<div class="tt"><div class="t">' + esc(t.task) + '</div>' +
-    '<div class="meta"><span class="pill p' + (t.priority || 'P1').slice(1) + '">' + esc(t.priority) + '</span>' + dueChip(t) +
+  var isDone = t.status === 'Completed';
+  return '<div class="task ' + (isDone ? 'done-t' : '') + '" data-act="edit" data-id="' + esc(t.id) + '" style="display:block">' +
+    '<div class="t" style="font-weight:600;font-size:1.05rem;overflow-wrap:anywhere">' + esc(t.task) + '</div>' +
+    '<div class="meta">' + prioPill(t) + dueChip(t) +
     (t.status === 'In Progress' ? '<span class="pill" style="background:#fff3da;color:#8a5a00">In progress</span>' : '') +
     (t.owner ? '<span>👤 ' + esc(t.owner) + '</span>' : '') + (showCat ? '<span>' + esc(t.category) + '</span>' : '') + '</div>' +
-    (t.remarks ? '<div class="rem">' + esc(t.remarks) + '</div>' : '') + '</div></div>';
+    (t.remarks ? '<div class="rem">' + esc(t.remarks) + '</div>' : '') +
+    (isDone ? '<div style="margin-top:.5rem"><span class="doneTag">✓ ' + B('Done', 'पूरा हुआ') + (t.completedOn ? ' · ' + niceDate(t.completedOn) : '') + '</span></div>'
+      : '<button class="doneBtn" data-act="askdone" data-id="' + esc(t.id) + '">✓ ' + B('Done', 'पूरा हुआ') + '</button>') + '</div>';
 }
 function list(arr, showCat, empty) { return arr.length ? '<div class="card">' + arr.map(function (t) { return taskRow(t, showCat); }).join('') + '</div>' : (empty ? '<div class="card empty">' + empty + '</div>' : ''); }
 
@@ -181,24 +219,31 @@ function viewToday() {
   var shown = {}; over.concat(week).forEach(function (t) { shown[t.id] = 1; });
   var crit = p0.filter(function (t) { return !shown[t.id]; }).sort(sortTasks);
   var nodate = all.filter(function (t) { return open(t) && !t.due; }).length;
-  var h = '<div class="hero"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem"><div><div class="sub">' + esc(CONFIG.weddingTitle) + '</div><div class="big">' +
-    (left > 0 ? left : left === 0 ? '🎉' : '✓') + '</div><div class="sub">' + (left > 0 ? 'days to go' : left === 0 ? 'It is the big day!' : 'Wedding done — congratulations!') + '</div></div>' +
-    '<div style="text-align:right"><div class="big" style="font-size:2.2rem">' + pct + '%</div><div class="sub">tasks done</div></div></div>' +
-    '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="sub">' + done + ' of ' + all.length + ' completed</div>' +
-    '<div class="stats"><div class="stat"><b>' + p0.length + '</b> critical open</div><div class="stat"><b>' + over.length + '</b> overdue</div><div class="stat"><b>' + week.length + '</b> this week</div></div></div>';
-  if (over.length) h += '<h2 class="sec bad">Overdue <span class="n">' + over.length + '</span></h2>' + list(over, true);
-  h += '<h2 class="sec">This week <span class="n">' + week.length + '</span></h2>' + list(week, true, nodate ? 'Nothing is dated for the next 7 days.' : 'Nothing due this week 🎉');
-  h += '<h2 class="sec">Critical (P0) — still open <span class="n">' + crit.length + '</span></h2>' + list(crit, true, p0.length ? 'All critical items are on your list above.' : 'All critical tasks are done 🎉');
-  if (nodate) h += '<div class="card" style="padding:1rem;margin-top:1.2rem"><b>' + nodate + ' open tasks have no due date.</b><div class="rem">Give them dates so they show up here at the right time.</div><button class="btn ghost" style="margin-top:.7rem" data-act="gonodate">Show tasks without a date</button></div>';
+  var rec = all.filter(function (t) { var d = doneDay(t); return d && (t.status === 'Completed' || t.status === 'In Progress') && diff(d) <= 0 && diff(d) >= -6; });
+  var recDone = rec.filter(function (t) { return t.status === 'Completed'; }).length;
+  var h = '<p style="margin:.2rem .2rem .8rem;font-size:1.15rem">🙏 <b>Namaste, ' + esc(S.me) + '</b></p>';
+  h += '<div class="hero"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem"><div><div class="sub">' + esc(CONFIG.weddingTitle) + '</div><div class="big">' +
+    (left > 0 ? left : left === 0 ? '🎉' : '✓') + '</div><div class="sub">' + (left > 0 ? B('days to go', 'दिन बाकी') : left === 0 ? 'It is the big day!' : 'Wedding done — congratulations!') + '</div></div>' +
+    '<div style="text-align:right"><div class="big" style="font-size:2.2rem">' + pct + '%</div><div class="sub">' + B('done', 'पूरा') + '</div></div></div>' +
+    '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="sub">' + done + ' of ' + all.length + ' tasks completed</div>' +
+    '<div class="stats"><div class="stat"><b>' + p0.length + '</b> critical open</div><div class="stat"><b>' + over.length + '</b> late</div><div class="stat"><b>' + week.length + '</b> this week</div></div></div>';
+  h += '<button class="addbig" data-act="add">＋ ' + B('Add a new task', 'नया काम जोड़ें') + '</button>';
+  h += '<div class="card" style="padding:1rem;margin-top:1rem"><b>' + B('Last 7 days', 'पिछले 7 दिन') + '</b><div class="rem" style="font-size:.95rem">' + recDone + ' done · ' + (rec.length - recDone) + ' in progress</div><button class="btn ghost" style="margin-top:.6rem;min-height:2.6rem;padding:.4rem 1.1rem" data-act="gorecent">' + B('See the list', 'सूची देखें') + '</button></div>';
+  if (over.length) h += '<h2 class="sec bad">' + B('Late', 'देर हो गई') + ' <span class="n">' + over.length + '</span></h2>' + list(over, true);
+  h += '<h2 class="sec">' + B('This week', 'इस हफ़्ते') + ' <span class="n">' + week.length + '</span></h2>' + list(week, true, nodate ? 'Nothing is dated for the next 7 days.' : 'Nothing due this week 🎉');
+  h += '<h2 class="sec">' + B('Critical — still open', 'बहुत ज़रूरी — बाकी') + ' <span class="n">' + crit.length + '</span></h2>' + list(crit, true, p0.length ? 'All critical items are in the lists above.' : 'All critical tasks are done 🎉');
+  if (nodate) h += '<div class="card" style="padding:1rem;margin-top:1.2rem"><b>' + nodate + ' open tasks have no date.</b><div class="rem">Give them dates so they show up here at the right time.</div><button class="btn ghost" style="margin-top:.7rem" data-act="gonodate">Show tasks without a date</button></div>';
   return h;
 }
 
 function filtered() {
   var q = S.q.trim().toLowerCase();
   return S.tasks.filter(function (t) {
-    if (S.fStatus === 'open' && !open(t)) return false;
-    if (S.fStatus === 'Completed' && open(t)) return false;
-    if (S.fStatus === 'In Progress' && t.status !== 'In Progress') return false;
+    if (!q) {
+      if (S.fStatus === 'open' && !open(t)) return false;
+      if (S.fStatus === 'Completed' && open(t)) return false;
+      if (S.fStatus === 'In Progress' && t.status !== 'In Progress') return false;
+    }
     if (S.fPrio !== 'all' && t.priority !== S.fPrio) return false;
     if (S.fCat !== 'all' && (t.category || 'Other') !== S.fCat) return false;
     if (S.fOwner === '__none' ? !!t.owner : (S.fOwner !== 'all' && t.owner !== S.fOwner)) return false;
@@ -207,29 +252,54 @@ function filtered() {
     return true;
   });
 }
-function chip(act, val, label, on) { return '<button class="chip ' + (on ? 'on' : '') + '" data-act="' + act + '" data-v="' + esc(val) + '">' + esc(label) + '</button>'; }
+function chip(act, val, label, on) { return '<button class="chip ' + (on ? 'on' : '') + '" data-act="' + act + '" data-v="' + esc(val) + '">' + label + '</button>'; }
+function dayLabel(d) { var n = diff(d); return n === 0 ? 'Today · आज' : n === -1 ? 'Yesterday · कल' : niceDate(d); }
 function viewTasks() {
-  var h = '<input class="input" id="q" placeholder="Search tasks, vendors, people…" value="' + esc(S.q) + '" />';
-  h += '<div class="chips" style="margin-top:.6rem">' + [['open', 'Open'], ['all', 'All'], ['In Progress', 'In progress'], ['Completed', 'Done']].map(function (x) { return chip('fs', x[0], x[1], S.fStatus === x[0]); }).join('') + '</div>';
-  h += '<div class="chips">' + [['all', 'Any priority'], ['P0', 'P0 critical'], ['P1', 'P1'], ['P2', 'P2']].map(function (x) { return chip('fp', x[0], x[1], S.fPrio === x[0]); }).join('') +
-    chip('fd', 'none', 'No date', S.fDate === 'none') + '</div>';
+  var h = '<input class="input" id="q" placeholder="Search any task (open or done)…" value="' + esc(S.q) + '" />';
+  if (S.q.trim()) h += '<p class="rem" style="margin:.4rem .2rem">Searching all tasks, including done ones.</p>';
+  h += '<div class="chips" style="margin-top:.6rem">' + [['open', 'Open', 'बाकी'], ['all', 'All', 'सभी'], ['In Progress', 'In progress', 'चल रहा है'], ['Completed', 'Done', 'पूरा'], ['recent', 'Last 7 days', 'पिछले 7 दिन']].map(function (x) { return chip('fs', x[0], B(x[1], x[2]), S.fStatus === x[0]); }).join('') + '</div>';
+  if (S.fStatus === 'recent' && !S.q.trim()) {
+    var rec = S.tasks.filter(function (t) { var d = doneDay(t); return d && (t.status === 'Completed' || t.status === 'In Progress') && diff(d) <= 0 && diff(d) >= -6; });
+    rec.sort(function (a, b) { return doneDay(a) < doneDay(b) ? 1 : doneDay(a) > doneDay(b) ? -1 : 0; });
+    var byDay = {}, order = []; rec.forEach(function (t) { var d = doneDay(t); if (!byDay[d]) { byDay[d] = []; order.push(d); } byDay[d].push(t); });
+    if (!order.length) return h + '<div class="card empty">Nothing was marked done or in progress in the last 7 days.</div>';
+    order.forEach(function (d) { h += '<h2 class="sec">' + dayLabel(d) + ' <span class="n">' + byDay[d].length + '</span></h2><div class="card">' + byDay[d].map(function (t) { return taskRow(t, true); }).join('') + '</div>'; });
+    return h;
+  }
+  h += '<div class="chips">' + [['all', 'Any priority', ''], ['P0', 'Critical', ''], ['P1', 'Important', ''], ['P2', 'Normal', '']].map(function (x) { return chip('fp', x[0], esc(x[1]), S.fPrio === x[0]); }).join('') + chip('fd', 'none', 'No date', S.fDate === 'none') + '</div>';
   h += '<div style="display:flex;gap:.5rem"><select class="input" id="fcat"><option value="all">All categories</option>' + cats().map(function (c) { return '<option ' + (S.fCat === c ? 'selected' : '') + ' value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>' +
-    '<select class="input" id="fown"><option value="all">Everyone</option><option value="__none" ' + (S.fOwner === '__none' ? 'selected' : '') + '>Unassigned</option>' + owners().map(function (o) { return '<option ' + (S.fOwner === o ? 'selected' : '') + ' value="' + esc(o) + '">' + esc(o) + '</option>'; }).join('') + '</select></div>';
-  h += '<div style="margin:.7rem 0"><button class="chip ' + (S.big ? 'on' : '') + '" data-act="big">☑ Checklist mode (big)</button></div>';
+    '<select class="input" id="fown"><option value="all">Everyone</option><option value="__none" ' + (S.fOwner === '__none' ? 'selected' : '') + '>Not given to anyone</option>' + owners().map(function (o) { return '<option ' + (S.fOwner === o ? 'selected' : '') + ' value="' + esc(o) + '">' + esc(o) + '</option>'; }).join('') + '</select></div>';
   var f = filtered(), groups = {};
   f.forEach(function (t) { (groups[t.category || 'Other'] = groups[t.category || 'Other'] || []).push(t); });
   var names = Object.keys(groups).sort();
-  if (!names.length) h += '<div class="card empty">No tasks match.</div>';
+  if (!names.length) h += '<div class="card empty" style="margin-top:.8rem">No tasks match.</div>';
   names.forEach(function (c) {
     var tot = S.tasks.filter(function (t) { return (t.category || 'Other') === c; }), dn = tot.filter(function (t) { return !open(t); }).length;
-    h += '<div class="card group ' + (S.big ? 'big-check' : '') + '"><div class="catHead"><span>' + esc(c) + '</span><small>' + dn + '/' + tot.length + ' done</small></div>' + groups[c].sort(sortTasks).map(function (t) { return taskRow(t, false); }).join('') + '</div>';
+    h += '<div class="card group" style="margin-top:.9rem"><div class="catHead"><span>' + esc(c) + '</span><small>' + dn + '/' + tot.length + ' done</small></div>' + groups[c].sort(sortTasks).map(function (t) { return taskRow(t, false); }).join('') + '</div>';
+  });
+  return h;
+}
+
+/* Final checklist: grouped by function in date order; critical tasks at the END of each group */
+function viewChecklist() {
+  var h = '<div class="hero" style="padding:1rem"><b style="font-family:Cinzel,serif">' + B('Final Checklist', 'अंतिम चेकलिस्ट') + '</b><div class="sub" style="margin-top:.3rem">Function by function. In each part, the <b>critical</b> tasks come last, so you check them at the end.</div></div>';
+  FUNCTIONS.forEach(function (f) {
+    var items = S.tasks.filter(function (t) { return (t.fn || 'Before the wedding') === f.n; });
+    if (!items.length) return;
+    var dn = items.filter(function (t) { return !open(t); }).length;
+    var opn = items.filter(open), crit = opn.filter(function (t) { return t.priority === 'P0'; }).sort(sortTasks), rest = opn.filter(function (t) { return t.priority !== 'P0'; }).sort(function (a, b) { return (PR[b.priority] || 1) - (PR[a.priority] || 1) || sortTasks(a, b); });
+    var dnl = items.filter(function (t) { return !open(t); });
+    h += '<div class="card grp" style="margin-top:1rem"><div class="catHead"><span>' + esc(f.n) + ' <span class="hi" style="text-transform:none">· ' + esc(f.hi) + '</span>' + (f.d ? '<br><small>' + esc(f.d) + '</small>' : '') + '</span><small>' + dn + '/' + items.length + ' done</small></div>' +
+      rest.map(function (t) { return taskRow(t, false); }).join('') +
+      (crit.length ? '<div class="last-h">★ Critical — check these last · आख़िर में ज़रूर देखें</div>' + crit.map(function (t) { return taskRow(t, false); }).join('') : '') +
+      dnl.map(function (t) { return taskRow(t, false); }).join('') + '</div>';
   });
   return h;
 }
 
 function viewVendors() {
   var q = 0, p = 0, b = 0; S.vendors.forEach(function (v) { q += v.quoted; p += v.advance; b += v.balance; });
-  var h = '<div class="hero"><div class="sub">Vendor payments</div><div class="money" style="margin-top:.5rem"><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Quoted<b style="color:#ffe2a3">' + money(q) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Paid<b style="color:#ffe2a3">' + money(p) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Balance<b style="color:#ffe2a3">' + money(b) + '</b></div></div></div>' +
+  var h = '<div class="hero"><div class="sub">' + B('Vendor payments', 'विक्रेता भुगतान') + '</div><div class="money" style="margin-top:.5rem"><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Quoted<b style="color:#ffe2a3">' + money(q) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Paid<b style="color:#ffe2a3">' + money(p) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Balance<b style="color:#ffe2a3">' + money(b) + '</b></div></div></div>' +
     '<p class="rem" style="margin:.6rem .2rem 1rem">To change amounts, edit the "Vendors &amp; Payments" tab in your Google Sheet.</p>';
   S.vendors.forEach(function (v) {
     var ph = (v.contact || '').replace(/[^\d+]/g, '');
@@ -242,57 +312,67 @@ function viewVendors() {
 }
 
 function icon(n) {
-  var p = { today: '<path d="M4 6h16M4 12h16M4 18h10"/><path d="M17 17l2 2 3-4"/>', tasks: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>', vendors: '<circle cx="12" cy="12" r="9"/><path d="M9 9.5c.5-1.5 5.5-1.5 6 0M9 14.5c.5 1.500 5.500 1.500 6 0M8 12h8"/>' }[n];
+  var p = { today: '<path d="M4 6h16M4 12h16M4 18h10"/><path d="M17 17l2 2 3-4"/>', tasks: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/>', check: '<path d="M5 12l4 4 10-10"/><rect x="3" y="3" width="18" height="18" rx="4"/>', vendors: '<circle cx="12" cy="12" r="9"/><path d="M9 9.5c.5-1.5 5.5-1.5 6 0M9 14.5c.5 1.5 5.5 1.5 6 0M8 12h8"/>' }[n];
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
 }
 
 function viewGate() {
   return '<div class="gate card"><div style="font-size:2rem">🪔</div><h2>Shaadi Planner</h2><p class="rem">' + esc(CONFIG.weddingTitle) + '</p>' +
-    (S.needPin || !S.pin ? '<label class="l" style="text-align:left">Family PIN</label><input class="input" id="gpin" inputmode="numeric" autocomplete="off" placeholder="PIN" value="' + (S.needPin ? '' : esc(S.pin)) + '" />' + (S.needPin && S.pin ? '<p style="color:var(--bad)">That PIN is not right.</p>' : '') : '') +
-    '<label class="l" style="text-align:left">Who are you?</label><input class="input" id="gme" placeholder="Your name" value="' + esc(S.me) + '" />' +
+    (S.needPin || !S.pin ? '<label class="l" style="text-align:left">Family PIN · पिन</label><input class="input" id="gpin" inputmode="numeric" autocomplete="off" placeholder="PIN" value="' + (S.needPin ? '' : esc(S.pin)) + '" />' + (S.needPin && S.pin ? '<p style="color:var(--bad)">That PIN is not right.</p>' : '') : '') +
+    '<label class="l" style="text-align:left">Your name · आपका नाम</label><input class="input" id="gme" placeholder="Your name" value="' + esc(S.me) + '" />' +
     '<div class="chips" style="margin-top:.5rem;flex-wrap:wrap">' + CONFIG.people.map(function (p) { return '<button class="chip" data-act="pickme" data-v="' + esc(p) + '">' + esc(p) + '</button>'; }).join('') + '</div>' +
-    '<button class="btn block" style="margin-top:1rem" data-act="enter">Open planner</button></div>';
+    '<button class="btn block" style="margin-top:1rem" data-act="enter">' + B('Open planner', 'खोलें') + '</button></div>';
 }
 
 function render() {
   var keep = document.activeElement && document.activeElement.id === 'q' ? document.activeElement.selectionStart : null;
   if (!S.pin || !S.me || S.needPin) { $app.innerHTML = viewGate(); return; }
   var body = !S.loaded ? (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">Refresh</button></div>' : '<div class="card empty">Loading your plan…</div>')
-    : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : viewVendors();
+    : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : S.tab === 'check' ? viewChecklist() : viewVendors();
   $app.innerHTML = '<header class="top"><h1>🪔 SHAADI PLANNER</h1><button class="who" data-act="switch" title="Change name">👤 ' + esc(S.me) + '</button></header><main>' + body +
-    (S.loaded ? '<div class="sync">' + (S.pending ? 'Saving…' : 'Synced ' + new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' · <a href="#" data-act="refresh" style="color:inherit">Refresh</a></div>' : '') + '</main>' +
-    (S.loaded && S.tab !== 'vendors' ? '<button class="fab" data-act="add" aria-label="Add task">+</button>' : '') +
-    '<nav class="bottom">' + [['today', 'Today'], ['tasks', 'All Tasks'], ['vendors', 'Vendors']].map(function (x) { return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0]) + x[1] + '</button>'; }).join('') + '</nav>';
+    (S.loaded ? '<div class="sync">' + (S.pending ? 'Saving…' : 'Updated ' + new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' · <a href="#" data-act="refresh" style="color:inherit">Refresh · ताज़ा करें</a></div>' : '') + '</main>' +
+    (S.loaded && S.tab !== 'vendors' ? '<button class="fab" data-act="add">＋ ' + B2('Add task', 'काम जोड़ें') + '</button>' : '') +
+    '<nav class="bottom">' + [['today', 'Today', 'आज'], ['tasks', 'All Tasks', 'सभी काम'], ['check', 'Checklist', 'चेकलिस्ट'], ['vendors', 'Vendors', 'विक्रेता']].map(function (x) { return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0] === 'check' ? 'check' : x[0]) + B2(x[1], x[2]) + '</button>'; }).join('') + '</nav>';
   if (keep !== null) { var q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(keep, keep); } }
 }
 
-/* ---------- sheets (edit / add) ---------- */
+/* ---------- sheets (edit / add / confirm) ---------- */
+function showSheet(html, center) { closeSheet(true); var d = document.createElement('div'); d.className = 'sheetbg' + (center ? ' center' : ''); d.id = 'sheetbg'; d.innerHTML = center ? html : '<div class="sheet">' + html + '</div>'; document.body.appendChild(d); }
+function closeSheet(keepState) { var d = document.getElementById('sheetbg'); if (d) d.remove(); if (!keepState) S.sheet = null; }
+function segVal(id) { var b = document.querySelector('#' + id + ' .on'); return b ? b.getAttribute('data-v') : ''; }
+function fnSelect(id, cur) { return '<select class="input" id="' + id + '">' + FUNCTIONS.map(function (f) { return '<option value="' + esc(f.n) + '" ' + (cur === f.n ? 'selected' : '') + '>' + esc(f.n) + ' · ' + esc(f.hi) + '</option>'; }).join('') + '</select>'; }
+function ownerList(id) { return '<datalist id="' + id + '">' + ownerOptions().map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>'; }
+
+function askDone(id) {
+  var t = find(id); if (!t) return; S.sheet = { confirm: id };
+  showSheet('<div class="modal"><h3 style="margin:0;font-family:Cormorant Garamond,serif;font-size:1.5rem;color:var(--maroon)">' + B('Mark as done?', 'क्या यह पूरा हो गया?') + '</h3><p style="font-size:1.1rem;font-weight:600;margin:.6rem 0 1rem">' + esc(t.task) + '</p>' +
+    '<div style="display:flex;gap:.6rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('No', 'नहीं') + '</button><button class="btn" style="flex:1.4;background:linear-gradient(180deg,#3d9a4f,#2f7a3e)" data-act="confirmdone" data-id="' + esc(id) + '">✓ ' + B('Yes, done', 'हाँ, पूरा हुआ') + '</button></div></div>', true);
+}
 function openEditor(id) {
-  var t = S.tasks.filter(function (x) { return x.id === id; })[0]; if (!t) return;
-  S.sheet = { id: id };
+  var t = find(id); if (!t) return; S.sheet = { id: id };
   showSheet('<h3>' + esc(t.task) + '</h3><div class="rem">' + esc(t.category) + (t.updatedBy ? ' · last changed by ' + esc(t.updatedBy) + ' ' + esc(t.updatedAt) : '') + '</div>' +
-    '<label class="l">Status</label><div class="seg" id="e_status">' + STATUS.map(function (s) { return '<button data-v="' + s + '" class="' + (t.status === s ? 'on' : '') + '">' + s + '</button>'; }).join('') + '</div>' +
-    '<label class="l">Priority</label><div class="seg" id="e_prio">' + ['P0', 'P1', 'P2'].map(function (s) { return '<button data-v="' + s + '" class="' + (t.priority === s ? 'on' : '') + '">' + s + '</button>'; }).join('') + '</div>' +
-    '<label class="l">Who is doing this?</label><input class="input" id="e_owner" list="ownlist" value="' + esc(t.owner) + '" placeholder="Name" /><datalist id="ownlist">' + owners().concat(CONFIG.people).filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' +
-    '<label class="l">Due date</label><input class="input" type="date" id="e_due" value="' + esc(t.due) + '" />' +
-    '<label class="l">Notes / next action</label><textarea class="input" id="e_rem">' + esc(t.remarks) + '</textarea>' +
+    '<label class="l">' + B('Status', 'स्थिति') + '</label><div class="seg" id="e_status">' + STATUS.map(function (s) { return '<button data-v="' + s.v + '" class="' + (t.status === s.v ? 'on' : '') + '">' + B2(s.en, s.hi) + '</button>'; }).join('') + '</div>' +
+    '<label class="l">' + B('How important?', 'कितना ज़रूरी?') + '</label><div class="seg" id="e_prio">' + ['P0', 'P1', 'P2'].map(function (s) { return '<button data-v="' + s + '" class="' + (t.priority === s ? 'on' : '') + '">' + B2(PRIO[s].en, PRIO[s].hi) + '</button>'; }).join('') + '</div>' +
+    '<label class="l">' + B('Who is doing this?', 'कौन करेगा?') + '</label><input class="input" id="e_owner" list="ownlist" value="' + esc(t.owner) + '" placeholder="Name" />' + ownerList('ownlist') +
+    '<label class="l">' + B('Due date', 'कब तक') + '</label><input class="input" type="date" id="e_due" value="' + esc(t.due) + '" />' +
+    '<label class="l">' + B('Which function?', 'कौन सा कार्यक्रम?') + '</label>' + fnSelect('e_fn', t.fn || 'Before the wedding') +
+    '<label class="l">' + B('Notes', 'नोट') + '</label><textarea class="input" id="e_rem">' + esc(t.remarks) + '</textarea>' +
     '<label class="l">Vendor / contact</label><input class="input" id="e_vendor" value="' + esc(t.vendor) + '" />' +
-    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">Cancel</button><button class="btn" data-act="saveedit" style="flex:2">Save</button></div>');
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="saveedit" style="flex:2">' + B('Save', 'सेव करें') + '</button></div>');
 }
 function openAdd() {
   S.sheet = { add: true };
-  var c = cats();
-  showSheet('<h3>Add a task</h3><label class="l">What needs to be done?</label><input class="input" id="a_task" placeholder="e.g. Book return tickets" />' +
-    '<label class="l">Category</label><input class="input" id="a_cat" list="catlist" placeholder="Pick or type new" /><datalist id="catlist">' + c.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' +
-    '<label class="l">Priority</label><div class="seg" id="a_prio">' + ['P0', 'P1', 'P2'].map(function (s) { return '<button data-v="' + s + '" class="' + (s === 'P1' ? 'on' : '') + '">' + s + '</button>'; }).join('') + '</div>' +
-    '<label class="l">Who is doing this?</label><input class="input" id="a_owner" list="ownlist2" /><datalist id="ownlist2">' + owners().concat(CONFIG.people).filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' +
-    '<label class="l">Due date</label><input class="input" type="date" id="a_due" />' +
-    '<label class="l">Notes</label><textarea class="input" id="a_rem"></textarea>' +
-    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">Cancel</button><button class="btn" data-act="saveadd" style="flex:2">Add task</button></div>');
+  showSheet('<h3>' + B('Add a new task', 'नया काम जोड़ें') + '</h3><label class="l">' + B('What needs to be done?', 'क्या करना है?') + '</label><input class="input" id="a_task" placeholder="e.g. Book return tickets" />' +
+    '<label class="l">' + B('Who is doing this?', 'कौन करेगा?') + '</label><input class="input" id="a_owner" list="ownlist2" placeholder="Name (optional)" />' + ownerList('ownlist2') +
+    '<label class="l">' + B('Due date', 'कब तक') + ' (optional)</label><input class="input" type="date" id="a_due" />' +
+    '<button class="chip" style="margin-top:1rem" data-act="more">▾ More options · और विकल्प</button>' +
+    '<div id="a_more" style="display:none"><label class="l">Category</label><input class="input" id="a_cat" list="catlist" placeholder="Pick or type new" /><datalist id="catlist">' + cats().map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' +
+    '<label class="l">' + B('Which function?', 'कौन सा कार्यक्रम?') + '</label>' + fnSelect('a_fn', 'Before the wedding') +
+    '<label class="l">' + B('How important?', 'कितना ज़रूरी?') + '</label><div class="seg" id="a_prio">' + ['P0', 'P1', 'P2'].map(function (s) { return '<button data-v="' + s + '" class="' + (s === 'P1' ? 'on' : '') + '">' + B2(PRIO[s].en, PRIO[s].hi) + '</button>'; }).join('') + '</div>' +
+    '<label class="l">' + B('Notes', 'नोट') + '</label><textarea class="input" id="a_rem"></textarea></div>' +
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="saveadd" style="flex:2">' + B('Add task', 'जोड़ें') + '</button></div>');
+  setTimeout(function () { var i = document.getElementById('a_task'); if (i) i.focus(); }, 50);
 }
-function showSheet(html) { closeSheet(true); var d = document.createElement('div'); d.className = 'sheetbg'; d.id = 'sheetbg'; d.innerHTML = '<div class="sheet">' + html + '</div>'; document.body.appendChild(d); }
-function closeSheet(keepState) { var d = document.getElementById('sheetbg'); if (d) d.remove(); if (!keepState) S.sheet = null; }
-function segVal(id) { var b = document.querySelector('#' + id + ' .on'); return b ? b.getAttribute('data-v') : ''; }
 
 /* ---------- events ---------- */
 document.addEventListener('click', function (e) {
@@ -300,18 +380,21 @@ document.addEventListener('click', function (e) {
   if (e.target.id === 'sheetbg') { closeSheet(); return; }
   var el = e.target.closest('[data-act]'); if (!el) return;
   var act = el.getAttribute('data-act'), id = el.getAttribute('data-id'), v = el.getAttribute('data-v');
-  if (act === 'tick') { e.stopPropagation(); var t = S.tasks.filter(function (x) { return x.id === id; })[0]; if (t) saveFields(id, { status: t.status === 'Completed' ? 'Pending' : 'Completed' }, t.status === 'Completed' ? 'Marked pending' : 'Done ✓'); return; }
+  if (act === 'askdone') { e.stopPropagation(); askDone(id); return; }
+  if (act === 'confirmdone') { closeSheet(); saveFields(id, { status: 'Completed' }, 'Marked as done ✓', id); return; }
+  if (act === 'undo') { S.toast = null; renderToast(); saveFields(id, { status: 'Pending' }, 'Moved back to Not started'); return; }
   if (act === 'edit') { openEditor(id); return; }
   if (act === 'tab') { S.tab = v; render(); window.scrollTo(0, 0); return; }
   if (act === 'fs') { S.fStatus = v; render(); return; }
   if (act === 'fp') { S.fPrio = v; render(); return; }
   if (act === 'fd') { S.fDate = S.fDate === 'none' ? 'all' : 'none'; render(); return; }
-  if (act === 'big') { S.big = !S.big; render(); return; }
   if (act === 'gonodate') { S.tab = 'tasks'; S.fDate = 'none'; S.fStatus = 'open'; render(); window.scrollTo(0, 0); return; }
+  if (act === 'gorecent') { S.tab = 'tasks'; S.fStatus = 'recent'; S.q = ''; render(); window.scrollTo(0, 0); return; }
   if (act === 'refresh') { e.preventDefault(); toast('Refreshing…'); load(); return; }
   if (act === 'add') { openAdd(); return; }
+  if (act === 'more') { var m = document.getElementById('a_more'); if (m) { m.style.display = 'block'; el.remove(); } return; }
   if (act === 'closesheet') { closeSheet(); return; }
-  if (act === 'pickme') { var m = document.getElementById('gme'); if (m) m.value = v; return; }
+  if (act === 'pickme') { var mm = document.getElementById('gme'); if (mm) mm.value = v; return; }
   if (act === 'switch') { S.me = ''; render(); return; }
   if (act === 'enter') {
     var pe = document.getElementById('gpin'), me = document.getElementById('gme').value.trim();
@@ -321,15 +404,15 @@ document.addEventListener('click', function (e) {
     S.me = me; LS.set('pl_pin', S.pin); LS.set('pl_me', S.me); S.needPin = false; S.loaded = false; S.error = ''; render(); load(); return;
   }
   if (act === 'saveedit') {
-    var t2 = S.tasks.filter(function (x) { return x.id === S.sheet.id; })[0], f = {};
-    var nv = { status: segVal('e_status'), priority: segVal('e_prio'), owner: document.getElementById('e_owner').value.trim(), due: document.getElementById('e_due').value, remarks: document.getElementById('e_rem').value.trim(), vendor: document.getElementById('e_vendor').value.trim() };
+    var t2 = find(S.sheet.id), f = {};
+    var nv = { status: segVal('e_status'), priority: segVal('e_prio'), owner: document.getElementById('e_owner').value.trim(), due: document.getElementById('e_due').value, fn: document.getElementById('e_fn').value, remarks: document.getElementById('e_rem').value.trim(), vendor: document.getElementById('e_vendor').value.trim() };
     Object.keys(nv).forEach(function (k) { if ((t2[k] || '') !== nv[k]) f[k] = nv[k]; });
     var sid = S.sheet.id; closeSheet();
     if (Object.keys(f).length) saveFields(sid, f, 'Saved ✓'); return;
   }
   if (act === 'saveadd') {
     var task = document.getElementById('a_task').value.trim(); if (!task) { toast('Please type the task', true); return; }
-    var fields = { task: task, category: document.getElementById('a_cat').value.trim(), priority: segVal('a_prio') || 'P1', owner: document.getElementById('a_owner').value.trim(), due: document.getElementById('a_due').value, remarks: document.getElementById('a_rem').value.trim() };
+    var fields = { task: task, category: document.getElementById('a_cat').value.trim(), priority: segVal('a_prio') || 'P1', fn: document.getElementById('a_fn').value, owner: document.getElementById('a_owner').value.trim(), due: document.getElementById('a_due').value, remarks: document.getElementById('a_rem').value.trim() };
     closeSheet(); S.pending++; render();
     api('POST', { action: 'add', fields: fields }).then(function () { S.pending--; toast('Task added ✓'); load(true); }).catch(function (er) { S.pending--; render(); toast('Not added — ' + er.message, true); });
     return;
