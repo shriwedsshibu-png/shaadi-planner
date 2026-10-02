@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#430c19" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Shaadi Planner</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@600;700&family=Lora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+:root{--maroon:#6a1526;--maroon-d:#430c19;--gold:#b98a2e;--gold-s:#e7cf98;--ivory:#fbf6ee;--cream:#f3e8d6;--ink:#2e1a1c;--muted:#6b5a52;--ok:#2f7a3e;--warn:#c47a00;--bad:#b3261e;--nav:4.4rem}
+*{box-sizing:border-box}
+html{font-size:17px;-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--ivory);color:var(--ink);font-family:'Lora',Georgia,serif;line-height:1.45;padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 1rem);-webkit-tap-highlight-color:transparent}
+button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
+header.top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#5b1223,var(--maroon-d));color:#ffe2a3;border-bottom:2px solid var(--gold);padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+header.top h1{margin:0;font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:.06em;font-weight:600}
+.who{background:rgba(255,226,163,.15);border:1px solid rgba(255,226,163,.5);color:#ffe2a3;border-radius:999px;padding:.35rem .8rem;font-size:.85rem;cursor:pointer;max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main{max-width:46rem;margin:0 auto;padding:1rem}
+.hero{background:radial-gradient(circle at 50% 0%,#8a2638,#5b1424 60%,#40101c);color:#fff7e6;border-radius:1.2rem;padding:1.2rem;border:1.5px solid var(--gold);box-shadow:0 8px 24px rgba(74,17,32,.25)}
+.hero .big{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:3.2rem;line-height:1;color:#ffe2a3}
+.hero .sub{opacity:.9;font-size:.95rem}
+.bar{height:.7rem;border-radius:99px;background:rgba(255,255,255,.2);overflow:hidden;margin:.8rem 0 .3rem}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,#e0bb6a,#f5dc9c);border-radius:99px;transition:width .4s}
+.stats{display:flex;gap:.5rem;margin-top:.7rem;flex-wrap:wrap}
+.stat{background:rgba(0,0,0,.2);border:1px solid rgba(231,207,152,.4);border-radius:.8rem;padding:.4rem .7rem;font-size:.85rem}
+.stat b{font-size:1.1rem;color:#ffe2a3}
+h2.sec{font-family:'Cinzel',serif;font-size:.9rem;letter-spacing:.12em;text-transform:uppercase;color:var(--maroon);margin:1.5rem 0 .6rem;display:flex;align-items:center;gap:.5rem}
+h2.sec .n{background:var(--maroon);color:#fff7e6;border-radius:99px;font-size:.75rem;padding:.05rem .55rem;letter-spacing:0}
+h2.sec.bad{color:var(--bad)} h2.sec.bad .n{background:var(--bad)}
+.card{background:#fffdf9;border:1px solid rgba(184,137,59,.4);border-radius:1rem;box-shadow:0 4px 14px rgba(74,17,32,.06)}
+.task{display:flex;gap:.8rem;align-items:flex-start;padding:.8rem .8rem;border-bottom:1px solid rgba(184,137,59,.2);cursor:pointer}
+.task:last-child{border-bottom:0}
+.chk{flex:none;width:2.1rem;height:2.1rem;border-radius:50%;border:2px solid var(--gold);background:#fff;display:grid;place-items:center;cursor:pointer;padding:0;color:#fff;font-size:1.1rem;margin-top:.1rem}
+.chk.prog{border-color:var(--warn);background:linear-gradient(90deg,var(--warn) 50%,#fff 50%)}
+.chk.done{background:var(--ok);border-color:var(--ok)}
+.tt{flex:1;min-width:0}
+.tt .t{font-weight:600;font-size:1.02rem;overflow-wrap:anywhere}
+.done-t .t{text-decoration:line-through;opacity:.55}
+.meta{display:flex;flex-wrap:wrap;gap:.3rem .5rem;margin-top:.25rem;font-size:.8rem;color:var(--muted)}
+.pill{border-radius:99px;padding:.05rem .55rem;font-weight:700;font-size:.72rem;border:1px solid transparent;font-family:'Cinzel',serif}
+.p0{background:#fde8e6;color:var(--bad);border-color:#f2b8b3}.p1{background:#fff3da;color:#8a5a00;border-color:#f0d391}.p2{background:#eef3ea;color:#4a6a3a;border-color:#cfe0c3}
+.due{background:var(--cream);color:#55403a}.due.over{background:#fde8e6;color:var(--bad)}.due.soon{background:#fff3da;color:#8a5a00}
+.rem{font-size:.85rem;color:var(--muted);margin-top:.2rem}
+.empty{padding:1.2rem;text-align:center;color:var(--muted)}
+nav.bottom{position:fixed;left:0;right:0;bottom:0;z-index:40;display:flex;background:linear-gradient(180deg,#5c1727,var(--maroon-d));border-top:2px solid var(--gold);padding-bottom:env(safe-area-inset-bottom)}
+nav.bottom button{flex:1;height:var(--nav);border:0;background:transparent;color:#e9d9bd;font-family:'Cinzel',serif;font-weight:600;font-size:.78rem;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.15rem;cursor:pointer}
+nav.bottom button svg{width:1.6rem;height:1.6rem}
+nav.bottom button.on{color:#ffd98a;box-shadow:inset 0 3px 0 #ffd98a}
+.fab{position:fixed;right:1rem;bottom:calc(var(--nav) + env(safe-area-inset-bottom) + .9rem);z-index:41;width:3.6rem;height:3.6rem;border-radius:50%;border:2px solid #f1d99a;background:linear-gradient(180deg,#e0bb6a,#b8893b);color:#3b1a1a;font-size:2rem;line-height:1;cursor:pointer;box-shadow:0 8px 20px rgba(74,17,32,.4)}
+.btn{border:1.5px solid var(--gold);background:linear-gradient(180deg,#7d2231,var(--maroon-d));color:#fff7e6;border-radius:99px;padding:.75rem 1.4rem;font-weight:700;font-size:1rem;cursor:pointer;min-height:3rem}
+.btn.ghost{background:transparent;color:var(--maroon);border-color:var(--maroon)}
+.btn.block{width:100%}
+.btn:disabled{opacity:.55}
+.input,select.input,textarea.input{width:100%;min-height:3rem;border:1.5px solid #dccbb0;border-radius:.8rem;padding:.65rem .85rem;background:#fff}
+textarea.input{min-height:5rem;resize:vertical}
+.input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(184,137,59,.25)}
+label.l{display:block;font-weight:700;font-size:.85rem;margin:.9rem 0 .3rem;font-family:'Cinzel',serif;letter-spacing:.04em}
+.seg{display:flex;gap:.35rem;flex-wrap:wrap}
+.seg button{flex:1;min-width:5rem;border:1.5px solid #dccbb0;background:#fff;border-radius:.8rem;padding:.65rem .4rem;font-weight:700;cursor:pointer;font-size:.92rem}
+.seg button.on{background:var(--maroon);color:#fff7e6;border-color:var(--maroon)}
+.chips{display:flex;gap:.4rem;overflow-x:auto;padding:.2rem 0 .6rem;scrollbar-width:none}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid #dccbb0;background:#fff;border-radius:99px;padding:.4rem .9rem;font-weight:600;font-size:.88rem;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--maroon);color:#fff7e6;border-color:var(--maroon)}
+.catHead{display:flex;justify-content:space-between;align-items:center;padding:.7rem .9rem;background:var(--cream);border-radius:1rem 1rem 0 0;font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;color:var(--maroon);letter-spacing:.05em}
+.catHead small{font-family:'Lora',serif;font-weight:600;color:var(--muted)}
+.group{margin-bottom:1rem;overflow:hidden}
+.sheetbg{position:fixed;inset:0;z-index:60;background:rgba(46,26,28,.55);display:flex;align-items:flex-end;justify-content:center}
+.sheet{background:var(--ivory);width:100%;max-width:46rem;max-height:92vh;overflow-y:auto;border-radius:1.4rem 1.4rem 0 0;padding:1.1rem 1.1rem calc(1.3rem + env(safe-area-inset-bottom));border-top:3px solid var(--gold)}
+.sheet h3{margin:0 0 .2rem;font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--maroon)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 5rem);background:#2e1a1c;color:#fff;border-radius:99px;padding:.6rem 1.1rem;z-index:80;font-size:.9rem;max-width:90vw;box-shadow:0 8px 24px rgba(0,0,0,.3)}
+.toast.err{background:var(--bad)}
+.gate{max-width:24rem;margin:12vh auto 0;padding:1.4rem;text-align:center}
+.gate h2{font-family:'Cormorant Garamond',serif;font-size:2.2rem;color:var(--maroon);margin:.2rem 0}
+.sync{font-size:.75rem;opacity:.8;text-align:center;margin-top:1.2rem;color:var(--muted)}
+.vend{padding:.9rem 1rem;margin-bottom:.8rem}
+.vend h4{margin:0;font-size:1.05rem}.vend .cat{font-family:'Cinzel',serif;font-size:.72rem;letter-spacing:.1em;text-transform:uppercase;color:var(--gold)}
+.money{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.6rem;text-align:center}
+.money div{background:var(--cream);border-radius:.7rem;padding:.4rem .2rem;font-size:.75rem;color:var(--muted)}.money b{display:block;font-size:.98rem;color:var(--ink)}
+.money .bal b{color:var(--bad)}.money .bal.zero b{color:var(--ok)}
+a.call{display:inline-block;margin-top:.5rem;color:var(--maroon);font-weight:700;text-decoration:none;border:1.5px solid var(--maroon);border-radius:99px;padding:.3rem .9rem;font-size:.9rem}
+.big-check .task{padding:1.05rem .9rem}.big-check .t{font-size:1.15rem}.big-check .chk{width:2.5rem;height:2.5rem}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+/* ============ SETTINGS (the only part you may edit) ============ */
+var CONFIG = {
+  scriptUrl: "https://script.google.com/macros/s/AKfycbzZyiDscv0WK7REJA9YLGLPqwlBNG036OVvb7C0YJAux4N5C_sXdYd3_pnuRdQ4cA/exec",                 // paste your Web app link (ends with /exec) between the quotes
+  weddingDate: "2026-12-02",     // the big day, used for the countdown
+  weddingTitle: "Shrijeet & Shivangi",
+  people: ["Shrijeet", "Shivangi", "Mummy", "Papa"]   // quick-pick names on the "Who are you?" screen
+};
+/* ================================================================ */
+
+var $app = document.getElementById('app');
+var LS = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+var S = { tasks: [], vendors: [], tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', big: false, sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
+var STATUS = ['Pending', 'In Progress', 'Completed'];
+
+function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function pad(n) { return (n < 10 ? '0' : '') + n; }
+function ymd(d) { return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); }
+function today() { return ymd(new Date()); }
+function dayNum(s) { var p = s.split('-'); return Math.round(Date.UTC(+p[0], +p[1] - 1, +p[2]) / 864e5); }
+function diff(s) { return dayNum(s) - dayNum(today()); }
+function money(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
+function niceDate(s) { var p = s.split('-'); var m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']; return +p[2] + ' ' + m[+p[1] - 1]; }
+
+/* ---------- network ---------- */
+function api(method, payload) {
+  if (!CONFIG.scriptUrl) return Promise.reject(new Error('NOURL'));
+  var req = method === 'GET'
+    ? fetch(CONFIG.scriptUrl + '?action=all&pin=' + encodeURIComponent(S.pin) + '&t=' + Date.now())
+    : fetch(CONFIG.scriptUrl, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ pin: S.pin, by: S.me }, payload)) });
+  return req.then(function (r) { return r.text(); }).then(function (t) {
+    var d; try { d = JSON.parse(t); } catch (e) { throw new Error('BAD'); }
+    if (d.code === 'PIN') { S.needPin = true; throw new Error('PIN'); }
+    if (!d.success) throw new Error(d.message || 'Failed');
+    return d;
+  });
+}
+function load(silent) {
+  if (S.pending > 0) return;
+  return api('GET').then(function (d) {
+    if (S.pending > 0) return;
+    S.tasks = d.tasks; S.vendors = d.vendors; S.loaded = true; S.error = ''; S.lastSync = Date.now(); S.needPin = false;
+    if (!S.sheet) render();
+  }).catch(function (e) {
+    if (e.message === 'PIN') { S.loaded = false; render(); return; }
+    if (!silent || !S.loaded) { S.error = e.message === 'NOURL' ? 'The planner is not connected yet. Paste your /exec link into CONFIG.scriptUrl in index.html.' : 'Could not reach the sheet. Check your internet and tap Refresh.'; render(); }
+  });
+}
+function toast(msg, err) { S.toast = { msg: msg, err: err }; renderToast(); clearTimeout(toast.t); toast.t = setTimeout(function () { S.toast = null; renderToast(); }, err ? 4500 : 1800); }
+function renderToast() { var el = document.getElementById('toast'); if (el) el.remove(); if (S.toast) { var d = document.createElement('div'); d.id = 'toast'; d.className = 'toast' + (S.toast.err ? ' err' : ''); d.textContent = S.toast.msg; document.body.appendChild(d); } }
+
+function saveFields(id, fields, okMsg) {
+  var t = S.tasks.filter(function (x) { return x.id === id; })[0]; if (!t) return;
+  var before = {}; Object.keys(fields).forEach(function (k) { before[k] = t[k]; t[k] = fields[k]; });
+  S.pending++; render();
+  api('POST', { action: 'update', id: id, fields: fields }).then(function () { S.pending--; if (okMsg) toast(okMsg); load(true); })
+    .catch(function (e) { S.pending--; Object.keys(before).forEach(function (k) { t[k] = before[k]; }); render(); toast(e.message === 'PIN' ? 'Wrong PIN' : 'Not saved — ' + (e.message === 'BAD' ? 'try again' : e.message), true); });
+}
+
+/* ---------- helpers ---------- */
+var PR = { P0: 0, P1: 1, P2: 2 };
+function sortTasks(a, b) { var da = a.due || '9999', db = b.due || '9999'; return da < db ? -1 : da > db ? 1 : (PR[a.priority] || 1) - (PR[b.priority] || 1) || (a.task < b.task ? -1 : 1); }
+function open(t) { return t.status !== 'Completed'; }
+function cats() { var s = {}; S.tasks.forEach(function (t) { s[t.category || 'Other'] = 1; }); return Object.keys(s); }
+function owners() { var s = {}; S.tasks.forEach(function (t) { if (t.owner) s[t.owner] = 1; }); return Object.keys(s).sort(); }
+
+function dueChip(t) {
+  if (!t.due) return '';
+  var d = diff(t.due), c = 'pill due';
+  if (open(t) && d < 0) c += ' over'; else if (open(t) && d <= 3) c += ' soon';
+  var lbl = d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : d < 0 ? Math.abs(d) + 'd overdue' : niceDate(t.due);
+  return '<span class="' + c + '">' + (open(t) && d < 0 ? '⚠ ' : '📅 ') + lbl + '</span>';
+}
+function taskRow(t, showCat) {
+  var cc = t.status === 'Completed' ? 'done' : t.status === 'In Progress' ? 'prog' : '';
+  return '<div class="task ' + (t.status === 'Completed' ? 'done-t' : '') + '" data-act="edit" data-id="' + esc(t.id) + '">' +
+    '<button class="chk ' + cc + '" data-act="tick" data-id="' + esc(t.id) + '" aria-label="Mark done">' + (t.status === 'Completed' ? '✓' : '') + '</button>' +
+    '<div class="tt"><div class="t">' + esc(t.task) + '</div>' +
+    '<div class="meta"><span class="pill p' + (t.priority || 'P1').slice(1) + '">' + esc(t.priority) + '</span>' + dueChip(t) +
+    (t.status === 'In Progress' ? '<span class="pill" style="background:#fff3da;color:#8a5a00">In progress</span>' : '') +
+    (t.owner ? '<span>👤 ' + esc(t.owner) + '</span>' : '') + (showCat ? '<span>' + esc(t.category) + '</span>' : '') + '</div>' +
+    (t.remarks ? '<div class="rem">' + esc(t.remarks) + '</div>' : '') + '</div></div>';
+}
+function list(arr, showCat, empty) { return arr.length ? '<div class="card">' + arr.map(function (t) { return taskRow(t, showCat); }).join('') + '</div>' : (empty ? '<div class="card empty">' + empty + '</div>' : ''); }
+
+/* ---------- views ---------- */
+function viewToday() {
+  var all = S.tasks, done = all.filter(function (t) { return !open(t); }).length, pct = all.length ? Math.round(done / all.length * 100) : 0;
+  var left = diff(CONFIG.weddingDate), p0 = all.filter(function (t) { return open(t) && t.priority === 'P0'; });
+  var over = all.filter(function (t) { return open(t) && t.due && diff(t.due) < 0; }).sort(sortTasks);
+  var week = all.filter(function (t) { return open(t) && t.due && diff(t.due) >= 0 && diff(t.due) <= 7; }).sort(sortTasks);
+  var shown = {}; over.concat(week).forEach(function (t) { shown[t.id] = 1; });
+  var crit = p0.filter(function (t) { return !shown[t.id]; }).sort(sortTasks);
+  var nodate = all.filter(function (t) { return open(t) && !t.due; }).length;
+  var h = '<div class="hero"><div style="display:flex;justify-content:space-between;align-items:flex-end;gap:1rem"><div><div class="sub">' + esc(CONFIG.weddingTitle) + '</div><div class="big">' +
+    (left > 0 ? left : left === 0 ? '🎉' : '✓') + '</div><div class="sub">' + (left > 0 ? 'days to go' : left === 0 ? 'It is the big day!' : 'Wedding done — congratulations!') + '</div></div>' +
+    '<div style="text-align:right"><div class="big" style="font-size:2.2rem">' + pct + '%</div><div class="sub">tasks done</div></div></div>' +
+    '<div class="bar"><i style="width:' + pct + '%"></i></div><div class="sub">' + done + ' of ' + all.length + ' completed</div>' +
+    '<div class="stats"><div class="stat"><b>' + p0.length + '</b> critical open</div><div class="stat"><b>' + over.length + '</b> overdue</div><div class="stat"><b>' + week.length + '</b> this week</div></div></div>';
+  if (over.length) h += '<h2 class="sec bad">Overdue <span class="n">' + over.length + '</span></h2>' + list(over, true);
+  h += '<h2 class="sec">This week <span class="n">' + week.length + '</span></h2>' + list(week, true, nodate ? 'Nothing is dated for the next 7 days.' : 'Nothing due this week 🎉');
+  h += '<h2 class="sec">Critical (P0) — still open <span class="n">' + crit.length + '</span></h2>' + list(crit, true, p0.length ? 'All critical items are on your list above.' : 'All critical tasks are done 🎉');
+  if (nodate) h += '<div class="card" style="padding:1rem;margin-top:1.2rem"><b>' + nodate + ' open tasks have no due date.</b><div class="rem">Give them dates so they show up here at the right time.</div><button class="btn ghost" style="margin-top:.7rem" data-act="gonodate">Show tasks without a date</button></div>';
+  return h;
+}
+
+function filtered() {
+  var q = S.q.trim().toLowerCase();
+  return S.tasks.filter(function (t) {
+    if (S.fStatus === 'open' && !open(t)) return false;
+    if (S.fStatus === 'Completed' && open(t)) return false;
+    if (S.fStatus === 'In Progress' && t.status !== 'In Progress') return false;
+    if (S.fPrio !== 'all' && t.priority !== S.fPrio) return false;
+    if (S.fCat !== 'all' && (t.category || 'Other') !== S.fCat) return false;
+    if (S.fOwner === '__none' ? !!t.owner : (S.fOwner !== 'all' && t.owner !== S.fOwner)) return false;
+    if (S.fDate === 'none' && t.due) return false;
+    if (q && (t.task + ' ' + t.category + ' ' + t.remarks + ' ' + t.owner + ' ' + t.vendor).toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+}
+function chip(act, val, label, on) { return '<button class="chip ' + (on ? 'on' : '') + '" data-act="' + act + '" data-v="' + esc(val) + '">' + esc(label) + '</button>'; }
+function viewTasks() {
+  var h = '<input class="input" id="q" placeholder="Search tasks, vendors, people…" value="' + esc(S.q) + '" />';
+  h += '<div class="chips" style="margin-top:.6rem">' + [['open', 'Open'], ['all', 'All'], ['In Progress', 'In progress'], ['Completed', 'Done']].map(function (x) { return chip('fs', x[0], x[1], S.fStatus === x[0]); }).join('') + '</div>';
+  h += '<div class="chips">' + [['all', 'Any priority'], ['P0', 'P0 critical'], ['P1', 'P1'], ['P2', 'P2']].map(function (x) { return chip('fp', x[0], x[1], S.fPrio === x[0]); }).join('') +
+    chip('fd', 'none', 'No date', S.fDate === 'none') + '</div>';
+  h += '<div style="display:flex;gap:.5rem"><select class="input" id="fcat"><option value="all">All categories</option>' + cats().map(function (c) { return '<option ' + (S.fCat === c ? 'selected' : '') + ' value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('') + '</select>' +
+    '<select class="input" id="fown"><option value="all">Everyone</option><option value="__none" ' + (S.fOwner === '__none' ? 'selected' : '') + '>Unassigned</option>' + owners().map(function (o) { return '<option ' + (S.fOwner === o ? 'selected' : '') + ' value="' + esc(o) + '">' + esc(o) + '</option>'; }).join('') + '</select></div>';
+  h += '<div style="margin:.7rem 0"><button class="chip ' + (S.big ? 'on' : '') + '" data-act="big">☑ Checklist mode (big)</button></div>';
+  var f = filtered(), groups = {};
+  f.forEach(function (t) { (groups[t.category || 'Other'] = groups[t.category || 'Other'] || []).push(t); });
+  var names = Object.keys(groups).sort();
+  if (!names.length) h += '<div class="card empty">No tasks match.</div>';
+  names.forEach(function (c) {
+    var tot = S.tasks.filter(function (t) { return (t.category || 'Other') === c; }), dn = tot.filter(function (t) { return !open(t); }).length;
+    h += '<div class="card group ' + (S.big ? 'big-check' : '') + '"><div class="catHead"><span>' + esc(c) + '</span><small>' + dn + '/' + tot.length + ' done</small></div>' + groups[c].sort(sortTasks).map(function (t) { return taskRow(t, false); }).join('') + '</div>';
+  });
+  return h;
+}
+
+function viewVendors() {
+  var q = 0, p = 0, b = 0; S.vendors.forEach(function (v) { q += v.quoted; p += v.advance; b += v.balance; });
+  var h = '<div class="hero"><div class="sub">Vendor payments</div><div class="money" style="margin-top:.5rem"><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Quoted<b style="color:#ffe2a3">' + money(q) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Paid<b style="color:#ffe2a3">' + money(p) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Balance<b style="color:#ffe2a3">' + money(b) + '</b></div></div></div>' +
+    '<p class="rem" style="margin:.6rem .2rem 1rem">To change amounts, edit the "Vendors &amp; Payments" tab in your Google Sheet.</p>';
+  S.vendors.forEach(function (v) {
+    var ph = (v.contact || '').replace(/[^\d+]/g, '');
+    h += '<div class="card vend"><div class="cat">' + esc(v.category) + '</div><h4>' + esc(v.vendor || v.category) + '</h4>' + (v.deliverables ? '<div class="rem">' + esc(v.deliverables) + '</div>' : '') +
+      '<div class="money"><div>Quoted<b>' + money(v.quoted) + '</b></div><div>Paid<b>' + money(v.advance) + '</b></div><div class="bal ' + (v.balance <= 0 ? 'zero' : '') + '">Balance<b>' + money(v.balance) + '</b></div></div>' +
+      '<div class="rem" style="margin-top:.5rem">' + (v.paidBy ? 'Paid by ' + esc(v.paidBy) : '') + (v.remarks ? (v.paidBy ? ' · ' : '') + esc(v.remarks) : '') + '</div>' +
+      (ph.length >= 8 ? '<a class="call" href="tel:' + esc(ph) + '">📞 Call ' + esc(v.contact) + '</a>' : '') + '</div>';
+  });
+  return h;
+}
+
+function icon(n) {
+  var p = { today: '<path d="M4 6h16M4 12h16M4 18h10"/><path d="M17 17l2 2 3-4"/>', tasks: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 12l3 3 5-6"/>', vendors: '<circle cx="12" cy="12" r="9"/><path d="M9 9.5c.5-1.5 5.5-1.5 6 0M9 14.5c.5 1.500 5.500 1.500 6 0M8 12h8"/>' }[n];
+  return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
+}
+
+function viewGate() {
+  return '<div class="gate card"><div style="font-size:2rem">🪔</div><h2>Shaadi Planner</h2><p class="rem">' + esc(CONFIG.weddingTitle) + '</p>' +
+    (S.needPin || !S.pin ? '<label class="l" style="text-align:left">Family PIN</label><input class="input" id="gpin" inputmode="numeric" autocomplete="off" placeholder="PIN" value="' + (S.needPin ? '' : esc(S.pin)) + '" />' + (S.needPin && S.pin ? '<p style="color:var(--bad)">That PIN is not right.</p>' : '') : '') +
+    '<label class="l" style="text-align:left">Who are you?</label><input class="input" id="gme" placeholder="Your name" value="' + esc(S.me) + '" />' +
+    '<div class="chips" style="margin-top:.5rem;flex-wrap:wrap">' + CONFIG.people.map(function (p) { return '<button class="chip" data-act="pickme" data-v="' + esc(p) + '">' + esc(p) + '</button>'; }).join('') + '</div>' +
+    '<button class="btn block" style="margin-top:1rem" data-act="enter">Open planner</button></div>';
+}
+
+function render() {
+  var keep = document.activeElement && document.activeElement.id === 'q' ? document.activeElement.selectionStart : null;
+  if (!S.pin || !S.me || S.needPin) { $app.innerHTML = viewGate(); return; }
+  var body = !S.loaded ? (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">Refresh</button></div>' : '<div class="card empty">Loading your plan…</div>')
+    : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : viewVendors();
+  $app.innerHTML = '<header class="top"><h1>🪔 SHAADI PLANNER</h1><button class="who" data-act="switch" title="Change name">👤 ' + esc(S.me) + '</button></header><main>' + body +
+    (S.loaded ? '<div class="sync">' + (S.pending ? 'Saving…' : 'Synced ' + new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' · <a href="#" data-act="refresh" style="color:inherit">Refresh</a></div>' : '') + '</main>' +
+    (S.loaded && S.tab !== 'vendors' ? '<button class="fab" data-act="add" aria-label="Add task">+</button>' : '') +
+    '<nav class="bottom">' + [['today', 'Today'], ['tasks', 'All Tasks'], ['vendors', 'Vendors']].map(function (x) { return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0]) + x[1] + '</button>'; }).join('') + '</nav>';
+  if (keep !== null) { var q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(keep, keep); } }
+}
+
+/* ---------- sheets (edit / add) ---------- */
+function openEditor(id) {
+  var t = S.tasks.filter(function (x) { return x.id === id; })[0]; if (!t) return;
+  S.sheet = { id: id };
+  showSheet('<h3>' + esc(t.task) + '</h3><div class="rem">' + esc(t.category) + (t.updatedBy ? ' · last changed by ' + esc(t.updatedBy) + ' ' + esc(t.updatedAt) : '') + '</div>' +
+    '<label class="l">Status</label><div class="seg" id="e_status">' + STATUS.map(function (s) { return '<button data-v="' + s + '" class="' + (t.status === s ? 'on' : '') + '">' + s + '</button>'; }).join('') + '</div>' +
+    '<label class="l">Priority</label><div class="seg" id="e_prio">' + ['P0', 'P1', 'P2'].map(function (s) { return '<button data-v="' + s + '" class="' + (t.priority === s ? 'on' : '') + '">' + s + '</button>'; }).join('') + '</div>' +
+    '<label class="l">Who is doing this?</label><input class="input" id="e_owner" list="ownlist" value="' + esc(t.owner) + '" placeholder="Name" /><datalist id="ownlist">' + owners().concat(CONFIG.people).filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' +
+    '<label class="l">Due date</label><input class="input" type="date" id="e_due" value="' + esc(t.due) + '" />' +
+    '<label class="l">Notes / next action</label><textarea class="input" id="e_rem">' + esc(t.remarks) + '</textarea>' +
+    '<label class="l">Vendor / contact</label><input class="input" id="e_vendor" value="' + esc(t.vendor) + '" />' +
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">Cancel</button><button class="btn" data-act="saveedit" style="flex:2">Save</button></div>');
+}
+function openAdd() {
+  S.sheet = { add: true };
+  var c = cats();
+  showSheet('<h3>Add a task</h3><label class="l">What needs to be done?</label><input class="input" id="a_task" placeholder="e.g. Book return tickets" />' +
+    '<label class="l">Category</label><input class="input" id="a_cat" list="catlist" placeholder="Pick or type new" /><datalist id="catlist">' + c.map(function (x) { return '<option value="' + esc(x) + '">'; }).join('') + '</datalist>' +
+    '<label class="l">Priority</label><div class="seg" id="a_prio">' + ['P0', 'P1', 'P2'].map(function (s) { return '<button data-v="' + s + '" class="' + (s === 'P1' ? 'on' : '') + '">' + s + '</button>'; }).join('') + '</div>' +
+    '<label class="l">Who is doing this?</label><input class="input" id="a_owner" list="ownlist2" /><datalist id="ownlist2">' + owners().concat(CONFIG.people).filter(function (v, i, a) { return a.indexOf(v) === i; }).map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>' +
+    '<label class="l">Due date</label><input class="input" type="date" id="a_due" />' +
+    '<label class="l">Notes</label><textarea class="input" id="a_rem"></textarea>' +
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">Cancel</button><button class="btn" data-act="saveadd" style="flex:2">Add task</button></div>');
+}
+function showSheet(html) { closeSheet(true); var d = document.createElement('div'); d.className = 'sheetbg'; d.id = 'sheetbg'; d.innerHTML = '<div class="sheet">' + html + '</div>'; document.body.appendChild(d); }
+function closeSheet(keepState) { var d = document.getElementById('sheetbg'); if (d) d.remove(); if (!keepState) S.sheet = null; }
+function segVal(id) { var b = document.querySelector('#' + id + ' .on'); return b ? b.getAttribute('data-v') : ''; }
+
+/* ---------- events ---------- */
+document.addEventListener('click', function (e) {
+  var seg = e.target.closest('.seg button'); if (seg) { seg.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); }); seg.classList.add('on'); return; }
+  if (e.target.id === 'sheetbg') { closeSheet(); return; }
+  var el = e.target.closest('[data-act]'); if (!el) return;
+  var act = el.getAttribute('data-act'), id = el.getAttribute('data-id'), v = el.getAttribute('data-v');
+  if (act === 'tick') { e.stopPropagation(); var t = S.tasks.filter(function (x) { return x.id === id; })[0]; if (t) saveFields(id, { status: t.status === 'Completed' ? 'Pending' : 'Completed' }, t.status === 'Completed' ? 'Marked pending' : 'Done ✓'); return; }
+  if (act === 'edit') { openEditor(id); return; }
+  if (act === 'tab') { S.tab = v; render(); window.scrollTo(0, 0); return; }
+  if (act === 'fs') { S.fStatus = v; render(); return; }
+  if (act === 'fp') { S.fPrio = v; render(); return; }
+  if (act === 'fd') { S.fDate = S.fDate === 'none' ? 'all' : 'none'; render(); return; }
+  if (act === 'big') { S.big = !S.big; render(); return; }
+  if (act === 'gonodate') { S.tab = 'tasks'; S.fDate = 'none'; S.fStatus = 'open'; render(); window.scrollTo(0, 0); return; }
+  if (act === 'refresh') { e.preventDefault(); toast('Refreshing…'); load(); return; }
+  if (act === 'add') { openAdd(); return; }
+  if (act === 'closesheet') { closeSheet(); return; }
+  if (act === 'pickme') { var m = document.getElementById('gme'); if (m) m.value = v; return; }
+  if (act === 'switch') { S.me = ''; render(); return; }
+  if (act === 'enter') {
+    var pe = document.getElementById('gpin'), me = document.getElementById('gme').value.trim();
+    if (pe) S.pin = pe.value.trim();
+    if (!S.pin) { toast('Please enter the PIN', true); return; }
+    if (!me) { toast('Please enter your name', true); return; }
+    S.me = me; LS.set('pl_pin', S.pin); LS.set('pl_me', S.me); S.needPin = false; S.loaded = false; S.error = ''; render(); load(); return;
+  }
+  if (act === 'saveedit') {
+    var t2 = S.tasks.filter(function (x) { return x.id === S.sheet.id; })[0], f = {};
+    var nv = { status: segVal('e_status'), priority: segVal('e_prio'), owner: document.getElementById('e_owner').value.trim(), due: document.getElementById('e_due').value, remarks: document.getElementById('e_rem').value.trim(), vendor: document.getElementById('e_vendor').value.trim() };
+    Object.keys(nv).forEach(function (k) { if ((t2[k] || '') !== nv[k]) f[k] = nv[k]; });
+    var sid = S.sheet.id; closeSheet();
+    if (Object.keys(f).length) saveFields(sid, f, 'Saved ✓'); return;
+  }
+  if (act === 'saveadd') {
+    var task = document.getElementById('a_task').value.trim(); if (!task) { toast('Please type the task', true); return; }
+    var fields = { task: task, category: document.getElementById('a_cat').value.trim(), priority: segVal('a_prio') || 'P1', owner: document.getElementById('a_owner').value.trim(), due: document.getElementById('a_due').value, remarks: document.getElementById('a_rem').value.trim() };
+    closeSheet(); S.pending++; render();
+    api('POST', { action: 'add', fields: fields }).then(function () { S.pending--; toast('Task added ✓'); load(true); }).catch(function (er) { S.pending--; render(); toast('Not added — ' + er.message, true); });
+    return;
+  }
+});
+document.addEventListener('input', function (e) { if (e.target.id === 'q') { S.q = e.target.value; render(); } });
+document.addEventListener('change', function (e) {
+  if (e.target.id === 'fcat') { S.fCat = e.target.value; render(); }
+  if (e.target.id === 'fown') { S.fOwner = e.target.value; render(); }
+});
+setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 45000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden && S.loaded && !S.sheet) load(true); });
+
+render();
+if (S.pin && S.me) load();
+</script>
+</body>
+</html>
