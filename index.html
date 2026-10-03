@@ -12,12 +12,12 @@
 <style>
 .hi{font-family:'Noto Sans Devanagari','Lora',sans-serif;font-weight:700}
 
-:root{--maroon:#6a1526;--maroon-d:#430c19;--gold:#b98a2e;--gold-s:#e7cf98;--ivory:#fbf6ee;--cream:#f3e8d6;--ink:#2e1a1c;--muted:#6b5a52;--ok:#2f7a3e;--warn:#c47a00;--bad:#b3261e;--nav:4.4rem}
+:root{--maroon:#6a1526;--maroon-d:#430c19;--gold:#b98a2e;--gold-s:#e7cf98;--ivory:#fbf6ee;--cream:#f3e8d6;--ink:#2e1a1c;--muted:#6b5a52;--ok:#2f7a3e;--warn:#c47a00;--bad:#b3261e;--nav:4.4rem;--hh:3.5rem}
 *{box-sizing:border-box}
 html{font-size:18px;-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--ivory);color:var(--ink);font-family:'Lora',Georgia,serif;line-height:1.45;padding-bottom:calc(var(--nav) + env(safe-area-inset-bottom) + 1rem);-webkit-tap-highlight-color:transparent}
 button,input,select,textarea{font-family:inherit;font-size:16px;color:inherit}
-header.top{position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#5b1223,var(--maroon-d));color:#ffe2a3;border-bottom:2px solid var(--gold);padding:.6rem 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem}
+header.top{height:var(--hh);position:sticky;top:0;z-index:30;background:linear-gradient(180deg,#5b1223,var(--maroon-d));color:#ffe2a3;border-bottom:2px solid var(--gold);padding:0 1rem;display:flex;align-items:center;justify-content:space-between;gap:.6rem}
 header.top h1{margin:0;font-family:'Cinzel',serif;font-size:1.05rem;letter-spacing:.06em;font-weight:600}
 .who{background:rgba(255,226,163,.15);border:1px solid rgba(255,226,163,.5);color:#ffe2a3;border-radius:999px;padding:.35rem .8rem;font-size:.85rem;cursor:pointer;max-width:9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 main{max-width:46rem;margin:0 auto;padding:1rem 1rem 5.5rem}
@@ -100,10 +100,19 @@ nav.bottom button{font-size:.72rem;line-height:1.1}
 .toast button{margin-left:.8rem;background:#ffe2a3;color:#3b1a1a;border:0;border-radius:99px;padding:.3rem .8rem;font-weight:700;cursor:pointer}
 .more{margin-top:.8rem}
 header.top h1{white-space:nowrap}
-@media(max-width:380px){header.top{padding:.6rem .7rem}header.top h1{font-size:.8rem;letter-spacing:.03em}.who{padding:.3rem .65rem;max-width:7.5rem;font-size:.8rem}.money b{font-size:.8rem}.money{gap:.25rem}.hero{padding:1rem}}
+.sbar{position:sticky;top:var(--hh);z-index:29;background:var(--ivory);padding:.6rem 1rem;border-bottom:1px solid rgba(184,137,59,.35);box-shadow:0 4px 10px rgba(74,17,32,.06)}
+.sbar .in{max-width:46rem;margin:0 auto;position:relative}
+#gq{padding-left:2.7rem;padding-right:3rem;border-radius:99px;min-height:3.1rem;border-color:var(--gold)}
+.sbar .si{position:absolute;left:1rem;top:50%;transform:translateY(-50%);font-size:1.1rem;pointer-events:none}
+.sbar .sx{position:absolute;right:.4rem;top:50%;transform:translateY(-50%);width:2.4rem;height:2.4rem;border-radius:50%;border:0;background:var(--cream);color:var(--maroon);font-size:1.1rem;cursor:pointer;display:none}
+.progBtn{margin-top:.55rem;margin-left:.5rem;border:2px solid var(--warn);background:#fff;color:#8a5a00;border-radius:.9rem;padding:.6rem 1rem;font-weight:700;cursor:pointer;min-height:3rem}
+.res-note{font-size:.9rem;color:var(--muted);margin:.3rem .2rem .6rem}
+@media(max-width:380px){header.top{padding:0 .7rem}header.top h1{font-size:.8rem;letter-spacing:.03em}.who{padding:.3rem .65rem;max-width:7.5rem;font-size:.8rem}.money b{font-size:.8rem}.money{gap:.25rem}.hero{padding:1rem}}
 </style>
 </head>
 <body>
+<header class="top" id="hdr" style="display:none"><h1>🪔 SHAADI PLANNER</h1><button class="who" id="whoBtn" data-act="switch" title="Change name"></button></header>
+<div class="sbar" id="sbar" style="display:none"><div class="in"><span class="si">🔍</span><input class="input" id="gq" type="search" autocomplete="off" enterkeyhint="search" placeholder="Search task, vendor, event or date…" /><button class="sx" id="gqx" data-act="clearsearch" aria-label="Clear search">✕</button></div></div>
 <div id="app"></div>
 <script>
 /* ============ SETTINGS (the only part you may edit) ============ */
@@ -129,7 +138,7 @@ var STATUS = [{ v: 'Pending', en: 'Not started', hi: 'बाकी' }, { v: 'In 
 
 var $app = document.getElementById('app');
 var LS = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-var S = { tasks: [], vendors: [], tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
+var S = { gq: '', tasks: [], vendors: [], tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -258,9 +267,8 @@ function filtered() {
 function chip(act, val, label, on) { return '<button class="chip ' + (on ? 'on' : '') + '" data-act="' + act + '" data-v="' + esc(val) + '">' + label + '</button>'; }
 function dayLabel(d) { var n = diff(d); return n === 0 ? 'Today · आज' : n === -1 ? 'Yesterday · कल' : niceDate(d); }
 function viewTasks() {
-  var h = '<input class="input" id="q" placeholder="Search any task (open or done)…" value="' + esc(S.q) + '" />';
-  if (S.q.trim()) h += '<p class="rem" style="margin:.4rem .2rem">Searching all tasks, including done ones.</p>';
-  h += '<div class="chips" style="margin-top:.6rem">' + [['open', 'Open', 'बाकी'], ['all', 'All', 'सभी'], ['In Progress', 'In progress', 'चल रहा है'], ['Completed', 'Done', 'पूरा'], ['recent', 'Last 7 days', 'पिछले 7 दिन']].map(function (x) { return chip('fs', x[0], B(x[1], x[2]), S.fStatus === x[0]); }).join('') + '</div>';
+  var h = '<button class="addbig" style="margin-top:0;margin-bottom:.8rem" data-act="add">＋ ' + B('Add a new task', 'नया काम जोड़ें') + '</button>';
+  h += '<div class="chips">' + [['open', 'Open', 'बाकी'], ['all', 'All', 'सभी'], ['In Progress', 'In progress', 'चल रहा है'], ['Completed', 'Done', 'पूरा'], ['recent', 'Last 7 days', 'पिछले 7 दिन']].map(function (x) { return chip('fs', x[0], B(x[1], x[2]), S.fStatus === x[0]); }).join('') + '</div>';
   if (S.fStatus === 'recent' && !S.q.trim()) {
     var rec = S.tasks.filter(function (t) { var d = doneDay(t); return d && (t.status === 'Completed' || t.status === 'In Progress') && diff(d) <= 0 && diff(d) >= -6; });
     rec.sort(function (a, b) { return doneDay(a) < doneDay(b) ? 1 : doneDay(a) > doneDay(b) ? -1 : 0; });
@@ -314,6 +322,55 @@ function viewVendors() {
   return h;
 }
 
+/* ---------- global search: tasks, vendors, events, dates ---------- */
+var MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+function dateWords(d) {
+  if (!d) return '';
+  var p = String(d).slice(0, 10).split('-'), m = +p[1] - 1, day = +p[2];
+  return [String(d).slice(0, 10), day + ' ' + MONTHS[m].slice(0, 3), day + ' ' + MONTHS[m], MONTHS[m].slice(0, 3) + ' ' + day, MONTHS[m], MONTHS[m].slice(0, 3), day + '/' + (m + 1)].join(' ');
+}
+var STATUS_WORDS = { 'Pending': 'pending not started baaki', 'In Progress': 'in progress started chal raha', 'Completed': 'done completed complete finished' };
+function fnHindi(n) { var f = FUNCTIONS.filter(function (x) { return x.n === n; })[0]; return f ? f.hi + ' ' + f.d : ''; }
+function taskHay(t) {
+  return (t.task + ' ' + t.category + ' ' + t.remarks + ' ' + t.owner + ' ' + t.vendor + ' ' + t.planAhead + ' ' + (t.fn || '') + ' ' + fnHindi(t.fn || 'Before the wedding') + ' ' +
+    (PRIO[t.priority] ? PRIO[t.priority].en : '') + ' ' + t.priority + ' ' + (STATUS_WORDS[t.status] || '') + ' ' + dateWords(t.due) + ' ' + dateWords(t.completedOn) + ' ' + (t.updatedBy || '')).toLowerCase();
+}
+function vendorHay(v) { return (v.category + ' ' + v.vendor + ' ' + v.contact + ' ' + v.deliverables + ' ' + v.paidBy + ' ' + v.remarks + ' ' + v.status).toLowerCase(); }
+function matchAll(hay, words) { for (var i = 0; i < words.length; i++) if (hay.indexOf(words[i]) < 0) return false; return true; }
+function vendorMini(v) {
+  var ph = (v.contact || '').replace(/[^\d+]/g, '');
+  return '<div class="card vend" style="margin-bottom:.6rem"><div class="cat">' + esc(v.category) + '</div><h4>' + esc(v.vendor || v.category) + '</h4>' + (v.deliverables ? '<div class="rem">' + esc(v.deliverables) + '</div>' : '') +
+    '<div class="rem" style="margin-top:.3rem"><b>Quoted</b> ' + money(v.quoted) + ' · <b>Paid</b> ' + money(v.advance) + ' · <b style="color:' + (v.balance > 0 ? 'var(--bad)' : 'var(--ok)') + '">Balance ' + money(v.balance) + '</b></div>' +
+    (ph.length >= 8 ? '<a class="call" href="tel:' + esc(ph) + '">📞 Call ' + esc(v.contact) + '</a>' : '') + '</div>';
+}
+function searchRow(t) {
+  var isDone = t.status === 'Completed';
+  return '<div class="task ' + (isDone ? 'done-t' : '') + '" data-act="edit" data-id="' + esc(t.id) + '" style="display:block">' +
+    '<div class="t" style="font-weight:600;font-size:1.05rem;overflow-wrap:anywhere">' + esc(t.task) + '</div>' +
+    '<div class="meta">' + prioPill(t) + dueChip(t) + (t.status === 'In Progress' ? '<span class="pill" style="background:#fff3da;color:#8a5a00">In progress</span>' : '') +
+    (t.owner ? '<span>👤 ' + esc(t.owner) + '</span>' : '') + '<span>' + esc(t.fn || 'Before the wedding') + '</span></div>' +
+    (t.remarks ? '<div class="rem">' + esc(t.remarks) + '</div>' : '') +
+    (isDone ? '<div style="margin-top:.5rem"><span class="doneTag">✓ ' + B('Done', 'पूरा हुआ') + (t.completedOn ? ' · ' + niceDate(t.completedOn) : '') + '</span></div>'
+      : '<div><button class="doneBtn" data-act="askdone" data-id="' + esc(t.id) + '">✓ ' + B('Done', 'पूरा हुआ') + '</button>' +
+        (t.status === 'Pending' ? '<button class="progBtn" data-act="started" data-id="' + esc(t.id) + '">▶ ' + B('Started', 'शुरू किया') + '</button>' : '') + '</div>') + '</div>';
+}
+function viewSearch() {
+  var words = S.gq.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  var res = S.tasks.filter(function (t) { return matchAll(taskHay(t), words); });
+  var first = words[0];
+  res.sort(function (a, b) {
+    var oa = open(a) ? 0 : 1, ob = open(b) ? 0 : 1; if (oa !== ob) return oa - ob;
+    var ta = a.task.toLowerCase().indexOf(first) >= 0 ? 0 : 1, tb = b.task.toLowerCase().indexOf(first) >= 0 ? 0 : 1; if (ta !== tb) return ta - tb;
+    return sortTasks(a, b);
+  });
+  var vend = S.vendors.filter(function (v) { return matchAll(vendorHay(v), words); });
+  var h = '<div class="res-note">' + res.length + ' task' + (res.length === 1 ? '' : 's') + (vend.length ? ' · ' + vend.length + ' vendor' + (vend.length === 1 ? '' : 's') : '') + ' found for “' + esc(S.gq.trim()) + '” <span class="hi">· मिले</span></div>';
+  if (!res.length && !vend.length) h += '<div class="card empty">Nothing found. Try one word, like <b>mehndi</b>, <b>tickets</b> or a name.<br><br><button class="btn" data-act="addfromsearch">＋ ' + B('Add “' + S.gq.trim() + '” as a new task', 'नया काम बनाएँ') + '</button></div>';
+  if (res.length) h += '<div class="card">' + res.slice(0, 60).map(searchRow).join('') + '</div>' + (res.length > 60 ? '<div class="res-note">Showing the first 60. Type more letters to narrow down.</div>' : '');
+  if (vend.length) h += '<h2 class="sec">' + B('Vendors', 'विक्रेता') + ' <span class="n">' + vend.length + '</span></h2>' + vend.slice(0, 12).map(vendorMini).join('');
+  return h;
+}
+
 function icon(n) {
   var p = { today: '<path d="M4 6h16M4 12h16M4 18h10"/><path d="M17 17l2 2 3-4"/>', tasks: '<rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8 9h8M8 13h8M8 17h5"/>', check: '<path d="M5 12l4 4 10-10"/><rect x="3" y="3" width="18" height="18" rx="4"/>', vendors: '<circle cx="12" cy="12" r="9"/><path d="M9 9.5c.5-1.5 5.5-1.5 6 0M9 14.5c.5 1.5 5.5 1.5 6 0M8 12h8"/>' }[n];
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
@@ -328,15 +385,17 @@ function viewGate() {
 }
 
 function render() {
-  var keep = document.activeElement && document.activeElement.id === 'q' ? document.activeElement.selectionStart : null;
-  if (!S.pin || !S.me || S.needPin) { $app.innerHTML = viewGate(); return; }
+  var loggedIn = !!(S.pin && S.me && !S.needPin);
+  document.getElementById('hdr').style.display = loggedIn ? 'flex' : 'none';
+  document.getElementById('sbar').style.display = loggedIn && S.loaded ? 'block' : 'none';
+  document.getElementById('whoBtn').textContent = '👤 ' + S.me;
+  document.getElementById('gqx').style.display = S.gq ? 'block' : 'none';
+  if (!loggedIn) { $app.innerHTML = viewGate(); return; }
   var body = !S.loaded ? (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">Refresh</button></div>' : '<div class="card empty">Loading your plan…</div>')
-    : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : S.tab === 'check' ? viewChecklist() : viewVendors();
-  $app.innerHTML = '<header class="top"><h1>🪔 SHAADI PLANNER</h1><button class="who" data-act="switch" title="Change name">👤 ' + esc(S.me) + '</button></header><main>' + body +
+    : S.gq.trim() ? viewSearch() : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : S.tab === 'check' ? viewChecklist() : viewVendors();
+  $app.innerHTML = '<main>' + body +
     (S.loaded ? '<div class="sync">' + (S.pending ? 'Saving…' : 'Updated ' + new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' · <a href="#" data-act="refresh" style="color:inherit">Refresh · ताज़ा करें</a></div>' : '') + '</main>' +
-    (S.loaded && S.tab !== 'vendors' ? '<button class="fab" data-act="add">＋ ' + B2('Add task', 'काम जोड़ें') + '</button>' : '') +
     '<nav class="bottom">' + [['today', 'Today', 'आज'], ['tasks', 'All Tasks', 'सभी काम'], ['check', 'Checklist', 'चेकलिस्ट'], ['vendors', 'Vendors', 'विक्रेता']].map(function (x) { return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0] === 'check' ? 'check' : x[0]) + B2(x[1], x[2]) + '</button>'; }).join('') + '</nav>';
-  if (keep !== null) { var q = document.getElementById('q'); if (q) { q.focus(); q.setSelectionRange(keep, keep); } }
 }
 
 /* ---------- sheets (edit / add / confirm) ---------- */
@@ -387,12 +446,15 @@ document.addEventListener('click', function (e) {
   if (act === 'confirmdone') { closeSheet(); saveFields(id, { status: 'Completed' }, 'Marked as done ✓', id); return; }
   if (act === 'undo') { S.toast = null; renderToast(); saveFields(id, { status: 'Pending' }, 'Moved back to Not started'); return; }
   if (act === 'edit') { if (String(id).indexOf('tmp') === 0) { toast('Still saving this task…'); return; } openEditor(id); return; }
-  if (act === 'tab') { S.tab = v; render(); window.scrollTo(0, 0); return; }
+  if (act === 'tab') { S.tab = v; S.gq = ''; document.getElementById('gq').value = ''; render(); window.scrollTo(0, 0); return; }
+  if (act === 'clearsearch') { S.gq = ''; var gi = document.getElementById('gq'); gi.value = ''; gi.focus(); render(); return; }
+  if (act === 'started') { e.stopPropagation(); saveFields(id, { status: 'In Progress' }, 'Marked as started ▶', id); return; }
+  if (act === 'addfromsearch') { var txt = S.gq.trim(); openAdd(); var ai = document.getElementById('a_task'); if (ai) ai.value = txt; return; }
   if (act === 'fs') { S.fStatus = v; render(); return; }
   if (act === 'fp') { S.fPrio = v; render(); return; }
   if (act === 'fd') { S.fDate = S.fDate === 'none' ? 'all' : 'none'; render(); return; }
   if (act === 'gonodate') { S.tab = 'tasks'; S.fDate = 'none'; S.fStatus = 'open'; render(); window.scrollTo(0, 0); return; }
-  if (act === 'gorecent') { S.tab = 'tasks'; S.fStatus = 'recent'; S.q = ''; render(); window.scrollTo(0, 0); return; }
+  if (act === 'gorecent') { S.tab = 'tasks'; S.fStatus = 'recent'; S.gq = ''; document.getElementById('gq').value = ''; render(); window.scrollTo(0, 0); return; }
   if (act === 'refresh') { e.preventDefault(); toast('Refreshing…'); load(); return; }
   if (act === 'add') { openAdd(); return; }
   if (act === 'more') { var m = document.getElementById('a_more'); if (m) { m.style.display = 'block'; el.remove(); } return; }
@@ -423,7 +485,7 @@ document.addEventListener('click', function (e) {
     return;
   }
 });
-document.addEventListener('input', function (e) { if (e.target.id === 'q') { S.q = e.target.value; render(); } });
+document.addEventListener('input', function (e) { if (e.target.id === 'gq') { S.gq = e.target.value; render(); window.scrollTo(0, 0); } });
 document.addEventListener('change', function (e) {
   if (e.target.id === 'fcat') { S.fCat = e.target.value; render(); }
   if (e.target.id === 'fown') { S.fOwner = e.target.value; render(); }

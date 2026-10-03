@@ -5,6 +5,7 @@
 > 2. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** (Same `/exec` link. If Google asks for permission, Advanced → Go to … → Allow.)
 > 3. Open `index.html` from this folder, paste your `/exec` link into `scriptUrl: ""`, save.
 > 4. On GitHub open your `shaadi-planner` repo → click `index.html` → ✏️ → select all, paste the new file → **Commit changes**. Vercel updates by itself in about a minute.
+> (Search-bar update: only step 4 is needed — no script redeploy.)
 > 5. Open the planner and tap Refresh. The first load adds the new columns and about 78 suggested tasks (one time only; nothing you already have is changed or duplicated).
 
 Your Excel becomes a **Google Sheet** (the data lives there), and a small **web page** sits on top of it so the whole family can tick and update tasks from their phones.
@@ -44,9 +45,9 @@ Files in this folder:
 ## Part D — How to use it
 - **Done button:** every open task has a green **Done · पूरा हुआ** button. It asks "Mark as done?" first, then shows an **Undo · वापस** button for a few seconds. Tap the task itself to change anything else.
 - **Last 7 days:** on Today or in All Tasks, see what was marked done or in progress in the last week, grouped by day.
-- **Search finds done tasks too.**
+- **Search bar (top of every screen):** type anything you remember — a task word, vendor name, event (mehndi, haldi), a date (1 dec) or a person. Matching tasks appear at once with **Done** and **Started** buttons, and matching vendors show below. Done tasks are found too. Nothing found? Tap the button to add it as a new task.
 - **Checklist tab:** every task grouped by function in date order (Before, Faldaan, Mehndi, Engagement & Sangeet, Haldi, Varmala & Shaadi, After). In each group the **critical** tasks come last. Change a task's function by tapping it.
-- **Add a task:** the gold **＋ Add task** button is on every screen. Only the task name is needed; "More options" is optional.
+- **Add a task:** the **＋ Add a new task** button is on Today and All Tasks. Only the task name is needed; "More options" is optional.
 - **Today** (opens first): days to go, % done, **Overdue**, **This week**, and every **Critical (P0)** task that is still open.
 - **Tap the circle** on a task to mark it done. **Tap the task** to change status, priority, who is doing it, due date and notes.
 - **All Tasks:** search, filter by status, priority, category or person. **Checklist mode** shows big easy rows for the last days.
