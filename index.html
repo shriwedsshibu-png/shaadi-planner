@@ -155,11 +155,12 @@ function api(method, payload) {
     return d;
   });
 }
+function saveCache() { try { LS.set('pl_cache', JSON.stringify({ t: S.tasks, v: S.vendors, at: Date.now() })); } catch (e) {} }
 function load(silent) {
   if (S.pending > 0) return Promise.resolve();
   return api('GET').then(function (d) {
     if (S.pending > 0) return;
-    S.tasks = d.tasks; S.vendors = d.vendors; S.loaded = true; S.error = ''; S.lastSync = Date.now(); S.needPin = false;
+    S.tasks = d.tasks; S.vendors = d.vendors; S.loaded = true; S.error = ''; S.lastSync = Date.now(); S.needPin = false; saveCache();
     if (!S.sheet) render();
   }).catch(function (e) {
     if (e.message === 'PIN') { S.loaded = false; render(); return; }
@@ -178,7 +179,7 @@ function saveFields(id, fields, okMsg, undoId) {
   if (fields.status === 'Completed') t.completedOn = today(); else if (fields.status) t.completedOn = '';
   t.updatedBy = S.me; t.updatedAt = today() + ' 00:00';
   S.pending++; render();
-  api('POST', { action: 'update', id: id, fields: fields }).then(function () { S.pending--; if (okMsg) toast(okMsg, false, undoId); load(true); })
+  api('POST', { action: 'update', id: id, fields: fields }).then(function () { S.pending--; saveCache(); if (okMsg) toast(okMsg, false, undoId); render(); })
     .catch(function (e) { S.pending--; Object.keys(before).forEach(function (k) { t[k] = before[k]; }); render(); toast(e.message === 'PIN' ? 'Wrong PIN' : 'Not saved — ' + (e.message === 'BAD' ? 'please try again' : e.message), true); });
 }
 
@@ -385,7 +386,7 @@ document.addEventListener('click', function (e) {
   if (act === 'askdone') { e.stopPropagation(); askDone(id); return; }
   if (act === 'confirmdone') { closeSheet(); saveFields(id, { status: 'Completed' }, 'Marked as done ✓', id); return; }
   if (act === 'undo') { S.toast = null; renderToast(); saveFields(id, { status: 'Pending' }, 'Moved back to Not started'); return; }
-  if (act === 'edit') { openEditor(id); return; }
+  if (act === 'edit') { if (String(id).indexOf('tmp') === 0) { toast('Still saving this task…'); return; } openEditor(id); return; }
   if (act === 'tab') { S.tab = v; render(); window.scrollTo(0, 0); return; }
   if (act === 'fs') { S.fStatus = v; render(); return; }
   if (act === 'fp') { S.fPrio = v; render(); return; }
@@ -415,8 +416,10 @@ document.addEventListener('click', function (e) {
   if (act === 'saveadd') {
     var task = document.getElementById('a_task').value.trim(); if (!task) { toast('Please type the task', true); return; }
     var fields = { task: task, category: document.getElementById('a_cat').value.trim(), priority: segVal('a_prio') || 'P1', fn: document.getElementById('a_fn').value, owner: document.getElementById('a_owner').value.trim(), due: document.getElementById('a_due').value, remarks: document.getElementById('a_rem').value.trim() };
-    closeSheet(); S.pending++; render();
-    api('POST', { action: 'add', fields: fields }).then(function () { S.pending--; toast('Task added ✓'); load(true); }).catch(function (er) { S.pending--; render(); toast('Not added — ' + er.message, true); });
+    closeSheet();
+    var tmp = { id: 'tmp' + Date.now(), category: fields.category || 'Other', task: fields.task, status: 'Pending', priority: fields.priority, vendor: '', cost: '', remarks: fields.remarks, planAhead: '', owner: fields.owner, due: fields.due, fn: fields.fn, completedOn: '', updatedBy: S.me, updatedAt: today() + ' 00:00' };
+    S.tasks.push(tmp); S.pending++; render(); toast('Task added ✓');
+    api('POST', { action: 'add', fields: fields }).then(function () { S.pending--; load(true); }).catch(function (er) { S.pending--; S.tasks = S.tasks.filter(function (x) { return x !== tmp; }); render(); toast('Not added — ' + er.message, true); });
     return;
   }
 });
@@ -428,8 +431,9 @@ document.addEventListener('change', function (e) {
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 45000);
 document.addEventListener('visibilitychange', function () { if (!document.hidden && S.loaded && !S.sheet) load(true); });
 
+(function () { if (!S.pin || !S.me) return; try { var c = JSON.parse(LS.get('pl_cache') || 'null'); if (c && c.t && c.t.length) { S.tasks = c.t; S.vendors = c.v || []; S.loaded = true; S.lastSync = c.at || Date.now(); } } catch (e) {} })();
 render();
-if (S.pin && S.me) load();
+if (S.pin && S.me) load(true);
 </script>
 </body>
 </html>

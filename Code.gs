@@ -100,13 +100,32 @@ function status_(v) {
 }
 
 function readAll_() {
+  var cache = null;
+  try { cache = CacheService.getScriptCache(); var hit = cache.get('ALL'); if (hit) return JSON.parse(hit); } catch (e) { cache = null; }
+  var out = readAllFresh_();
+  try { if (cache) cache.put('ALL', JSON.stringify(out), 25); } catch (e) {}
+  return out;
+}
+function clearCache_() { try { CacheService.getScriptCache().remove('ALL'); } catch (e) {} }
+
+function setupNeeded_(sheet) {
+  var map = headerMap_(sheet);
+  for (var i = 0; i < EXTRA_COLS.length; i++) if (!map[norm_(EXTRA_COLS[i])]) return true;
+  return false;
+}
+
+function readAllFresh_() {
   var ss = SpreadsheetApp.getActive();
-  var map = ensureColumns_();
-  seedOnce_();
   var sheet = ss.getSheetByName(TASK_SHEET);
+  if (!sheet) throw new Error('Tab "' + TASK_SHEET + '" not found');
+  if (setupNeeded_(sheet)) ensureColumns_();
+  seedOnce_();
+  var map = headerMap_(sheet);
   var rows = sheet.getLastRow(), tasks = [];
   if (rows >= 2) {
     var data = sheet.getRange(2, 1, rows - 1, sheet.getLastColumn()).getValues();
+    var missingId = data.some(function (r) { return String(r[map.task - 1] || '').trim() && !String(r[map.id - 1] || ''); });
+    if (missingId) { ensureColumns_(); data = sheet.getRange(2, 1, rows - 1, sheet.getLastColumn()).getValues(); }
     var g = function (r, key) { return map[key] ? r[map[key] - 1] : ''; };
     data.forEach(function (r) {
       var id = str_(g(r, 'id'));
@@ -163,7 +182,8 @@ function updateTask_(b) {
   var lock = LockService.getScriptLock(); lock.waitLock(25000);
   try {
     var sheet = SpreadsheetApp.getActive().getSheetByName(TASK_SHEET);
-    var map = ensureColumns_();
+    var map = headerMap_(sheet);
+    if (!map.id || !map.completedon) map = ensureColumns_();
     var row = findRowById_(sheet, map, b.id);
     if (!row) return { success: false, message: 'Task not found (was it deleted in the sheet?)' };
     var f = b.fields || {}, changed = 0;
@@ -190,6 +210,7 @@ function updateTask_(b) {
       sheet.getRange(row, map.lastupdatedby).setValue(who_(b));
       sheet.getRange(row, map.lastupdated).setValue(Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'));
     }
+    clearCache_();
     return { success: true };
   } finally { lock.releaseLock(); }
 }
@@ -218,6 +239,7 @@ function addTask_(b) {
     sheet.appendRow(row);
     var r = sheet.getLastRow();
     if (f.due && /^\d{4}-\d{2}-\d{2}$/.test(f.due)) { var p = f.due.split('-'); sheet.getRange(r, map.duedate).setNumberFormat('yyyy-mm-dd').setValue(new Date(Number(p[0]), Number(p[1]) - 1, Number(p[2]), 12, 0, 0)); }
+    clearCache_();
     return { success: true, id: id };
   } finally { lock.releaseLock(); }
 }
