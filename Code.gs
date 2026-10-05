@@ -5,7 +5,7 @@
  * Follow GUIDE-PLANNER.md. The only thing to edit here is the PIN below.
  */
 
-var PIN = '1202';                       // <-- CHANGE THIS to your own family PIN, then re-deploy
+var PIN = '0000';                       // <-- CHANGE THIS to your own family PIN, then re-deploy
 var TASK_SHEET = 'Master Tracker';
 var VENDOR_SHEET = 'Vendors & Payments';
 var PAY_SHEET = 'Payments';
