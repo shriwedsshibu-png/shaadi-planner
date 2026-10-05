@@ -1,5 +1,11 @@
 # Shaadi Planner — setup (about 20 minutes, one time)
 
+> **Money update (vendor edit + Hisaab split) — do this (5 minutes):**
+> 1. Google Sheet → **Extensions → Apps Script** → select all, delete, paste the new `Code.gs`. **Check the PIN line is still your PIN.** Save.
+> 2. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** (Same `/exec` link. Allow permission if asked.)
+> 3. Replace `index.html` on GitHub (keep your `scriptUrl`). Vercel updates in about a minute.
+> 4. Open the planner → tap **Refresh**. The first load adds a **Payments** tab and ID / Split / Share % columns to "Vendors & Payments", moves each existing advance into a payment, and adds about 19 after-wedding tasks. Nothing you already have is lost.
+
 > **Already set up the first version? Do only this (5 minutes):**
 > 1. Google Sheet → **Extensions → Apps Script** → select all, delete, paste the new `Code.gs`. **Check the PIN line is still your PIN.** Save.
 > 2. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** (Same `/exec` link. If Google asks for permission, Advanced → Go to … → Allow.)
@@ -58,7 +64,9 @@ Files in this folder:
 ## Important
 - **Your tasks have no due dates yet**, so "This week" will be empty at first. Open "All Tasks → No date" and give each task a date; the P0 list works without dates.
 - The script adds five columns on the right of the "Master Tracker" tab (ID, Owner, Due Date, Last Updated By, Last Updated). **Do not delete the ID column.** You can still edit, sort and add rows in the Google Sheet itself; new rows get an ID automatically.
-- Vendor amounts are edited in the Google Sheet tab "Vendors & Payments"; the page only shows them.
+- **Money tab:** add, edit or delete vendors and expenses from the page. Tap **＋ Payment** to record each payment and who paid (Shrijeet / Shivangi / Family). Balance = quoted − payments, so "I paid the advance, she paid the rest" works with two payments.
+- **Hisaab · Split:** shared items are divided by the % on each item (50/50 by default). Mark clothes, jewellery and gifts as **Personal** and they are left out. Family-paid money is not divided. **Settle up** records when one of you pays the other; **Copy** makes a summary for WhatsApp.
+- **Today → Critical:** open critical tasks are grouped by category, with a button to see every open task of that category.
 - The Guest List and Event Flow tabs are not in the page yet.
 - **Privacy:** the PIN keeps casual visitors out, but anyone who has both the link and the PIN can see vendor phone numbers and payments. Share it only with family. Change the PIN in `Code.gs` (then Deploy → Manage deployments → ✏️ → New version → Deploy) if it leaks.
 - **If you change `Code.gs` later:** Deploy → Manage deployments → ✏️ → Version: New version → Deploy. The link stays the same.

@@ -108,6 +108,11 @@ header.top h1{white-space:nowrap}
 .progBtn{margin-top:.55rem;margin-left:.5rem;border:2px solid var(--warn);background:#fff;color:#8a5a00;border-radius:.9rem;padding:.6rem 1rem;font-weight:700;cursor:pointer;min-height:3rem}
 .res-note{font-size:.9rem;color:var(--muted);margin:.3rem .2rem .6rem}
 @media(max-width:380px){header.top{padding:0 .7rem}header.top h1{font-size:.8rem;letter-spacing:.03em}.who{padding:.3rem .65rem;max-width:7.5rem;font-size:.8rem}.money b{font-size:.8rem}.money{gap:.25rem}.hero{padding:1rem}}
+
+.seeall{display:block;width:100%;text-align:left;background:none;border:0;border-top:1px solid #eadcc0;padding:.8rem 1rem;color:var(--maroon);font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit}
+.vbtns{display:flex;gap:.5rem;align-items:center;margin-top:.7rem;flex-wrap:wrap}.vbtns .btn{min-height:2.8rem;padding:.4rem 1.1rem;font-size:.98rem}
+.delbtn{display:block;width:100%;margin-top:1rem;background:none;border:2px solid #c0392b;color:#c0392b;border-radius:.9rem;padding:.8rem;font-weight:700;font-size:1rem;cursor:pointer;font-family:inherit;min-height:3rem}
+.seg2{display:flex;gap:.4rem;margin-top:.5rem}.seg2 button{flex:1;border:2px solid #d9c79c;background:#fff;color:var(--maroon);border-radius:.8rem;padding:.55rem;font-weight:700;cursor:pointer;min-height:2.8rem;font-family:inherit;font-size:.95rem}.seg2 button.on{background:var(--maroon);color:#fff7e6;border-color:var(--maroon)}
 </style>
 </head>
 <body>
@@ -138,7 +143,7 @@ var STATUS = [{ v: 'Pending', en: 'Not started', hi: 'बाकी' }, { v: 'In 
 
 var $app = document.getElementById('app');
 var LS = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-var S = { gq: '', tasks: [], vendors: [], tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
+var S = { gq: '', tasks: [], vendors: [], payments: [], vtab: 'list', back: '', tab: 'today', loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), q: '', fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, pending: 0, lastSync: 0, needPin: false };
 
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function pad(n) { return (n < 10 ? '0' : '') + n; }
@@ -164,12 +169,12 @@ function api(method, payload) {
     return d;
   });
 }
-function saveCache() { try { LS.set('pl_cache', JSON.stringify({ t: S.tasks, v: S.vendors, at: Date.now() })); } catch (e) {} }
+function saveCache() { try { LS.set('pl_cache', JSON.stringify({ t: S.tasks, v: S.vendors, p: S.payments, at: Date.now() })); } catch (e) {} }
 function load(silent) {
   if (S.pending > 0) return Promise.resolve();
   return api('GET').then(function (d) {
     if (S.pending > 0) return;
-    S.tasks = d.tasks; S.vendors = d.vendors; S.loaded = true; S.error = ''; S.lastSync = Date.now(); S.needPin = false; saveCache();
+    S.tasks = d.tasks; S.vendors = d.vendors; S.payments = d.payments || []; S.loaded = true; S.error = ''; S.lastSync = Date.now(); S.needPin = false; saveCache();
     if (!S.sheet) render();
   }).catch(function (e) {
     if (e.message === 'PIN') { S.loaded = false; render(); return; }
@@ -243,7 +248,14 @@ function viewToday() {
   h += '<div class="card" style="padding:1rem;margin-top:1rem"><b>' + B('Last 7 days', 'पिछले 7 दिन') + '</b><div class="rem" style="font-size:.95rem">' + recDone + ' done · ' + (rec.length - recDone) + ' in progress</div><button class="btn ghost" style="margin-top:.6rem;min-height:2.6rem;padding:.4rem 1.1rem" data-act="gorecent">' + B('See the list', 'सूची देखें') + '</button></div>';
   if (over.length) h += '<h2 class="sec bad">' + B('Late', 'देर हो गई') + ' <span class="n">' + over.length + '</span></h2>' + list(over, true);
   h += '<h2 class="sec">' + B('This week', 'इस हफ़्ते') + ' <span class="n">' + week.length + '</span></h2>' + list(week, true, nodate ? 'Nothing is dated for the next 7 days.' : 'Nothing due this week 🎉');
-  h += '<h2 class="sec">' + B('Critical — still open', 'बहुत ज़रूरी — बाकी') + ' <span class="n">' + crit.length + '</span></h2>' + list(crit, true, p0.length ? 'All critical items are in the lists above.' : 'All critical tasks are done 🎉');
+  h += '<h2 class="sec">' + B('Critical — still open', 'बहुत ज़रूरी — बाकी') + ' <span class="n">' + crit.length + '</span></h2>';
+  if (!crit.length) h += '<div class="card empty">' + (p0.length ? 'All critical items are in the lists above.' : 'All critical tasks are done 🎉') + '</div>';
+  var cg = {}; crit.forEach(function (t) { (cg[t.category || 'Other'] = cg[t.category || 'Other'] || []).push(t); });
+  Object.keys(cg).sort(function (x, y) { return cg[y].length - cg[x].length || (x < y ? -1 : 1); }).forEach(function (c) {
+    var totalOpen = all.filter(function (t) { return open(t) && (t.category || 'Other') === c; }).length;
+    h += '<div class="card group" style="margin-top:.8rem"><div class="catHead"><span>' + esc(c) + '</span><small>' + cg[c].length + ' critical</small></div>' + cg[c].map(function (t) { return taskRow(t, false); }).join('') +
+      '<button class="seeall" data-act="gocat" data-v="' + esc(c) + '">' + B('See all ' + totalOpen + ' open in this category', 'इस श्रेणी के सभी काम') + ' →</button></div>';
+  });
   if (nodate) h += '<div class="card" style="padding:1rem;margin-top:1.2rem"><b>' + nodate + ' open tasks have no date.</b><div class="rem">Give them dates so they show up here at the right time.</div><button class="btn ghost" style="margin-top:.7rem" data-act="gonodate">Show tasks without a date</button></div>';
   return h;
 }
@@ -308,18 +320,72 @@ function viewChecklist() {
   return h;
 }
 
+/* ---------- money: vendors, payments, split ---------- */
+var WHO = ['Shrijeet', 'Shivangi', 'Family'];
+function paysOf(vid) { return S.payments.filter(function (p) { return p.vid === vid; }); }
+function paidSplit(vid) { var r = { Shrijeet: 0, Shivangi: 0, Family: 0, total: 0 }; paysOf(vid).forEach(function (p) { r[p.by] = (r[p.by] || 0) + p.amount; r.total += p.amount; }); return r; }
+function vBal(v) { return v.quoted - paidSplit(v.id).total; }
+function findV(id) { return S.vendors.filter(function (x) { return x.id === id; })[0]; }
+function splitTag(v) { return v.split === 'Personal' ? '<span class="pill" style="background:#efe6f7;color:#5b3a82">Personal · अपना</span>' : '<span class="pill" style="background:#e3f0e6;color:#2a6a38">Shared ' + Math.round(v.pct) + '/' + Math.round(100 - v.pct) + '</span>'; }
+
 function viewVendors() {
-  var q = 0, p = 0, b = 0; S.vendors.forEach(function (v) { q += v.quoted; p += v.advance; b += v.balance; });
-  var h = '<div class="hero"><div class="sub">' + B('Vendor payments', 'विक्रेता भुगतान') + '</div><div class="money" style="margin-top:.5rem"><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Quoted<b style="color:#ffe2a3">' + money(q) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Paid<b style="color:#ffe2a3">' + money(p) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Balance<b style="color:#ffe2a3">' + money(b) + '</b></div></div></div>' +
-    '<p class="rem" style="margin:.6rem .2rem 1rem">To change amounts, edit the "Vendors &amp; Payments" tab in your Google Sheet.</p>';
+  var h = '<div class="chips">' + chip('vt', 'list', B('Vendors', 'विक्रेता'), S.vtab === 'list') + chip('vt', 'split', B('Hisaab · Split', 'हिसाब'), S.vtab === 'split') + '</div>';
+  if (S.vtab === 'split') return h + viewSplit();
+  var q = 0, p = 0, b = 0; S.vendors.forEach(function (v) { q += v.quoted; p += paidSplit(v.id).total; });
+  b = q - p;
+  h += '<div class="hero"><div class="sub">' + B('Vendor payments', 'विक्रेता भुगतान') + '</div><div class="money" style="margin-top:.5rem"><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Quoted<b style="color:#ffe2a3">' + money(q) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Paid<b style="color:#ffe2a3">' + money(p) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Balance<b style="color:#ffe2a3">' + money(b) + '</b></div></div></div>';
+  h += '<button class="addbig" data-act="addvendor">＋ ' + B('Add vendor / expense', 'नया खर्चा जोड़ें') + '</button>';
   S.vendors.forEach(function (v) {
-    var ph = (v.contact || '').replace(/[^\d+]/g, '');
-    h += '<div class="card vend"><div class="cat">' + esc(v.category) + '</div><h4>' + esc(v.vendor || v.category) + '</h4>' + (v.deliverables ? '<div class="rem">' + esc(v.deliverables) + '</div>' : '') +
-      '<div class="money"><div>Quoted<b>' + money(v.quoted) + '</b></div><div>Paid<b>' + money(v.advance) + '</b></div><div class="bal ' + (v.balance <= 0 ? 'zero' : '') + '">Balance<b>' + money(v.balance) + '</b></div></div>' +
-      '<div class="rem" style="margin-top:.5rem">' + (v.paidBy ? 'Paid by ' + esc(v.paidBy) : '') + (v.remarks ? (v.paidBy ? ' · ' : '') + esc(v.remarks) : '') + '</div>' +
-      (ph.length >= 8 ? '<a class="call" href="tel:' + esc(ph) + '">📞 Call ' + esc(v.contact) + '</a>' : '') + '</div>';
+    var ph = (v.contact || '').replace(/[^\d+]/g, ''), ps = paidSplit(v.id), bal = v.quoted - ps.total;
+    h += '<div class="card vend"><div style="display:flex;justify-content:space-between;gap:.5rem;align-items:flex-start"><div><div class="cat">' + esc(v.category) + '</div><h4>' + esc(v.vendor || v.category) + '</h4></div>' + splitTag(v) + '</div>' + (v.deliverables ? '<div class="rem">' + esc(v.deliverables) + '</div>' : '') +
+      '<div class="money"><div>Quoted<b>' + money(v.quoted) + '</b></div><div>Paid<b>' + money(ps.total) + '</b></div><div class="bal ' + (bal <= 0 ? 'zero' : '') + '">' + (bal < 0 ? 'Extra' : 'Balance') + '<b>' + money(Math.abs(bal)) + '</b></div></div>' +
+      '<div class="rem" style="margin-top:.5rem">' + WHO.filter(function (w) { return ps[w]; }).map(function (w) { return esc(w) + ' ' + money(ps[w]); }).join(' · ') + (v.remarks ? (ps.total ? ' · ' : '') + esc(v.remarks) : '') + '</div>' +
+      '<div class="vbtns"><button class="btn" data-act="addpay" data-id="' + esc(v.id) + '">＋ ' + B('Payment', 'भुगतान') + '</button><button class="btn ghost" data-act="editvendor" data-id="' + esc(v.id) + '">✎ ' + B('Edit', 'बदलें') + '</button>' +
+      (ph.length >= 8 ? '<a class="call" style="margin:0" href="tel:' + esc(ph) + '">📞 Call</a>' : '') + '</div></div>';
   });
   return h;
+}
+
+function calcSplit() {
+  var r = { A: 0, B: 0, fam: 0, fairS: 0, shared: [], personal: [], pendingShared: 0, persS: 0, persV: 0, persF: 0, setS: 0, setV: 0 };
+  S.vendors.forEach(function (v) {
+    var ps = paidSplit(v.id);
+    if (v.split === 'Personal') { r.personal.push(v); r.persS += ps.Shrijeet; r.persV += ps.Shivangi; r.persF += ps.Family; return; }
+    r.shared.push(v); r.A += ps.Shrijeet; r.B += ps.Shivangi; r.fam += ps.Family; r.fairS += (ps.Shrijeet + ps.Shivangi) * v.pct / 100;
+    r.pendingShared += Math.max(0, v.quoted - ps.total);
+  });
+  S.payments.forEach(function (p) { if (p.vid === 'SETTLE') { if (p.by === 'Shivangi') r.setV += p.amount; else if (p.by === 'Shrijeet') r.setS += p.amount; } });
+  r.T = r.A + r.B; r.fairV = r.T - r.fairS;
+  r.net = r.A - r.fairS - r.setV + r.setS;      // >0 : Shivangi owes Shrijeet
+  return r;
+}
+function owesLine(c) {
+  var n = Math.round(c.net);
+  return n > 0 ? 'Shivangi owes Shrijeet <b>' + money(n) + '</b>' : n < 0 ? 'Shrijeet owes Shivangi <b>' + money(-n) + '</b>' : 'All settled ✓ — nobody owes anything';
+}
+function viewSplit() {
+  var c = calcSplit(), h = '';
+  h += '<div class="hero"><div class="sub">' + B('Shared expenses (divided)', 'साझा खर्चा (बँटेगा)') + '</div><div class="big" style="font-size:2rem">' + money(c.T) + '</div>' +
+    '<div class="money" style="margin-top:.5rem"><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Shrijeet paid<b style="color:#ffe2a3">' + money(c.A) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Shivangi paid<b style="color:#ffe2a3">' + money(c.B) + '</b></div><div style="background:rgba(0,0,0,.2);color:#f1e2c4">Each share<b style="color:#ffe2a3">' + money(c.fairS) + ' / ' + money(c.fairV) + '</b></div></div></div>';
+  h += '<div class="card" style="padding:1rem;margin-top:.8rem;font-size:1.15rem;text-align:center">' + owesLine(c) + '</div>';
+  h += '<div style="display:flex;gap:.6rem;margin-top:.7rem"><button class="btn" style="flex:1.4" data-act="settle">' + B('Settle up', 'हिसाब चुकता') + '</button><button class="btn ghost" style="flex:1" data-act="copysum">' + B('Copy', 'कॉपी') + '</button></div>';
+  h += '<p class="rem" style="margin:.7rem .2rem">Shared items are split by the % set on each item (50/50 by default). Items marked <b>Personal</b> (clothes, jewellery, gifts…) are left out. Money paid by <b>Family</b> is not divided. Shared bills still unpaid: <b>' + money(c.pendingShared) + '</b>.</p>';
+  var setl = S.payments.filter(function (p) { return p.vid === 'SETTLE'; });
+  if (setl.length) h += '<h2 class="sec">' + B('Settled so far', 'चुकाया') + '</h2><div class="card">' + setl.map(function (p) { return '<div class="task" data-act="editsettle" data-id="' + esc(p.id) + '" style="display:block"><b>' + esc(p.by) + ' paid ' + (p.by === 'Shivangi' ? 'Shrijeet' : 'Shivangi') + ' ' + money(p.amount) + '</b><div class="rem">' + esc(niceDate(p.date)) + (p.note ? ' · ' + esc(p.note) : '') + '</div></div>'; }).join('') + '</div>';
+  function row(v) {
+    var ps = paidSplit(v.id);
+    return '<div class="task" style="display:block"><div data-act="editvendor" data-id="' + esc(v.id) + '"><div class="t" style="font-weight:600;overflow-wrap:anywhere">' + esc(v.vendor || v.category) + '</div><div class="rem">' + esc(v.category) + ' · Quoted ' + money(v.quoted) + ' · Paid ' + money(ps.total) + (ps.Family ? ' (Family ' + money(ps.Family) + ')' : '') + '</div>' +
+      '<div class="rem">' + (ps.Shrijeet ? 'Shrijeet ' + money(ps.Shrijeet) + ' ' : '') + (ps.Shivangi ? 'Shivangi ' + money(ps.Shivangi) : '') + '</div></div>' +
+      '<div class="seg2"><button class="' + (v.split !== 'Personal' ? 'on' : '') + '" data-act="setsplit" data-id="' + esc(v.id) + '" data-v="Shared">Shared</button><button class="' + (v.split === 'Personal' ? 'on' : '') + '" data-act="setsplit" data-id="' + esc(v.id) + '" data-v="Personal">Personal</button></div></div>';
+  }
+  h += '<h2 class="sec">' + B('Shared', 'साझा') + ' <span class="n">' + c.shared.length + '</span></h2><div class="card">' + (c.shared.map(row).join('') || '<div class="empty">None</div>') + '</div>';
+  h += '<h2 class="sec">' + B('Personal — not divided', 'अपना — नहीं बँटेगा') + ' <span class="n">' + c.personal.length + '</span></h2><div class="card">' + (c.personal.map(row).join('') || '<div class="empty">None yet. Tap Personal on clothes, jewellery, gifts…</div>') + '</div>' +
+    '<p class="rem" style="margin:.5rem .2rem">Personal spend so far: Shrijeet ' + money(c.persS) + ' · Shivangi ' + money(c.persV) + (c.persF ? ' · Family ' + money(c.persF) : '') + '</p>';
+  return h;
+}
+function summaryText() {
+  var c = calcSplit();
+  return 'Wedding expenses (' + CONFIG.weddingTitle + ')\nShared total: ' + money(c.T) + '\nShrijeet paid: ' + money(c.A) + '\nShivangi paid: ' + money(c.B) + '\nEach one\'s share: ' + money(c.fairS) + ' / ' + money(c.fairV) + '\n' + owesLine(c).replace(/<\/?b>/g, '') + '\nPersonal (not divided): Shrijeet ' + money(c.persS) + ', Shivangi ' + money(c.persV);
 }
 
 /* ---------- global search: tasks, vendors, events, dates ---------- */
@@ -340,8 +406,8 @@ function matchAll(hay, words) { for (var i = 0; i < words.length; i++) if (hay.i
 function vendorMini(v) {
   var ph = (v.contact || '').replace(/[^\d+]/g, '');
   return '<div class="card vend" style="margin-bottom:.6rem"><div class="cat">' + esc(v.category) + '</div><h4>' + esc(v.vendor || v.category) + '</h4>' + (v.deliverables ? '<div class="rem">' + esc(v.deliverables) + '</div>' : '') +
-    '<div class="rem" style="margin-top:.3rem"><b>Quoted</b> ' + money(v.quoted) + ' · <b>Paid</b> ' + money(v.advance) + ' · <b style="color:' + (v.balance > 0 ? 'var(--bad)' : 'var(--ok)') + '">Balance ' + money(v.balance) + '</b></div>' +
-    (ph.length >= 8 ? '<a class="call" href="tel:' + esc(ph) + '">📞 Call ' + esc(v.contact) + '</a>' : '') + '</div>';
+    '<div class="rem" style="margin-top:.3rem"><b>Quoted</b> ' + money(v.quoted) + ' · <b>Paid</b> ' + money(paidSplit(v.id).total) + ' · <b style="color:' + (vBal(v) > 0 ? 'var(--bad)' : 'var(--ok)') + '">Balance ' + money(vBal(v)) + '</b></div>' +
+    '<div class="vbtns"><button class="btn" data-act="addpay" data-id="' + esc(v.id) + '">＋ Payment</button><button class="btn ghost" data-act="editvendor" data-id="' + esc(v.id) + '">✎ Edit</button>' + (ph.length >= 8 ? '<a class="call" style="margin:0" href="tel:' + esc(ph) + '">📞 Call</a>' : '') + '</div></div>';
 }
 function searchRow(t) {
   var isDone = t.status === 'Completed';
@@ -395,7 +461,7 @@ function render() {
     : S.gq.trim() ? viewSearch() : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : S.tab === 'check' ? viewChecklist() : viewVendors();
   $app.innerHTML = '<main>' + body +
     (S.loaded ? '<div class="sync">' + (S.pending ? 'Saving…' : 'Updated ' + new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) + ' · <a href="#" data-act="refresh" style="color:inherit">Refresh · ताज़ा करें</a></div>' : '') + '</main>' +
-    '<nav class="bottom">' + [['today', 'Today', 'आज'], ['tasks', 'All Tasks', 'सभी काम'], ['check', 'Checklist', 'चेकलिस्ट'], ['vendors', 'Vendors', 'विक्रेता']].map(function (x) { return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0] === 'check' ? 'check' : x[0]) + B2(x[1], x[2]) + '</button>'; }).join('') + '</nav>';
+    '<nav class="bottom">' + [['today', 'Today', 'आज'], ['tasks', 'All Tasks', 'सभी काम'], ['check', 'Checklist', 'चेकलिस्ट'], ['vendors', 'Money', 'पैसा']].map(function (x) { return '<button class="' + (S.tab === x[0] ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0] === 'check' ? 'check' : x[0]) + B2(x[1], x[2]) + '</button>'; }).join('') + '</nav>';
 }
 
 /* ---------- sheets (edit / add / confirm) ---------- */
@@ -436,6 +502,58 @@ function openAdd() {
   setTimeout(function () { var i = document.getElementById('a_task'); if (i) i.focus(); }, 50);
 }
 
+/* ---------- vendor / payment sheets ---------- */
+function numv(id) { var n = parseFloat(String(document.getElementById(id).value).replace(/,/g, '')); return isFinite(n) ? n : 0; }
+function whoSeg(id, cur) { return '<div class="seg" id="' + id + '">' + WHO.map(function (w) { return '<button data-v="' + w + '" class="' + (cur === w ? 'on' : '') + '">' + w + '</button>'; }).join('') + '</div>'; }
+function mact(payload, apply, ok) {
+  var snap = JSON.stringify({ v: S.vendors, p: S.payments });
+  apply(); S.pending++; render();
+  api('POST', payload).then(function () { S.pending--; saveCache(); if (ok) toast(ok); load(true); })
+    .catch(function (e) { S.pending--; var o = JSON.parse(snap); S.vendors = o.v; S.payments = o.p; render(); toast('Not saved — ' + (e.message === 'BAD' ? 'please try again' : e.message), true); });
+}
+function openVendor(id) {
+  var v = id ? findV(id) : { id: '', category: '', vendor: '', contact: '', deliverables: '', quoted: 0, status: '', remarks: '', split: 'Shared', pct: 50 };
+  if (!v) return; S.sheet = { vendor: id || 'new' };
+  var pays = id ? paysOf(id).sort(function (a, b) { return a.date < b.date ? 1 : -1; }) : [], ps = id ? paidSplit(id) : { total: 0 };
+  showSheet('<h3>' + (id ? esc(v.vendor || v.category) : B('Add vendor / expense', 'नया खर्चा')) + '</h3>' +
+    '<label class="l">' + B('Item / category', 'किस चीज़ का') + '</label><input class="input" id="v_cat" value="' + esc(v.category) + '" placeholder="e.g. Clothes, Decor, Photographer" />' +
+    '<label class="l">' + B('Vendor / shop name', 'विक्रेता का नाम') + '</label><input class="input" id="v_name" value="' + esc(v.vendor) + '" />' +
+    '<label class="l">' + B('Total amount agreed (quoted)', 'कुल तय रकम') + ' ₹</label><input class="input" id="v_q" inputmode="decimal" value="' + (v.quoted || '') + '" placeholder="0" />' +
+    '<label class="l">' + B('Who will bear it?', 'खर्चा किसका?') + '</label><div class="seg" id="v_split"><button data-v="Shared" class="' + (v.split !== 'Personal' ? 'on' : '') + '">' + B2('Shared', 'दोनों में बँटेगा') + '</button><button data-v="Personal" class="' + (v.split === 'Personal' ? 'on' : '') + '">' + B2('Personal', 'अपना-अपना') + '</button></div>' +
+    '<label class="l">Shrijeet\'s share of a shared item (%) <span class="rem">— Shivangi pays the rest</span></label><input class="input" id="v_pct" inputmode="decimal" value="' + Math.round(v.pct) + '" />' +
+    (id ? '<label class="l">' + B('Payments made', 'किए गए भुगतान') + ' — ' + money(ps.total) + '</label><div class="card" style="margin:.3rem 0">' + (pays.length ? pays.map(function (p) { return '<div class="task" data-act="editpay" data-id="' + esc(p.id) + '" style="display:flex;justify-content:space-between;gap:.5rem"><span><b>' + money(p.amount) + '</b> · ' + esc(p.by) + '<div class="rem">' + esc(niceDate(p.date)) + (p.note ? ' · ' + esc(p.note) : '') + '</div></span><span class="rem">✎</span></div>'; }).join('') : '<div class="empty">No payment yet</div>') + '</div><button class="btn ghost" data-act="addpay" data-id="' + esc(id) + '" data-back="1" style="width:100%">＋ ' + B('Add payment', 'भुगतान जोड़ें') + '</button>' : '') +
+    '<label class="l">Contact</label><input class="input" id="v_con" value="' + esc(v.contact) + '" />' +
+    '<label class="l">' + B('What they provide', 'क्या देंगे') + '</label><input class="input" id="v_del" value="' + esc(v.deliverables) + '" />' +
+    '<label class="l">' + B('Notes', 'नोट') + '</label><textarea class="input" id="v_rem">' + esc(v.remarks) + '</textarea>' +
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="savevendor" data-id="' + esc(id || '') + '" style="flex:2">' + B('Save', 'सेव करें') + '</button></div>' +
+    (id ? '<button class="delbtn" data-act="delvendor" data-id="' + esc(id) + '">🗑 ' + B('Delete this vendor', 'यह हटाएँ') + '</button>' : ''));
+}
+function openPay(vid, payId, back) {
+  var v = findV(vid), p = payId ? S.payments.filter(function (x) { return x.id === payId; })[0] : null;
+  S.sheet = { pay: vid, payId: payId || '', back: back ? vid : '' };
+  showSheet('<h3>' + (p ? B('Edit payment', 'भुगतान बदलें') : B('Add payment', 'भुगतान जोड़ें')) + '</h3><div class="rem">' + esc(v ? (v.vendor || v.category) : '') + '</div>' +
+    '<label class="l">' + B('Amount paid', 'कितना दिया') + ' ₹</label><input class="input" id="p_amt" inputmode="decimal" value="' + (p ? p.amount : '') + '" placeholder="0" />' +
+    '<label class="l">' + B('Who paid?', 'किसने दिया?') + '</label>' + whoSeg('p_by', p ? p.by : 'Shrijeet') +
+    '<label class="l">' + B('Date', 'तारीख़') + '</label><input class="input" type="date" id="p_date" value="' + esc(p ? p.date : today()) + '" />' +
+    '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="p_note" value="' + esc(p ? p.note : '') + '" placeholder="e.g. advance, final, UPI" />' +
+    '<p class="rem">Tip: if Shrijeet paid the advance and Shivangi paid the rest, add two payments — the balance stays right.</p>' +
+    '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="savepay" style="flex:2">' + B('Save', 'सेव करें') + '</button></div>' +
+    (p ? '<button class="delbtn" data-act="delpay" data-id="' + esc(p.id) + '">🗑 ' + B('Delete this payment', 'यह भुगतान हटाएँ') + '</button>' : ''));
+  setTimeout(function () { var i = document.getElementById('p_amt'); if (i && !p) i.focus(); }, 50);
+}
+function openSettle(payId) {
+  var c = calcSplit(), p = payId ? S.payments.filter(function (x) { return x.id === payId; })[0] : null, n = Math.round(c.net);
+  var dflt = p ? p.by : (n < 0 ? 'Shrijeet' : 'Shivangi');
+  S.sheet = { settle: payId || 'new' };
+  showSheet('<h3>' + B('Settle up', 'हिसाब चुकता') + '</h3><p>' + owesLine(c) + '</p>' +
+    '<label class="l">' + B('Who paid whom?', 'किसने किसको दिया?') + '</label><div class="seg" id="s_by"><button data-v="Shivangi" class="' + (dflt === 'Shivangi' ? 'on' : '') + '">Shivangi → Shrijeet</button><button data-v="Shrijeet" class="' + (dflt === 'Shrijeet' ? 'on' : '') + '">Shrijeet → Shivangi</button></div>' +
+    '<label class="l">' + B('Amount', 'रकम') + ' ₹</label><input class="input" id="s_amt" inputmode="decimal" value="' + (p ? p.amount : Math.abs(n) || '') + '" />' +
+    '<label class="l">' + B('Date', 'तारीख़') + '</label><input class="input" type="date" id="s_date" value="' + esc(p ? p.date : today()) + '" />' +
+    '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="s_note" value="' + esc(p ? p.note : '') + '" placeholder="e.g. UPI" />' +
+    '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="savesettle" style="flex:2">' + B('Save', 'सेव करें') + '</button></div>' +
+    (p ? '<button class="delbtn" data-act="delpay" data-id="' + esc(p.id) + '">🗑 ' + B('Delete this entry', 'हटाएँ') + '</button>' : ''));
+}
+
 /* ---------- events ---------- */
 document.addEventListener('click', function (e) {
   var seg = e.target.closest('.seg button'); if (seg) { seg.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); }); seg.classList.add('on'); return; }
@@ -450,6 +568,52 @@ document.addEventListener('click', function (e) {
   if (act === 'clearsearch') { S.gq = ''; var gi = document.getElementById('gq'); gi.value = ''; gi.focus(); render(); return; }
   if (act === 'started') { e.stopPropagation(); saveFields(id, { status: 'In Progress' }, 'Marked as started ▶', id); return; }
   if (act === 'addfromsearch') { var txt = S.gq.trim(); openAdd(); var ai = document.getElementById('a_task'); if (ai) ai.value = txt; return; }
+  if (act === 'vt') { S.vtab = v; render(); window.scrollTo(0, 0); return; }
+  if (act === 'gocat') { S.tab = 'tasks'; S.fCat = v; S.fStatus = 'open'; S.fPrio = 'all'; S.gq = ''; document.getElementById('gq').value = ''; render(); window.scrollTo(0, 0); return; }
+  if (act === 'addvendor') { openVendor(''); return; }
+  if (act === 'editvendor') { if (String(id).indexOf('tmp') === 0) { toast('Still saving…'); return; } openVendor(id); return; }
+  if (act === 'savevendor') {
+    var vf = { category: document.getElementById('v_cat').value.trim(), vendor: document.getElementById('v_name').value.trim(), quoted: numv('v_q'), split: segVal('v_split') || 'Shared', pct: Math.min(100, Math.max(0, numv('v_pct'))), contact: document.getElementById('v_con').value.trim(), deliverables: document.getElementById('v_del').value.trim(), remarks: document.getElementById('v_rem').value.trim() };
+    if (!vf.category && !vf.vendor) { toast('Please type the item or vendor name', true); return; }
+    closeSheet();
+    if (id) { var cur = findV(id); mact({ action: 'vendorUpdate', id: id, fields: vf }, function () { Object.keys(vf).forEach(function (k) { cur[k] = vf[k]; }); }, 'Saved ✓'); }
+    else { var nv2 = Object.assign({ id: 'tmp' + Date.now(), advance: 0, balance: vf.quoted, status: '' }, vf); mact({ action: 'vendorAdd', fields: vf }, function () { S.vendors.push(nv2); }, 'Added ✓'); }
+    return;
+  }
+  if (act === 'delvendor') {
+    var dv = findV(id); S.sheet = { confirmDelV: id };
+    showSheet('<div class="modal"><h3 style="margin:0;font-family:Cormorant Garamond,serif;font-size:1.5rem;color:var(--maroon)">' + B('Delete this vendor?', 'क्या यह हटाना है?') + '</h3><p style="font-size:1.1rem;font-weight:600;margin:.6rem 0">' + esc(dv ? (dv.vendor || dv.category) : '') + '</p><p class="rem">Its payments will be deleted too. This cannot be undone.</p><div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('No', 'नहीं') + '</button><button class="btn" style="flex:1.4;background:linear-gradient(180deg,#c0392b,#962d22)" data-act="confirmdelv" data-id="' + esc(id) + '">' + B('Yes, delete', 'हाँ, हटाएँ') + '</button></div></div>', true);
+    return;
+  }
+  if (act === 'confirmdelv') { closeSheet(); mact({ action: 'vendorDelete', id: id }, function () { S.vendors = S.vendors.filter(function (x) { return x.id !== id; }); S.payments = S.payments.filter(function (x) { return x.vid !== id; }); }, 'Deleted'); return; }
+  if (act === 'setsplit') { e.stopPropagation(); var sv = findV(id); if (!sv || sv.split === v) return; mact({ action: 'vendorUpdate', id: id, fields: { split: v } }, function () { sv.split = v; }, v === 'Personal' ? 'Marked personal — not divided' : 'Marked shared'); return; }
+  if (act === 'addpay') { if (String(id).indexOf('tmp') === 0) { toast('Still saving…'); return; } var bk = el.getAttribute('data-back'); openPay(id, '', !!bk); return; }
+  if (act === 'editpay') { var pp = S.payments.filter(function (x) { return x.id === id; })[0]; if (!pp || String(id).indexOf('tmp') === 0) { toast('Still saving…'); return; } openPay(pp.vid, id, S.sheet && S.sheet.vendor); return; }
+  if (act === 'savepay') {
+    var amt = numv('p_amt'); if (!amt) { toast('Please enter the amount', true); return; }
+    var pf = { amount: amt, by: segVal('p_by') || 'Shrijeet', date: document.getElementById('p_date').value || today(), note: document.getElementById('p_note').value.trim() };
+    var sh = S.sheet, vid = sh.pay, backId = sh.back; closeSheet();
+    if (sh.payId) { var ex = S.payments.filter(function (x) { return x.id === sh.payId; })[0]; mact({ action: 'payUpdate', id: sh.payId, fields: pf }, function () { Object.keys(pf).forEach(function (k) { ex[k] = pf[k]; }); }, 'Saved ✓'); }
+    else { mact({ action: 'payAdd', fields: Object.assign({ vid: vid }, pf) }, function () { S.payments.push(Object.assign({ id: 'tmp' + Date.now(), vid: vid, addedBy: S.me }, pf)); }, 'Payment added ✓'); }
+    if (backId) setTimeout(function () { openVendor(backId); }, 0);
+    return;
+  }
+  if (act === 'delpay') {
+    var dp = S.payments.filter(function (x) { return x.id === id; })[0], backId2 = S.sheet && S.sheet.back; closeSheet();
+    mact({ action: 'payDelete', id: id }, function () { S.payments = S.payments.filter(function (x) { return x.id !== id; }); }, 'Deleted');
+    if (backId2 && dp && dp.vid !== 'SETTLE') setTimeout(function () { openVendor(backId2); }, 0);
+    return;
+  }
+  if (act === 'settle') { openSettle(''); return; }
+  if (act === 'editsettle') { openSettle(id); return; }
+  if (act === 'savesettle') {
+    var sa = numv('s_amt'); if (!sa) { toast('Please enter the amount', true); return; }
+    var sf = { amount: sa, by: segVal('s_by') || 'Shivangi', date: document.getElementById('s_date').value || today(), note: document.getElementById('s_note').value.trim() }, sid2 = S.sheet.settle; closeSheet();
+    if (sid2 && sid2 !== 'new') { var se = S.payments.filter(function (x) { return x.id === sid2; })[0]; mact({ action: 'payUpdate', id: sid2, fields: sf }, function () { Object.keys(sf).forEach(function (k) { se[k] = sf[k]; }); }, 'Saved ✓'); }
+    else mact({ action: 'payAdd', fields: Object.assign({ vid: 'SETTLE' }, sf) }, function () { S.payments.push(Object.assign({ id: 'tmp' + Date.now(), vid: 'SETTLE', addedBy: S.me }, sf)); }, 'Settlement noted ✓');
+    return;
+  }
+  if (act === 'copysum') { var tx = summaryText(); if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tx).then(function () { toast('Summary copied — paste it in WhatsApp'); }, function () { toast('Could not copy', true); }); else toast('Could not copy', true); return; }
   if (act === 'fs') { S.fStatus = v; render(); return; }
   if (act === 'fp') { S.fPrio = v; render(); return; }
   if (act === 'fd') { S.fDate = S.fDate === 'none' ? 'all' : 'none'; render(); return; }
@@ -493,7 +657,7 @@ document.addEventListener('change', function (e) {
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 45000);
 document.addEventListener('visibilitychange', function () { if (!document.hidden && S.loaded && !S.sheet) load(true); });
 
-(function () { if (!S.pin || !S.me) return; try { var c = JSON.parse(LS.get('pl_cache') || 'null'); if (c && c.t && c.t.length) { S.tasks = c.t; S.vendors = c.v || []; S.loaded = true; S.lastSync = c.at || Date.now(); } } catch (e) {} })();
+(function () { if (!S.pin || !S.me) return; try { var c = JSON.parse(LS.get('pl_cache') || 'null'); if (c && c.t && c.t.length) { S.tasks = c.t; S.vendors = c.v || []; S.payments = c.p || []; S.loaded = true; S.lastSync = c.at || Date.now(); } } catch (e) {} })();
 render();
 if (S.pin && S.me) load(true);
 </script>
