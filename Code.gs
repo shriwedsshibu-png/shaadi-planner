@@ -1,5 +1,5 @@
 /**
- * Wedding Planner — Google backend (Apps Script)
+ * Wedding Planner — Google backend (Apps Script)   · version 4 (fast + Guests, Shagun, Schedule)
  * Lives inside YOUR "Wedding Master Tracker" Google Sheet.
  * The planner web page reads and writes the tabs "Master Tracker" and "Vendors & Payments".
  * Follow GUIDE-PLANNER.md. The only thing to edit here is the PIN below.
@@ -12,6 +12,8 @@ var PAY_SHEET = 'Payments';
 var VENDOR_EXTRA = ['ID', 'Split', 'Shrijeet Share %'];
 var PAY_HEADERS = ['Pay ID', 'Vendor ID', 'Date', 'Amount', 'Paid By', 'Note', 'Added By', 'Added On'];
 var TZ = 'Asia/Kolkata';
+// The wedding website's sheet ("Wedding Data") — the planner only READS its RSVP tab, to show replies under Guests.
+var RSVP_SHEET_ID = '1taYuIECf8q1v8QxcjsXIYZny_fwaxAk39sgMZj5OviM';
 var EXTRA_COLS = ['ID', 'Owner', 'Due Date', 'Function', 'Completed On', 'Last Updated By', 'Last Updated'];
 var FUNCTIONS = ['Before the wedding', 'Faldaan', 'Mehndi', 'Engagement & Sangeet', 'Haldi', 'Varmala & Shaadi', 'After the wedding'];
 var STATUSES = ['Pending', 'In Progress', 'Completed'];
@@ -35,7 +37,12 @@ function doGet(e) {
   try {
     var p = (e && e.parameter) || {};
     if (String(p.pin || '') !== PIN) return json_({ success: false, code: 'PIN', message: 'Wrong PIN' });
-    if (p.action === 'all') return json_(readAll_());
+    if (p.action === 'ver') return json_({ success: true, ver: ver_() });
+    if (p.action === 'all') {
+      if (p.have && String(p.have) === ver_()) return json_({ success: true, same: true, ver: ver_() });   // nothing changed: tiny answer
+      return text_(readAllText_());
+    }
+    if (p.action === 'rsvp') return json_(readRsvp_());
     return json_({ success: true, message: 'Planner backend is running.' });
   } catch (err) { return json_({ success: false, message: 'Could not load: ' + err }); }
 }
@@ -44,16 +51,27 @@ function doPost(e) {
   try {
     var b = JSON.parse(e.postData.contents);
     if (String(b.pin || '') !== PIN) return json_({ success: false, code: 'PIN', message: 'Wrong PIN' });
-    if (b.action === 'update') return json_(updateTask_(b));
-    if (b.action === 'add') return json_(addTask_(b));
-    if (b.action === 'vendorAdd') return json_(vendorAdd_(b));
-    if (b.action === 'vendorUpdate') return json_(vendorUpdate_(b));
-    if (b.action === 'vendorDelete') return json_(vendorDelete_(b));
-    if (b.action === 'payAdd') return json_(payAdd_(b));
-    if (b.action === 'payUpdate') return json_(payUpdate_(b));
-    if (b.action === 'payDelete') return json_(payDelete_(b));
-    return json_({ success: false, message: 'Unknown action' });
+    // each change carries its own number (cid): if the phone sends it again (weak network), it is not saved twice
+    var cid = String(b.cid || '').slice(0, 40), cache = null;
+    if (cid) { try { cache = CacheService.getScriptCache(); var seen = cache.get('C' + cid); if (seen) return text_(seen); } catch (e2) { cache = null; } }
+    var res = doAction_(b);
+    if (cid && cache && res && res.success) { try { if (!res.ver) res.ver = ver_(); cache.put('C' + cid, JSON.stringify(res), 1800); } catch (e3) {} }
+    return json_(res);
   } catch (err) { return json_({ success: false, message: 'Could not save: ' + err }); }
+}
+function doAction_(b) {
+  if (b.action === 'update') return updateTask_(b);
+  if (b.action === 'add') return addTask_(b);
+  if (b.action === 'vendorAdd') return vendorAdd_(b);
+  if (b.action === 'vendorUpdate') return vendorUpdate_(b);
+  if (b.action === 'vendorDelete') return vendorDelete_(b);
+  if (b.action === 'payAdd') return payAdd_(b);
+  if (b.action === 'payUpdate') return payUpdate_(b);
+  if (b.action === 'payDelete') return payDelete_(b);
+  if (b.action === 'rowAdd') return rowAdd_(b);
+  if (b.action === 'rowUpdate') return rowUpdate_(b);
+  if (b.action === 'rowDelete') return rowDelete_(b);
+  return { success: false, message: 'Unknown action' };
 }
 
 /* ---------------- columns ---------------- */
@@ -108,14 +126,45 @@ function status_(v) {
   return 'Pending';
 }
 
-function readAll_() {
-  var cache = null;
-  try { cache = CacheService.getScriptCache(); var hit = cache.get('ALL'); if (hit) return JSON.parse(hit); } catch (e) { cache = null; }
-  var out = readAllFresh_();
-  try { if (cache) cache.put('ALL', JSON.stringify(out), 25); } catch (e) {}
-  return out;
+/* ---------------- speed: one saved copy of everything ----------------
+   The whole plan is kept ready in Google's cache (up to 6 hours), labelled with a version number.
+   Every change made from the planner, and every edit typed straight into this Google Sheet (onEdit below),
+   gives a new version number, so the next visit reads the sheet once and saves a new copy.
+   Phones ask "has anything changed since version X?" and get a tiny answer when nothing has. */
+function ver_() {
+  var v = PropertiesService.getScriptProperties().getProperty('VER');
+  if (!v) { v = String(new Date().getTime()); PropertiesService.getScriptProperties().setProperty('VER', v); }
+  return v;
 }
-function clearCache_() { try { CacheService.getScriptCache().remove('ALL'); } catch (e) {} }
+function clearCache_() { PropertiesService.getScriptProperties().setProperty('VER', String(new Date().getTime()) + Math.floor(Math.random() * 1000)); }
+function onEdit(e) { try { clearCache_(); } catch (err) {} }   // you typed in the sheet: the planner shows it on its next refresh
+
+var CHUNK = 90000;
+function readAllText_() {
+  var v = ver_(), cache = null;
+  try {
+    cache = CacheService.getScriptCache();
+    var head = cache.get('A' + v);
+    if (head) {
+      var n = Number(head), keys = [];
+      for (var i = 0; i < n; i++) keys.push('A' + v + '_' + i);
+      var got = cache.getAll(keys), parts = [];
+      for (var j = 0; j < n; j++) { if (got[keys[j]] == null) { parts = null; break; } parts.push(got[keys[j]]); }
+      if (parts) return parts.join('');
+    }
+  } catch (e) { cache = null; }
+  var out = readAllFresh_(); out.ver = v;
+  var txt = JSON.stringify(out);
+  try {
+    if (cache) {
+      var put = {}, k = 0;
+      for (var p = 0; p < txt.length; p += CHUNK) { put['A' + v + '_' + k] = txt.slice(p, p + CHUNK); k++; }
+      cache.putAll(put, 21600); cache.put('A' + v, String(k), 21600);
+    }
+  } catch (e) {}
+  return txt;
+}
+function readAll_() { return JSON.parse(readAllText_()); }
 
 function setupNeeded_(sheet) {
   var map = headerMap_(sheet);
@@ -128,7 +177,9 @@ function readAllFresh_() {
   var sheet = ss.getSheetByName(TASK_SHEET);
   if (!sheet) throw new Error('Tab "' + TASK_SHEET + '" not found');
   if (setupNeeded_(sheet)) ensureColumns_();
-  seedOnce_(); seedAfterWedding_();
+  var flags = PropertiesService.getScriptProperties().getProperties();
+  if (!flags.SEEDED_V2) seedOnce_();
+  if (!flags.SEEDED_V3) seedAfterWedding_();
   var map = headerMap_(sheet);
   var rows = sheet.getLastRow(), tasks = [];
   if (rows >= 2) {
@@ -150,7 +201,7 @@ function readAllFresh_() {
     });
   }
   var vs = ss.getSheetByName(VENDOR_SHEET);
-  if (vs) vendorSetup_(vs);
+  if (vs && vendorNeedsSetup_(vs, flags)) vendorSetup_(vs);
   var payments = readPayments_(), paid = {};
   payments.forEach(function (p) { if (p.vid !== 'SETTLE') paid[p.vid] = (paid[p.vid] || 0) + p.amount; });
   var vendors = [];
@@ -170,7 +221,19 @@ function readAllFresh_() {
       });
     });
   }
-  return { success: true, tasks: tasks, vendors: vendors, payments: payments, serverTime: new Date().getTime() };
+  if (!flags.FLOW_SEED_V1) seedFlow_();
+  return { success: true, tasks: tasks, vendors: vendors, payments: payments,
+    guests: readTable_('guests'), shagun: readTable_('shagun'), flow: readTable_('flow'),
+    serverTime: new Date().getTime() };
+}
+function vendorNeedsSetup_(vs, flags) {
+  if (!flags.PAYMIG_V1) return true;
+  var map = headerMap_(vs);
+  if (VENDOR_EXTRA.some(function (n) { return !map[norm_(n)]; })) return true;
+  var rows = vs.getLastRow(); if (rows < 2) return false;
+  var cols = [map.id, map.category || 1, map.vendor || 1], lo = Math.min.apply(null, cols), hi = Math.max.apply(null, cols);
+  var d = vs.getRange(2, lo, rows - 1, hi - lo + 1).getValues();
+  return d.some(function (r) { return (String(r[(map.category || 1) - lo] || '').trim() || String(r[(map.vendor || 1) - lo] || '').trim()) && !String(r[map.id - lo] || ''); });
 }
 function num_(v) { var n = Number(v); return isFinite(n) && v !== '' && v !== null ? n : 0; }
 
@@ -497,4 +560,182 @@ function payDelete_(b) {
   } finally { lock.releaseLock(); }
 }
 
-function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON); }
+function json_(o) {
+  if (o && o.success && !o.ver) { try { o.ver = ver_(); } catch (e) {} }
+  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);
+}
+function text_(t) { return ContentService.createTextOutput(t).setMimeType(ContentService.MimeType.JSON); }
+
+/* ---------------- Guests & Rooms, Shagun register, Day-wise schedule ----------------
+   Each lives in its own tab. Missing tabs / columns are added by themselves; your own columns are kept. */
+var TABLES = {
+  guests: { sheet: 'Guest List', prefix: 'G', need: 'name', nums: ['adults', 'children'], dates: ['arrDate', 'depDate'], times: ['arrTime'], texts: ['phone', 'rsvp', 'room'],
+    cols: [['name', 'Guest Name'], ['side', 'Side'], ['group', 'Family / Group'], ['adults', 'Adults'], ['children', 'Children'],
+      ['arrDate', 'Arrival Date'], ['arrTime', 'Arrival Time'], ['arrMode', 'Arrival Mode'], ['depDate', 'Departure Date'],
+      ['roomReq', 'Room Required'], ['room', 'Room No.'], ['vehicle', 'Vehicle Required'], ['route', 'Route'], ['meal', 'Meal Plan'],
+      ['wa', 'WhatsApp Added'], ['remarks', 'Remarks'], ['id', 'ID'], ['phone', 'Phone'], ['stay', 'Stay'], ['pickupBy', 'Pickup By'],
+      ['rsvp', 'RSVP Phone'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
+  shagun: { sheet: 'Shagun', prefix: 'S', need: 'name', nums: ['amount'], dates: ['date'], times: [], texts: [],
+    cols: [['id', 'ID'], ['date', 'Date'], ['type', 'Received / Given'], ['name', 'Name'], ['relation', 'Relation / Place'], ['side', 'Side'],
+      ['kind', 'Cash / Gift'], ['amount', 'Amount'], ['item', 'Gift Details'], ['note', 'Note'], ['by', 'Added By'], ['at', 'Added On']] },
+  flow: { sheet: 'Event Flow', prefix: 'E', need: 'what', nums: [], dates: ['date'], times: ['start', 'end'], texts: [],
+    cols: [['date', 'Date'], ['fn', 'Function'], ['start', 'Start Time'], ['end', 'End Time'], ['what', 'Event / Ritual'], ['people', 'People Involved'],
+      ['song', 'Entry Song / Music'], ['photo', 'Photo/Video Slot'], ['coord', 'Emcee / Coordinator'], ['venue', 'Venue'], ['remarks', 'Remarks'],
+      ['id', 'ID'], ['by', 'Last Updated By'], ['at', 'Last Updated']] }
+};
+function tableSheet_(name) {
+  var t = TABLES[name], ss = SpreadsheetApp.getActive(), sh = ss.getSheetByName(t.sheet);
+  if (!sh) {
+    sh = ss.insertSheet(t.sheet);
+    sh.getRange(1, 1, 1, t.cols.length).setValues([t.cols.map(function (c) { return c[1]; })]).setFontWeight('bold');
+    sh.setFrozenRows(1);
+  }
+  return sh;
+}
+// column number of each field (adds any missing column at the right; gives every row an ID)
+function tableMap_(name, sh, fix) {
+  var t = TABLES[name], hm = headerMap_(sh), map = {}, col = sh.getLastColumn(), added = false;
+  t.cols.forEach(function (c) {
+    var k = norm_(c[1]);
+    if (!hm[k]) { if (!fix) return; col++; sh.getRange(1, col).setValue(c[1]).setFontWeight('bold'); hm[k] = col; added = true; }
+    map[c[0]] = hm[k];
+  });
+  return { map: map, added: added };
+}
+function cellOut_(name, key, v) {
+  var t = TABLES[name];
+  if (v instanceof Date) {
+    if (t.times.indexOf(key) >= 0) return Utilities.formatDate(v, SpreadsheetApp.getActive().getSpreadsheetTimeZone() || TZ, 'HH:mm');
+    return Utilities.formatDate(v, TZ, 'yyyy-MM-dd');
+  }
+  if (t.nums.indexOf(key) >= 0) return v === '' || v == null ? '' : num_(v);
+  return v == null ? '' : String(v).trim();
+}
+function cellIn_(name, key, v) {
+  var t = TABLES[name];
+  if (t.nums.indexOf(key) >= 0) { var n = Number(String(v).replace(/,/g, '')); return v === '' || v == null || !isFinite(n) ? '' : n; }
+  if (t.dates.indexOf(key) >= 0) return /^\d{4}-\d{2}-\d{2}$/.test(String(v || '')) ? "'" + v : '';
+  if (t.times.indexOf(key) >= 0) return /^\d{1,2}:\d{2}$/.test(String(v || '')) ? "'" + v : '';
+  var s = safe_(v, key === 'remarks' || key === 'note' ? 1000 : 200);
+  if (t.texts.indexOf(key) >= 0 && s && s.charAt(0) !== "'") s = "'" + s;   // phone numbers / room numbers stay as typed (leading 0, +91)
+  return s;
+}
+function readTable_(name) {
+  var t = TABLES[name], sh = SpreadsheetApp.getActive().getSheetByName(t.sheet);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var tm = tableMap_(name, sh, false), map = tm.map;
+  if (!map.id || !map[t.need]) { map = fixTable_(name).map; }
+  var data = sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).getValues(), out = [], missing = false;
+  data.forEach(function (r) {
+    if (!String(r[map[t.need] - 1] || '').trim()) return;
+    if (!String(r[map.id - 1] || '')) { missing = true; return; }
+    var o = {};
+    t.cols.forEach(function (c) { if (map[c[0]]) o[c[0]] = cellOut_(name, c[0], r[map[c[0]] - 1]); });
+    out.push(o);
+  });
+  if (missing) { fixTable_(name); return readTable_(name); }
+  return out;
+}
+function nextId_(name, sh, map) {
+  var t = TABLES[name], max = 0, re = new RegExp('^' + t.prefix + '(\\d+)$');
+  if (sh.getLastRow() >= 2) sh.getRange(2, map.id, sh.getLastRow() - 1, 1).getValues().forEach(function (r) { var m = re.exec(String(r[0])); if (m) max = Math.max(max, Number(m[1])); });
+  return t.prefix + ('000' + (max + 1)).slice(-3);
+}
+function fixTable_(name) {
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    var t = TABLES[name], sh = tableSheet_(name), tm = tableMap_(name, sh, true), map = tm.map;
+    if (sh.getLastRow() >= 2) {
+      var ids = sh.getRange(2, map.id, sh.getLastRow() - 1, 1).getValues(), need = sh.getRange(2, map[t.need], sh.getLastRow() - 1, 1).getValues(), next = Number(nextId_(name, sh, map).slice(1)), changed = false;
+      ids.forEach(function (r, i) { if (!String(r[0] || '') && String(need[i][0] || '').trim()) { r[0] = t.prefix + ('000' + next).slice(-3); next++; changed = true; } });
+      if (changed) sh.getRange(2, map.id, ids.length, 1).setValues(ids);
+    }
+    return { sh: sh, map: map };
+  } finally { lock.releaseLock(); }
+}
+function stamp_() { return Utilities.formatDate(new Date(), TZ, 'yyyy-MM-dd HH:mm'); }
+function rowAdd_(b) {
+  var name = String(b.table || ''), t = TABLES[name]; if (!t) return { success: false, message: 'Unknown list' };
+  var f = b.fields || {};
+  if (!String(f[t.need] || '').trim()) return { success: false, message: 'Please fill in the name.' };
+  var fx = fixTable_(name), sh = fx.sh, map = fx.map;
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    var id = nextId_(name, sh, map), row = new Array(sh.getLastColumn()).fill('');
+    Object.keys(f).forEach(function (k) { if (map[k] && k !== 'id' && k !== 'by' && k !== 'at') row[map[k] - 1] = cellIn_(name, k, f[k]); });
+    row[map.id - 1] = id; row[map.by - 1] = who_(b); row[map.at - 1] = stamp_();
+    sh.appendRow(row);
+    clearCache_();
+    return { success: true, id: id };
+  } finally { lock.releaseLock(); }
+}
+function rowUpdate_(b) {
+  var name = String(b.table || ''), t = TABLES[name]; if (!t) return { success: false, message: 'Unknown list' };
+  var fx = fixTable_(name), sh = fx.sh, map = fx.map;
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    var r = findRowById_(sh, map, b.id); if (!r) return { success: false, message: 'Not found (was it deleted in the sheet?)' };
+    var range = sh.getRange(r, 1, 1, sh.getLastColumn()), row = range.getValues()[0], f = b.fields || {};
+    Object.keys(f).forEach(function (k) { if (map[k] && k !== 'id' && k !== 'by' && k !== 'at') row[map[k] - 1] = cellIn_(name, k, f[k]); });
+    row[map.by - 1] = who_(b); row[map.at - 1] = stamp_();
+    range.setValues([row]);
+    clearCache_();
+    return { success: true };
+  } finally { lock.releaseLock(); }
+}
+function rowDelete_(b) {
+  var name = String(b.table || ''); if (!TABLES[name]) return { success: false, message: 'Unknown list' };
+  var fx = fixTable_(name), sh = fx.sh, map = fx.map;
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    var r = findRowById_(sh, map, b.id); if (r) sh.deleteRow(r);
+    clearCache_();
+    return { success: true };
+  } finally { lock.releaseLock(); }
+}
+// The schedule starts with the five functions (from the wedding website); add the rituals under them.
+function seedFlow_() {
+  var props = PropertiesService.getScriptProperties();
+  var fx = fixTable_('flow'), sh = fx.sh, map = fx.map;
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    if (props.getProperty('FLOW_SEED_V1')) return;
+    if (sh.getLastRow() < 2) {
+      var rows = [['2026-11-30', 'Faldaan', '18:00', 'Faldaan ceremony'], ['2026-12-01', 'Mehndi', '08:30', 'Mehndi'],
+        ['2026-12-01', 'Engagement & Sangeet', '18:30', 'Engagement & Sangeet'], ['2026-12-02', 'Haldi', '08:30', 'Haldi'],
+        ['2026-12-02', 'Varmala & Shaadi', '19:30', 'Varmala, then the pheras']];
+      var out = rows.map(function (x, i) {
+        var row = new Array(sh.getLastColumn()).fill('');
+        row[map.id - 1] = 'E' + ('000' + (i + 1)).slice(-3); row[map.date - 1] = "'" + x[0]; row[map.fn - 1] = x[1]; row[map.start - 1] = "'" + x[2];
+        row[map.what - 1] = x[3]; row[map.venue - 1] = 'Aarif Seaside Resort'; row[map.by - 1] = 'Planner'; row[map.at - 1] = stamp_();
+        return row;
+      });
+      sh.getRange(2, 1, out.length, sh.getLastColumn()).setValues(out);
+    }
+    props.setProperty('FLOW_SEED_V1', '1');
+  } finally { lock.releaseLock(); }
+}
+
+/* ---------------- RSVP replies from the wedding website (read only) ---------------- */
+function readRsvp_() {
+  var cache = CacheService.getScriptCache(), hit = cache.get('RSVP');
+  if (hit) return JSON.parse(hit);
+  var out = { success: true, rsvp: [] };
+  try {
+    var sh = SpreadsheetApp.openById(RSVP_SHEET_ID).getSheetByName('RSVP');
+    if (sh && sh.getLastRow() >= 2) {
+      var data = sh.getDataRange().getValues(), hm = {};
+      data[0].forEach(function (h, i) { hm[norm_(h)] = i; });
+      var g = function (r, k) { return hm[k] === undefined ? '' : r[hm[k]]; };
+      for (var i = 1; i < data.length; i++) {
+        var r = data[i]; if (!String(g(r, 'mainguest') || '').trim()) continue;
+        out.rsvp.push({ name: String(g(r, 'mainguest')).trim(), phone: String(g(r, 'phone') || '').replace(/\D/g, ''), attending: String(g(r, 'attending') || ''),
+          men: num_(g(r, 'men')), women: num_(g(r, 'women')), children: num_(g(r, 'children')), total: num_(g(r, 'totalguests')),
+          arrDate: str_(g(r, 'arrivaldate')), room: String(g(r, 'needsroom') || ''), note: String(g(r, 'anythingelse') || ''),
+          invite: String(g(r, 'invitetype') || ''), functions: String(g(r, 'functions') || ''), updated: str_(g(r, 'lastupdated')) });
+      }
+    }
+  } catch (e) { out = { success: true, rsvp: [], note: 'Could not open the wedding website sheet: ' + e }; }
+  try { cache.put('RSVP', JSON.stringify(out), 120); } catch (e) {}
+  return out;
+}

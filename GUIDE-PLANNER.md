@@ -1,4 +1,40 @@
-# Shaadi Planner — setup (about 20 minutes, one time)
+# Shaadi Planner — setup and updates
+
+> **Version 4 update: faster, works offline, installs as an app, plus Guests & Rooms, Shagun register and Schedule. Do this once (5 minutes):**
+> 1. Open the **Wedding Master Tracker** Google Sheet → **Extensions → Apps Script** → select all, delete, paste the new `Code.gs`.
+>    **Change the line `var PIN = '0000';` back to your family PIN.** Click **Save**.
+> 2. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** The link stays the same.
+>    Google asks for permission once more (the planner now also *reads* the RSVP replies from the wedding website's "Wedding Data" sheet):
+>    **Authorize access → your account → Advanced → Go to … (unsafe) → Allow.**
+> 3. The page (`index.html`, the app icon and the offline files) is already updated on GitHub, and Vercel publishes it by itself. Nothing to upload.
+> 4. Open the planner on your phone and tap **Refresh**. A card on **Today** says **Install** (Android) — tap it. On iPhone: Safari → Share ⬆️ → **Add to Home Screen**. The 🪔 icon appears on the phone; the name and PIN are remembered.
+> 5. Do step 4 on Mummy's and Papa's phones too. On the name screen pick **Language: Hindi only** or **Big text** for them (they can change it any time by tapping their name at the top).
+>
+> **If Guests → RSVP replies says it could not open the wedding website sheet:** the planner and the wedding website use different Google accounts. Open the "Wedding Data" sheet → **Share** → add the planner's Google account as **Viewer**.
+
+## What is new in version 4
+- **Much faster.** The whole plan is kept ready on Google's side and only re-read when something changes. The page opens at once with the last saved plan and every tap (Done, Save, Add) shows immediately; saving happens in the background.
+- **Works without internet** (useful at the resort): changes wait on the phone (📴 at the top shows how many) and are saved by themselves when the internet is back. Nothing is saved twice.
+- **Installs as an app** with its own 🪔 icon — no need to search WhatsApp for the link.
+- **Guests & Rooms** (new bottom tab **Guests**):
+  - **Summary:** how many people, who needs a room, who needs a pickup, and how many are coming to each function according to the website RSVP.
+  - **Arrivals:** who comes on which day, at what time, by train / flight / car, and who is picking them up. **Pickup not arranged** shows only the ones nobody is collecting yet.
+  - **Rooms:** who stays where (Aarif, FantaSea, the bungalows, NOI, Command Mess, HSL…) with room numbers, and who still needs a room.
+  - **RSVP replies:** everything guests sent from the wedding website. **Add to guest list** copies a reply into your list in one tap, so you can give them a room and a pickup.
+  - Every guest has **Call** and **WhatsApp** buttons (WhatsApp sends their room and pickup details).
+  - Saved in the **Guest List** tab of the sheet (the columns you already had, plus Phone, Stay, Pickup By, ID).
+- **Shagun register** (Money → **Shagun register**): envelopes and gifts **received** at the wedding and what was **given** to relatives, with totals, name search and **Send the list on WhatsApp**. Saved in a new **Shagun** tab.
+- **Schedule** (new bottom tab): a run-sheet for every day — time, ritual, who is involved, place, coordinator, song, photo slot. It starts with the five functions; add the rituals under them. During the wedding days, **Today** shows what is next. **Send this day on WhatsApp** for the family group. Saved in the **Event Flow** tab.
+- **Language per phone:** English + Hindi (as before), **Hindi only**, or **Big text**.
+- **Given to you** on Today: each person sees the open tasks with their name first.
+- **WhatsApp buttons** on tasks (send a reminder), vendors, guests, the week's list, the schedule and the Hisaab summary.
+- **Shristi** is on the name list.
+- **Checklist** is now inside **Tasks** (Tasks → Checklist), and **Last 7 days** too.
+- If you type straight into the Google Sheet, the planner shows it on its next refresh (a few seconds to half a minute).
+
+---
+
+## First-time setup (about 20 minutes, one time)
 
 > **Money update (vendor edit + Hisaab split) — do this (5 minutes):**
 > 1. Google Sheet → **Extensions → Apps Script** → select all, delete, paste the new `Code.gs`. **Check the PIN line is still your PIN.** Save.
@@ -46,7 +82,7 @@ Files in this folder:
 4. On **vercel.com**: **Add New → Project →** pick `shaadi-planner → Import`. Leave every setting as it is (Framework "Other", no build command) and click **Deploy**.
 5. You get an address like `shaadi-planner.vercel.app`. Open it on your phone, enter the PIN and your name.
 
-**Share with family:** send them the address and the PIN on WhatsApp. On a phone they can tap the browser menu → **Add to Home screen** so it opens like an app.
+**Share with family:** send them the address and the PIN on WhatsApp. On the phone, tap **Install** on the Today screen (iPhone: Share ⬆️ → Add to Home Screen) so it opens like an app.
 
 ## Part D — How to use it
 - **Done button:** every open task has a green **Done · पूरा हुआ** button. It asks "Mark as done?" first, then shows an **Undo · वापस** button for a few seconds. Tap the task itself to change anything else.
@@ -67,6 +103,5 @@ Files in this folder:
 - **Money tab:** add, edit or delete vendors and expenses from the page. Tap **＋ Payment** to record each payment and who paid (Shrijeet / Shivangi / Family). Balance = quoted − payments, so "I paid the advance, she paid the rest" works with two payments.
 - **Hisaab · Split:** shared items are divided by the % on each item (50/50 by default). Mark clothes, jewellery and gifts as **Personal** and they are left out. Family-paid money is not divided. **Settle up** records when one of you pays the other; **Copy** makes a summary for WhatsApp.
 - **Today → Critical:** open critical tasks are grouped by category, with a button to see every open task of that category.
-- The Guest List and Event Flow tabs are not in the page yet.
 - **Privacy:** the PIN keeps casual visitors out, but anyone who has both the link and the PIN can see vendor phone numbers and payments. Share it only with family. Change the PIN in `Code.gs` (then Deploy → Manage deployments → ✏️ → New version → Deploy) if it leaks.
 - **If you change `Code.gs` later:** Deploy → Manage deployments → ✏️ → Version: New version → Deploy. The link stays the same.
