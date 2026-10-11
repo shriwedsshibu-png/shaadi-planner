@@ -1,5 +1,5 @@
 /**
- * Wedding Planner — Google backend (Apps Script)   · version 4 (fast + Guests, Shagun, Schedule)
+ * Wedding Planner — Google backend (Apps Script)   · version 5 (invite tracker + RSVP reminders)
  * Lives inside YOUR "Wedding Master Tracker" Google Sheet.
  * The planner web page reads and writes the tabs "Master Tracker" and "Vendors & Payments".
  * Follow GUIDE-PLANNER.md. The only thing to edit here is the PIN below.
@@ -159,26 +159,27 @@ function clearCache_() { PropertiesService.getScriptProperties().setProperty('VE
 function onEdit(e) { try { clearCache_(); } catch (err) {} }   // you typed in the sheet: the planner shows it on its next refresh
 
 var CHUNK = 90000;
+var CK = 'A5_';   // cache name; changes with each new version of this script, so a new deploy never shows an old copy
 function readAllText_() {
   var v = ver_(), cache = null;
   try {
     cache = CacheService.getScriptCache();
-    var head = cache.get('A' + v);
+    var head = cache.get(CK + v);
     if (head) {
       var n = Number(head), keys = [];
-      for (var i = 0; i < n; i++) keys.push('A' + v + '_' + i);
+      for (var i = 0; i < n; i++) keys.push(CK + v + '_' + i);
       var got = cache.getAll(keys), parts = [];
       for (var j = 0; j < n; j++) { if (got[keys[j]] == null) { parts = null; break; } parts.push(got[keys[j]]); }
       if (parts) return parts.join('');
     }
   } catch (e) { cache = null; }
-  var out = readAllFresh_(); out.ver = v;
+  var out = readAllFresh_(); out.ver = v; out.api = 5;
   var txt = JSON.stringify(out);
   try {
     if (cache) {
       var put = {}, k = 0;
-      for (var p = 0; p < txt.length; p += CHUNK) { put['A' + v + '_' + k] = txt.slice(p, p + CHUNK); k++; }
-      cache.putAll(put, 21600); cache.put('A' + v, String(k), 21600);
+      for (var p = 0; p < txt.length; p += CHUNK) { put[CK + v + '_' + k] = txt.slice(p, p + CHUNK); k++; }
+      cache.putAll(put, 21600); cache.put(CK + v, String(k), 21600);
     }
   } catch (e) {}
   return txt;
@@ -588,12 +589,13 @@ function text_(t) { return ContentService.createTextOutput(t).setMimeType(Conten
 /* ---------------- Guests & Rooms, Shagun register, Day-wise schedule ----------------
    Each lives in its own tab. Missing tabs / columns are added by themselves; your own columns are kept. */
 var TABLES = {
-  guests: { sheet: 'Guest List', prefix: 'G', need: 'name', nums: ['adults', 'children'], dates: ['arrDate', 'depDate'], times: ['arrTime'], texts: ['phone', 'rsvp', 'room'],
+  guests: { sheet: 'Guest List', prefix: 'G', need: 'name', nums: ['adults', 'children', 'remN'], dates: ['arrDate', 'depDate', 'invSent', 'remAt'], times: ['arrTime'], texts: ['phone', 'rsvp', 'room', 'invLink'],
     cols: [['name', 'Guest Name'], ['side', 'Side'], ['group', 'Family / Group'], ['adults', 'Adults'], ['children', 'Children'],
       ['arrDate', 'Arrival Date'], ['arrTime', 'Arrival Time'], ['arrMode', 'Arrival Mode'], ['depDate', 'Departure Date'],
       ['roomReq', 'Room Required'], ['room', 'Room No.'], ['vehicle', 'Vehicle Required'], ['route', 'Route'], ['meal', 'Meal Plan'],
       ['wa', 'WhatsApp Added'], ['remarks', 'Remarks'], ['id', 'ID'], ['phone', 'Phone'], ['stay', 'Stay'], ['pickupBy', 'Pickup By'],
-      ['rsvp', 'RSVP Phone'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
+      ['rsvp', 'RSVP Phone'], ['invSent', 'Invite Sent On'], ['invLink', 'Invite Link'], ['invBy', 'Invite Sent By'], ['remAt', 'Last Reminder'], ['remN', 'Reminders'],
+      ['by', 'Last Updated By'], ['at', 'Last Updated']] },
   shagun: { sheet: 'Shagun', prefix: 'S', need: 'name', nums: ['amount'], dates: ['date'], times: [], texts: [],
     cols: [['id', 'ID'], ['date', 'Date'], ['type', 'Received / Given'], ['name', 'Name'], ['relation', 'Relation / Place'], ['side', 'Side'],
       ['kind', 'Cash / Gift'], ['amount', 'Amount'], ['item', 'Gift Details'], ['note', 'Note'], ['by', 'Added By'], ['at', 'Added On']] },

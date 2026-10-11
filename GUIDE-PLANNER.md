@@ -1,5 +1,19 @@
 # Shaadi Planner — setup and updates
 
+> **Version 5 update: Invite tracker (who got the invite, who filled the RSVP, reminders). Do this once (3 minutes):**
+> 1. Open the **Wedding Master Tracker** Google Sheet (drive.google.com → search "Wedding Master Tracker") → **Extensions → Apps Script**. The first line must say *Wedding Planner — Google backend*.
+> 2. Select all, delete, paste the new `Code.gs`. **Put your family PIN in `var PIN = '…';` and the helper's PIN in `var SHAGUN_PIN = '…';` again.** Click **Save 💾**.
+> 3. **Deploy → Manage deployments → ✏️ → Version: New version → Deploy.** (Not "New deployment".)
+> 4. Open the planner → **Guests → Invites**. If it still says "One small step", tap **Check again**.
+>
+> **How to use the Invites tab**
+> - **📨 Send invites:** choose the invite (whose side · Parivaar 3 days or Shubh Vivah wedding day · English or Hindi). The message is ready, with a **bold line asking them to fill the RSVP** and a direct RSVP link at the end. You can paste your own message instead; the phone remembers it. Add people from **phone contacts** (Android), from **our guest list**, or type a name and number. Tap **Start sending**: WhatsApp opens for the first person, you tap Send, come back, and the next person is ready. Each one is noted with the date, the invite and who sent it (new **Invite Sent On / Invite Link / Invite Sent By** columns in the Guest List tab).
+> - **✓ Already sent? Mark:** for invites you sent yourself before. Nothing is sent; they are only noted.
+> - **Waiting / Replied / Not sent:** a guest moves to Replied as soon as they fill the RSVP on the website with the same mobile number (or the same name). If they told you on a call, tap **They replied**.
+> - **🔔 Remind all, one by one:** a polite RSVP reminder with each guest's own RSVP link (Hindi for Hindi-invite guests). **✎** changes the reminder message.
+> - **Schedule → 📣 Message guests for this day:** sends that day's functions and timings to everyone who said yes for them, one by one; or copy the message for a guests' WhatsApp group or broadcast list.
+> - WhatsApp does not allow any app to send by itself or read your chats, so every message needs your one tap on Send.
+
 > **Version 4 update: faster, works offline, installs as an app, plus Guests & Rooms, Shagun register and Schedule. Do this once (5 minutes):**
 > 1. Open the **Wedding Master Tracker** Google Sheet → **Extensions → Apps Script** → select all, delete, paste the new `Code.gs`.
 >    **Change the line `var PIN = '0000';` back to your family PIN.** Click **Save**.
