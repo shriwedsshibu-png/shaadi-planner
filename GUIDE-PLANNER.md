@@ -8,6 +8,7 @@
 >
 > **How to use the Invites tab**
 > - **📨 Send invites:** choose the invite (whose side · Parivaar 3 days or Shubh Vivah wedding day · English or Hindi). The message is ready, with a **bold line asking them to fill the RSVP** and a direct RSVP link at the end. You can paste your own message instead; the phone remembers it. Add people from **phone contacts** (Android), from **our guest list**, or type a name and number. Tap **Start sending**: WhatsApp opens for the first person, you tap Send, come back, and the next person is ready. Each one is noted with the date, the invite and who sent it (new **Invite Sent On / Invite Link / Invite Sent By** columns in the Guest List tab).
+> - **📢 Send all together as a broadcast:** pick the people in the planner first (contacts, guest list or typed). The planner shows the list of names to tick in a WhatsApp broadcast list, a **Copy message** button, and **Mark as sent** for everyone at once. A broadcast reaches only people who have saved your number. The same works for reminders (**Remind all together as a broadcast**).
 > - **✓ Already sent? Mark:** for invites you sent yourself before. Nothing is sent; they are only noted.
 > - **Waiting / Replied / Not sent:** a guest moves to Replied as soon as they fill the RSVP on the website with the same mobile number (or the same name). If they told you on a call, tap **They replied**.
 > - **🔔 Remind all, one by one:** a polite RSVP reminder with each guest's own RSVP link (Hindi for Hindi-invite guests). **✎** changes the reminder message.

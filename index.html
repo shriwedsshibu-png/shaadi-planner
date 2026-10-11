@@ -937,6 +937,7 @@ function viewInvites() {
   if (tab === 'wait' && wait.length) {
     var withNo = wait.filter(function (g) { return digits(g.phone).length >= 10; }).length;
     h += '<button class="btn block" style="width:100%;margin-bottom:.4rem" data-act="remall">🔔 ' + B('Remind all ' + withNo + ', one by one', 'सभी ' + withNo + ' को याद दिलाएँ, एक-एक करके') + '</button>' +
+      '<button class="btn ghost block" style="width:100%;margin-bottom:.4rem" data-act="rembc">📢 ' + B('Remind all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से याद दिलाएँ') + '</button>' +
       '<div style="text-align:center;margin-bottom:.6rem"><a href="#" data-act="remedit" style="color:var(--navy);font-weight:600;font-size:.9rem">✎ ' + B('See / change the reminder message', 'याद दिलाने का संदेश देखें / बदलें') + '</a></div>';
   }
   if (!list.length) h += '<div class="card empty">' + (tab === 'wait' ? (sent.length ? L('Everyone you invited has replied 🎉', 'सभी ने जवाब दे दिया 🎉') : L('No invites noted yet. Tap “Send invites”, or “Already sent? Mark” for the ones you sent before.', 'अभी कोई निमंत्रण नहीं लिखा। “निमंत्रण भेजें” दबाएँ, या पहले भेजे हुए “पहले भेजे? लिखें” से जोड़ें।'))
@@ -986,7 +987,9 @@ function openSend(mode, preIds) {
   }
   h += '<label class="l">' + B('Or type a name and number', 'या नाम और नंबर लिखें') + '</label><div class="two"><div><input class="input" id="inv_tn" placeholder="' + esc(L('Name', 'नाम')) + '" value="' + esc(sh.tn) + '" /></div><div><input class="input" id="inv_tp" inputmode="tel" placeholder="' + esc(L('Mobile', 'मोबाइल')) + '" value="' + esc(sh.tp) + '" /></div></div>' +
     '<button class="btn ghost sm" style="margin-top:.5rem" data-act="invadd">＋ ' + B('Add', 'जोड़ें') + '</button>';
-  h += '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="invgo" style="flex:2">' + (send ? B('Start sending', 'भेजना शुरू करें') : B('Mark ' + sh.people.length + ' as sent', sh.people.length + ' को भेजा लिखें')) + '</button></div>';
+  h += '<button class="btn block" style="width:100%;margin-top:1.2rem" data-act="invgo">' + (send ? '💬 ' + B('Send one by one', 'एक-एक करके भेजें') : '✓ ' + B('Mark ' + sh.people.length + ' as sent', sh.people.length + ' को भेजा लिखें')) + '</button>' +
+    (send ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="invbc">📢 ' + B('Send all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से भेजें') + '</button>' : '') +
+    '<button class="btn ghost block" style="width:100%;margin-top:.6rem;border-color:#cbbfa8;color:var(--muted)" data-act="closesheet">' + B('Cancel', 'रद्द करें') + '</button>';
   var keep = window.scrollY, box = document.querySelector('#sheetbg .sheet'), st = box ? box.scrollTop : 0;
   showSheet(h);
   var nb = document.querySelector('#sheetbg .sheet'); if (nb && st) nb.scrollTop = st; window.scrollTo(0, keep);
@@ -1034,6 +1037,38 @@ function runDone(sent) {
   r.i++;
 }
 
+
+/* broadcast: prepare the list here, send once from a WhatsApp broadcast list, then mark everyone */
+function openBroadcast(bc) {
+  if (bc) S.bc = bc; bc = S.bc; if (!bc) return; S.sheet = { bc: 1 };
+  var inv = bc.kind === 'inv';
+  var h = '<h3>📢 ' + B('Send as a WhatsApp broadcast', 'WhatsApp ब्रॉडकास्ट से भेजें') + '</h3>' +
+    '<div class="card" style="padding:.9rem 1rem;margin-top:.6rem;font-size:.95rem"><ol class="steps" style="margin:0;padding-left:1.2rem">' +
+    '<li>' + L('In WhatsApp make a broadcast list with the people below. Android: <b>⋮ → New broadcast</b>. iPhone: <b>Chats → Broadcast Lists → New List</b>. Tick each name, then ✓.', 'WhatsApp में नीचे दिए लोगों की ब्रॉडकास्ट लिस्ट बनाएँ। Android: <b>⋮ → New broadcast</b>। iPhone: <b>Chats → Broadcast Lists → New List</b>। हर नाम चुनें, फिर ✓।') + '</li>' +
+    '<li>' + L('Tap <b>Copy message</b> here, paste it in the broadcast and send.', 'यहाँ <b>संदेश कॉपी करें</b> दबाएँ, ब्रॉडकास्ट में पेस्ट करके भेजें।') + '</li>' +
+    '<li>' + L('Come back and tap <b>Mark as ' + (inv ? 'sent' : 'reminded') + '</b>, so the planner can follow their RSVP.', 'वापस आकर <b>' + (inv ? 'भेजा लिखें' : 'याद दिलाया लिखें') + '</b> दबाएँ, ताकि RSVP पर नज़र रहे।') + '</li></ol>' +
+    '<div class="rem" style="margin-top:.5rem">' + L('A broadcast reaches only people who have saved your number (others will not get it — send to them one by one). Up to 256 people per list.', 'ब्रॉडकास्ट सिर्फ़ उन्हीं तक पहुँचता है जिनके फ़ोन में आपका नंबर सेव है (बाकी को एक-एक करके भेजें)। एक लिस्ट में 256 तक लोग।') + '</div></div>';
+  bc.groups.forEach(function (g, gi) {
+    var names = g.people.slice().sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+    h += '<div class="card" style="padding:.9rem 1rem;margin-top:.9rem' + (g.done ? ';opacity:.6' : '') + '"><b style="color:var(--navy)">' + esc(g.title) + '</b> <span class="badge b-info">' + names.length + ' ' + L('people', 'लोग') + '</span>' +
+      '<div style="display:flex;gap:.5rem;margin-top:.6rem;flex-wrap:wrap"><button class="btn sm" style="flex:1" data-act="bccopy" data-v="' + gi + '">📋 ' + esc(L('Copy message', 'संदेश कॉपी करें')) + '</button>' +
+      '<a class="btn ghost sm" style="flex:1;display:flex;align-items:center;justify-content:center;text-decoration:none" target="_blank" rel="noopener" href="' + esc(waLink('', g.text)) + '">💬 ' + esc(L('Open WhatsApp', 'WhatsApp खोलें')) + '</a></div>' +
+      '<div class="rem" style="margin-top:.3rem">' + L('“Open WhatsApp” fills in the message — then choose your broadcast list.', '“WhatsApp खोलें” से संदेश भर जाएगा — फिर अपनी ब्रॉडकास्ट लिस्ट चुनें।') + '</div>' +
+      '<div style="margin-top:.6rem;max-height:14rem;overflow-y:auto;border-top:1px solid #eadfcb">' + names.map(function (p, i) { return '<div style="display:flex;justify-content:space-between;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #f1e8d8;font-size:.95rem"><span>' + (i + 1) + '. ' + esc(p.name || p.phone) + '</span><span class="rem" style="white-space:nowrap">' + esc(p.phone || '') + '</span></div>'; }).join('') + '</div>' +
+      (g.done ? '<div style="margin-top:.6rem;color:var(--ok);font-weight:700">✓ ' + L('Marked', 'लिख लिया') + '</div>' : '<button class="btn block" style="width:100%;margin-top:.7rem;background:linear-gradient(180deg,#2f9e5a,#1f7a43);border-color:#1f7a43" data-act="bcmark" data-v="' + gi + '">✓ ' + esc(inv ? L('Mark these ' + names.length + ' as sent', 'इन ' + names.length + ' को भेजा लिखें') : L('Mark these ' + names.length + ' as reminded', 'इन ' + names.length + ' को याद दिलाया लिखें')) + '</button>') + '</div>';
+  });
+  h += '<button class="btn ghost block" style="width:100%;margin-top:1rem" data-act="closesheet">' + B('Close', 'बंद करें') + '</button>';
+  var box = document.querySelector('#sheetbg .sheet'), st = box ? box.scrollTop : 0;
+  showSheet(h);
+  var nb = document.querySelector('#sheetbg .sheet'); if (nb && st) nb.scrollTop = st;
+}
+function remGroups() {
+  var by = {};
+  S.guests.filter(function (g) { return invState(g) === 'wait'; }).forEach(function (g) { var k = invInfo(g.invLink).ok ? g.invLink : 'shrijeet/parivaar'; (by[k] = by[k] || []).push(g); });
+  return Object.keys(by).sort().map(function (k) {
+    return { code: k, title: L('Reminder', 'याद दिलाना') + ' · ' + invLabel(k), text: remMsg(invInfo(k).hi).split(REM_TOKEN).join(rsvpUrl(k)), people: by[k].map(function (g) { return { name: g.name, phone: g.phone, gid: g.id }; }) };
+  });
+}
 /* reminder message editor */
 function openRemEdit() {
   S.sheet = { remedit: 1 };
@@ -1524,6 +1559,22 @@ document.addEventListener('click', function (e) {
       var gmsg = (document.getElementById('inv_msg') || {}).value || invMsg(gcode);
       startRun({ kind: 'inv', code: gcode, title: L('Sending invites', 'निमंत्रण भेज रहे हैं') + ' · ' + invLabel(gcode), items: gsh.people.map(function (p) { return { name: p.name, phone: p.phone, gid: p.gid, text: gmsg }; }), i: 0, sent: 0, skipped: 0 });
       return;
+    case 'invbc':
+      sendKeep(); var bsh = S.sheet, bcode = invCode(bsh.side, bsh.full, bsh.hi);
+      if (!bsh.people.length) { toast(L('Add at least one person', 'कम से कम एक व्यक्ति जोड़ें'), true); return; }
+      LS.set('pl_inv', bcode);
+      openBroadcast({ kind: 'inv', groups: [{ code: bcode, title: invLabel(bcode), text: (document.getElementById('inv_msg') || {}).value || invMsg(bcode), people: bsh.people.slice() }] });
+      return;
+    case 'rembc': var rgs = remGroups(); if (!rgs.length) { toast(L('Nobody to remind', 'याद दिलाने को कोई नहीं'), true); return; } openBroadcast({ kind: 'rem', groups: rgs }); return;
+    case 'bccopy': copyText(S.bc.groups[+v].text); return;
+    case 'bcmark':
+      var bg = S.bc.groups[+v]; if (!bg || bg.done) return; bg.done = true;
+      bg.people.forEach(function (p) {
+        if (S.bc.kind === 'inv') markInvited(p, bg.code);
+        else { var gx = S.guests.filter(function (x) { return x.id === p.gid; })[0]; if (gx) rowSave('guests', gx.id, { remAt: today(), remN: num(gx.remN) + 1 }); }
+      });
+      toast(S.bc.kind === 'inv' ? L(bg.people.length + ' marked as sent ✓', bg.people.length + ' को भेजा लिखा ✓') : L(bg.people.length + ' marked as reminded ✓', bg.people.length + ' को याद दिलाया लिखा ✓'));
+      openBroadcast(); return;
     case 'runsend': setTimeout(function () { runDone(true); showRun(); }, 500); return;      // the link itself opens WhatsApp
     case 'runskip': runDone(false); showRun(); return;
     case 'runstop': S.run = null; closeSheet(); return;
