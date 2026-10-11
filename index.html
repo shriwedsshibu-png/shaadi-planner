@@ -270,7 +270,14 @@ function applyData(d) {
   S.v4 = d.guests !== undefined;       // the Google script has been updated to version 4
 }
 function needUpdate() {
-  return S.v4 === false ? '<div class="card" style="padding:1rem;margin-bottom:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One step left', 'एक कदम बाकी') + '</b><div class="rem">' + L('This section needs the new Google script. Paste the new Code.gs into the sheet (Extensions → Apps Script), keep your PIN, then Deploy → Manage deployments → ✏️ → New version → Deploy. See GUIDE-PLANNER.md.', 'इसके लिए नई Google स्क्रिप्ट चाहिए। शीट में नया Code.gs डालें, अपना पिन रखें, फिर Deploy → New version। गाइड देखें।') + '</div></div>' : '';
+  if (S.v4 !== false) return '';
+  // the planner reached the sheet, but the answer came from the OLD script
+  return '<div class="card" style="padding:1rem;margin-bottom:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('The planner is still talking to the old script', 'प्लानर अभी पुरानी स्क्रिप्ट से जुड़ा है') + '</b>' +
+    '<div class="rem" style="margin-top:.4rem">' + L('Usually one of these:', 'आमतौर पर इनमें से एक कारण:') + '</div><ol class="steps" style="font-size:.9rem">' +
+    '<li>' + L('The new deployment was made with <b>New deployment</b> (it gets a new link). Use <b>Manage deployments → ✏️ (pencil) → Version: New version → Deploy</b> on the existing one instead — or send the new /exec link to be put into the planner.', '<b>New deployment</b> से नया लिंक बन गया। इसके बजाय <b>Manage deployments → ✏️ → New version → Deploy</b> करें, या नया /exec लिंक भेजें।') + '</li>' +
+    '<li>' + L('The code was pasted but not <b>saved</b> (💾) before deploying.', 'कोड डालकर <b>Save</b> (💾) नहीं किया गया।') + '</li>' +
+    '<li>' + L('It was pasted into the wedding website\'s script instead of the <b>Wedding Master Tracker</b> sheet\'s script.', 'कोड वेबसाइट वाली स्क्रिप्ट में चला गया, <b>Wedding Master Tracker</b> वाली में नहीं।') + '</li></ol>' +
+    '<button class="btn sm" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
 }
 // everything the family changed is shown at once and saved in the background (one by one, kept safe if the internet drops)
 var loading = null;
@@ -906,6 +913,8 @@ function viewGate() {
     (S.needPin || !S.pin ? '<label class="l" style="text-align:left">' + B('Family PIN', 'पिन') + '</label><input class="input" id="gpin" inputmode="numeric" autocomplete="off" placeholder="PIN" value="' + (S.needPin ? '' : esc(S.pin)) + '" />' + (S.needPin && S.pin ? '<p style="color:var(--bad)">' + L('That PIN is not right.', 'पिन सही नहीं है।') + '</p>' : '') : '') +
     '<label class="l" style="text-align:left">' + B('Your name / Login ID', 'आपका नाम / लॉगिन') + '</label><input class="input" id="gme" autocapitalize="words" placeholder="' + esc(L('Your name', 'आपका नाम')) + '" value="' + esc(S.me) + '" />' +
     '<div class="chips" style="margin-top:.5rem;flex-wrap:wrap">' + CONFIG.people.map(function (p) { return '<button class="chip" data-act="pickme" data-v="' + esc(p) + '">' + esc(p) + '</button>'; }).join('') + '</div>' +
+    '<button class="chip" style="margin-top:.6rem;border-color:var(--gold)" data-act="pickme" data-v="shagun">🪙 ' + B('Shagun desk login', 'शगुन डेस्क लॉगिन') + '</button>' +
+    '<p class="rem" style="text-align:left;margin:.3rem 0 0;font-size:.8rem">' + L('Shagun desk: Login ID shagun + the Shagun PIN. Opens only the shagun register.', 'शगुन डेस्क: लॉगिन shagun + शगुन पिन। सिर्फ़ शगुन रजिस्टर खुलेगा।') + '</p>' +
     '<label class="l" style="text-align:left">' + B('Language', 'भाषा') + '</label>' + langSeg('glang') +
     '<button class="btn block" style="margin-top:1.2rem" data-act="enter">' + B('Open planner', 'खोलें') + '</button></div>';
 }
@@ -1133,12 +1142,13 @@ document.addEventListener('click', function (e) {
     case 'fday': S.fday = v; render(); return;
     case 'stype': S.stype = v; render(); return;
     case 'refresh': e.preventDefault(); toast(L('Refreshing…', 'ताज़ा हो रहा है…')); load(false, true); if (S.tab === 'guests') loadRsvp(true); return;
+    case 'recheck': e.preventDefault(); S.ver = ''; LS.set('pl_cache', ''); toast(L('Checking the script…', 'स्क्रिप्ट देख रहे हैं…')); load(false, true).then(function () { toast(S.v4 === false ? L('Still the old script', 'अभी भी पुरानी स्क्रिप्ट') : L('Connected to the new script ✓', 'नई स्क्रिप्ट से जुड़ गया ✓'), S.v4 === false); }); return;
     case 'rsvprefresh': e.preventDefault(); toast(L('Checking…', 'देख रहे हैं…')); loadRsvp(true); return;
     case 'netinfo': toast(Q.length ? L(Q.length + ' change(s) will be saved as soon as the internet works. You can keep using the planner.', Q.length + ' बदलाव इंटरनेट आते ही सेव हो जाएँगे। आप काम जारी रखें।') : L('No internet right now — showing the last saved plan.', 'अभी इंटरनेट नहीं — पिछला सेव किया प्लान दिख रहा है।')); pump(); return;
     case 'add': openAdd(); return;
     case 'more': var m = document.getElementById('a_more'); if (m) { m.style.display = 'block'; el.remove(); } return;
     case 'closesheet': closeSheet(); return;
-    case 'pickme': var mm = document.getElementById('gme'); if (mm) mm.value = v; return;
+    case 'pickme': var mm = document.getElementById('gme'); if (mm) mm.value = v; var gpn = document.getElementById('gpin'); if (v === 'shagun' && gpn) { gpn.value = ''; gpn.focus(); } return;
     case 'fillme': var sm = document.getElementById('st_me'); if (sm) sm.value = v; return;
     case 'fillowner': document.getElementById('e_owner').value = v; return;
     case 'fillowner2': document.getElementById('a_owner').value = v; return;
