@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-<meta name="theme-color" content="#430c19" />
+<meta name="theme-color" content="#1f3350" />
 <meta name="robots" content="noindex, nofollow" />
 <title>Shaadi Planner</title>
 <link rel="manifest" href="/manifest.webmanifest" />
@@ -16,7 +16,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link rel="preconnect" href="https://script.google.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@600;700&family=Lora:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap" rel="stylesheet" />
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:wght@600;700&family=Great+Vibes&family=Lora:wght@400;500;600;700&family=Noto+Sans+Devanagari:wght@500;700&display=swap" rel="stylesheet" />
 <style>
 .hi{font-family:'Noto Sans Devanagari','Lora',sans-serif;font-weight:700}
 :root{--maroon:#6a1526;--maroon-d:#430c19;--gold:#b98a2e;--gold-s:#e7cf98;--ivory:#fbf6ee;--cream:#f3e8d6;--ink:#2e1a1c;--muted:#6b5a52;--ok:#2f7a3e;--warn:#c47a00;--bad:#b3261e;--nav:4.4rem;--hh:3.5rem}
@@ -136,11 +136,59 @@ a.wa,button.wa{color:#1f7a3f;border-color:#1f7a3f}
 .amt{font-family:'Cormorant Garamond',serif;font-weight:700;font-size:1.3rem;color:var(--maroon);white-space:nowrap}
 html.big header.top h1{font-size:.8rem}html.big .who{font-size:.72rem;max-width:7.5rem}html.big .netpill{font-size:.65rem}
 .who{min-width:4.2rem}
+/* ---------- the look of the wedding invitation: navy, gold, blush and ivory paper ---------- */
+:root{--maroon:#1f3350;--maroon-d:#16263d;--gold:#b8893b;--blush:#f6d9d4;--navy:#1f3350}
+body{background:#fbf6ee linear-gradient(180deg,#f8e9e4 0,#fbf6ee 22rem) no-repeat}
+body.gatebg{padding-bottom:2rem}
+header.top{background:linear-gradient(180deg,#2a4467,#16263d);color:#f1d68e;border-bottom:1.5px solid #c9a24a;box-shadow:0 4px 14px rgba(15,25,45,.25)}
+header.top::after{content:'';position:absolute;left:0;right:0;top:100%;height:26px;background:url(/img/toran.webp) repeat-x center top/auto 26px;pointer-events:none;filter:drop-shadow(0 3px 3px rgba(60,30,10,.25))}
+header.top h1{font-family:'Great Vibes',cursive;font-weight:400;font-size:1.75rem;letter-spacing:0;color:#f6dc9a;display:flex;align-items:center;gap:.45rem}
+header.top h1 img{height:2.1rem;width:auto;filter:drop-shadow(0 1px 3px rgba(0,0,0,.35))}
+.who{background:rgba(246,220,154,.12);border-color:rgba(246,220,154,.55);color:#f6dc9a}
+.sbar{padding-top:calc(.6rem + 18px);background:linear-gradient(180deg,#f7e8e3,#fbf6ee)}
+.hero{background:linear-gradient(180deg,rgba(20,32,56,.25),rgba(16,26,46,.78) 75%),url(/img/hero.webp) center 78%/cover;border:1.5px solid #c9a24a;box-shadow:0 10px 26px rgba(20,32,56,.28)}
+.hero .big{color:#f6dc9a;text-shadow:0 2px 10px rgba(0,0,0,.35)}
+.hero .stat{background:rgba(255,255,255,.1);border-color:rgba(246,220,154,.45);backdrop-filter:blur(2px)}
+.hero .stat b,.hero .money b{color:#f6dc9a}
+.bar i{background:linear-gradient(90deg,#e7c06a,#fbe4a6)}
+h2.sec{color:var(--navy)}
+h2.sec::before{content:'❖';color:var(--gold);font-size:.8rem}
+.card{border-color:rgba(184,137,59,.32);box-shadow:0 6px 18px rgba(31,51,80,.07)}
+.catHead{background:linear-gradient(180deg,#fbeee9,#f6e6dc);color:var(--navy)}
+nav.bottom{background:linear-gradient(180deg,#2a4467,#16263d);border-top:1.5px solid #c9a24a}
+nav.bottom button{color:#d8e0ec}
+nav.bottom button.on{color:#f6dc9a;box-shadow:inset 0 3px 0 #f6dc9a;background:rgba(246,220,154,.08)}
+.btn{background:linear-gradient(180deg,#2c4a6e,#1f3350);border-color:#c9a24a}
+.btn.ghost{background:#fff;color:var(--navy);border-color:var(--navy)}
+.addbig{background:linear-gradient(180deg,#f0d38a,#c99a45);color:#2a1d0c;border-color:#f6dfa2}
+.chip.on,.seg button.on,.seg2 button.on{background:var(--navy);border-color:var(--navy);color:#fbf3e6}
+.tile b,.amt{color:var(--navy)}
+.install{background:linear-gradient(180deg,#fff9ef,#fbeee9);border-color:#e2c27a}
+.toast{background:#1f3350}
+.gatebg{background:#f3e7d6 url(/img/gate.webp) center top/cover fixed}
+.gate{background:rgba(255,252,246,.9);backdrop-filter:blur(3px);border:1.5px solid #e2c27a;margin-top:6vh}
+.gate h2{font-family:'Great Vibes',cursive;font-weight:400;font-size:3rem;color:var(--navy);margin:.1rem 0 0}
+.gate .gan{height:5.5rem;width:auto;filter:drop-shadow(0 4px 8px rgba(120,60,20,.25))}
+.desk-q{min-height:3.6rem!important;font-size:1.15rem!important;border-radius:1rem!important;border:2px solid var(--gold)!important}
+.tbl-wrap{overflow-x:auto;margin-top:.6rem}
+table.tbl{width:100%;border-collapse:collapse;font-size:.86rem}
+.tbl th{font-family:'Cinzel',serif;font-size:.6rem;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);text-align:right;padding:.5rem .3rem;border-bottom:1.5px solid #e9d8bd;white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl td{padding:.55rem .3rem;border-bottom:1px solid #f1e5d2;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.tbl td:first-child,.tbl th:first-child{white-space:normal;font-weight:600;padding-left:.8rem;line-height:1.25}
+.tbl td:last-child,.tbl th:last-child{padding-right:.8rem}
+.tbl td:first-child .sub2{font-size:.78em;color:var(--muted)}
+.tbl .narrow{display:none}
+@media(max-width:400px){.tbl .wide{display:none}.tbl .narrow{display:inline}table.tbl{font-size:.8rem}.tbl th{font-size:.55rem;padding:.45rem .22rem}.tbl td{padding:.5rem .22rem}.tbl td:first-child,.tbl th:first-child{padding-left:.6rem}.tbl td:last-child,.tbl th:last-child{padding-right:.6rem}}
+.tbl td.tot,.tbl th.tot{font-weight:800;color:var(--navy);background:#fbf2e4}
+.tbl tr.sum td{font-weight:800;background:#f6ecdc;color:var(--navy)}
+.tbl-title{padding:.8rem .9rem .2rem;font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;color:var(--navy);letter-spacing:.04em}
+.tbl-note{padding:0 .9rem .8rem;font-size:.8rem;color:var(--muted)}
 @media(max-width:380px){header.top{padding-left:.7rem;padding-right:.7rem}header.top h1{font-size:.8rem;letter-spacing:.03em}.who{padding:.3rem .6rem;max-width:6.5rem;font-size:.8rem}.money b{font-size:.8rem}.money{gap:.25rem}.hero{padding:1rem}nav.bottom button{font-size:.6rem}}
 </style>
 </head>
 <body>
-<header class="top" id="hdr" style="display:none"><h1>🪔 SHAADI PLANNER</h1><div class="hright"><button class="netpill" id="netPill" data-act="netinfo" style="display:none"></button><button class="who" id="whoBtn" data-act="settings" title="Name, language, app"></button></div></header>
+<header class="top" id="hdr" style="display:none"><h1><img src="/img/ganesh.webp" alt="" />Shaadi Planner</h1><div class="hright"><button class="netpill" id="netPill" data-act="netinfo" style="display:none"></button><button class="who" id="whoBtn" data-act="settings" title="Name, language, app"></button></div></header>
 <div class="sbar" id="sbar" style="display:none"><div class="in"><span class="si">🔍</span><input class="input" id="gq" type="search" autocomplete="off" enterkeyhint="search" placeholder="Search task, guest, vendor, date…" /><button class="sx" id="gqx" data-act="clearsearch" aria-label="Clear search">✕</button></div></div>
 <div id="app"></div>
 <script>
@@ -170,7 +218,7 @@ var WHO_HI = { Shrijeet: 'श्रीजीत', Shivangi: 'शिवांग�
 
 var $app = document.getElementById('app');
 var LS = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
-var S = { gq: '', tasks: [], vendors: [], payments: [], guests: [], shagun: [], flow: [], rsvp: null, rsvpAt: 0, ver: '', tab: LS.get('pl_tab') || 'today',
+var S = { role: LS.get('pl_role') || '', names: [], dq: '', gq: '', tasks: [], vendors: [], payments: [], guests: [], shagun: [], flow: [], rsvp: null, rsvpAt: 0, ver: '', tab: LS.get('pl_tab') || 'today',
   ttab: 'list', vtab: 'list', gtab: 'sum', stype: 'Received', sq: '', fday: 'all', gpick: false,
   loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), lang: LS.get('pl_lang') || 'both',
   fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, lastSync: 0, needPin: false, offline: false };
@@ -211,8 +259,12 @@ function api(method, payload) {
     return d;
   }, function (e) { clearTimeout(timer); throw e; });
 }
-function saveCache() { try { LS.set('pl_cache', JSON.stringify({ t: S.tasks, v: S.vendors, p: S.payments, g: S.guests, s: S.shagun, f: S.flow, ver: S.ver, v4: S.v4, at: S.lastSync || Date.now() })); } catch (e) {} }
+function saveCache() { try { LS.set('pl_cache', JSON.stringify({ role: S.role, t: S.tasks, v: S.vendors, p: S.payments, g: S.guests, s: S.shagun, f: S.flow, n: S.names, ver: S.ver, v4: S.v4, at: S.lastSync || Date.now() })); } catch (e) {} }
 function applyData(d) {
+  var role = d.role === 'shagun' ? 'shagun' : 'family';
+  if (S.role && S.role !== role) { S.tasks = []; S.vendors = []; S.payments = []; S.guests = []; S.flow = []; S.rsvp = null; LS.set('pl_rsvp', ''); }
+  S.role = role; LS.set('pl_role', role);
+  if (role === 'shagun') { S.shagun = d.shagun || []; S.names = d.names || []; S.tasks = []; S.vendors = []; S.payments = []; S.guests = []; S.flow = []; S.ver = d.ver || ''; S.loaded = true; S.error = ''; S.needPin = false; S.v4 = true; return; }
   S.tasks = d.tasks || []; S.vendors = d.vendors || []; S.payments = d.payments || []; S.guests = d.guests || []; S.shagun = d.shagun || []; S.flow = d.flow || [];
   S.ver = d.ver || ''; S.loaded = true; S.error = ''; S.needPin = false;
   S.v4 = d.guests !== undefined;       // the Google script has been updated to version 4
@@ -520,15 +572,8 @@ function viewGuests() {
     '<button class="tile ' + (notIn.length ? 'warn' : '') + '" data-act="gt" data-v="rsvp"><b>' + (S.rsvp ? notIn.length : '…') + '</b><span>' + L('RSVP replies not in the guest list', 'जवाब जो सूची में नहीं') + '</span></button>' +
     '<button class="tile" data-act="gt" data-v="arr"><b>' + G.filter(function (g) { return g.arrDate; }).length + '</b><span>' + L('families with arrival dates', 'परिवारों के आने की तारीख़') + '</span></button></div>';
   h += '<button class="addbig" data-act="addguest">＋ ' + B('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
-  if (S.rsvp && ry.length) {
-    h += '<h2 class="sec">' + B('Coming to each function (website RSVP)', 'हर कार्यक्रम में कितने (वेबसाइट)') + '</h2><div class="card">';
-    FUNCTIONS.slice(1, 6).forEach(function (f) {
-      var rr = ry.filter(function (r) { return r.functions.indexOf(f.n) >= 0; }), m = 0, w = 0, c = 0;
-      rr.forEach(function (r) { m += r.men; w += r.women; c += r.children; });
-      h += '<div class="task" style="cursor:default;display:flex;justify-content:space-between;gap:.6rem;align-items:center"><span><b>' + B(f.n, f.hi) + '</b><div class="rem">' + L(rr.length + ' families · ' + m + ' men · ' + w + ' women · ' + c + ' children', rr.length + ' परिवार · ' + m + ' पुरुष · ' + w + ' महिलाएँ · ' + c + ' बच्चे') + '</div></span><span class="amt">' + (m + w + c) + '</span></div>';
-    });
-    h += '</div><p class="rem">' + L('Rooms asked for on the website: ', 'वेबसाइट पर कमरा माँगा: ') + ry.filter(function (r) { return yes(r.room); }).length + L(' families', ' परिवार') + '</p>';
-  }
+  if (S.rsvp) h += rsvpTables(R);
+  if (G.length) h += guestTable(G);
   if (G.length) {
     var stays = {}; G.forEach(function (g) { if (g.stay) { stays[g.stay] = stays[g.stay] || []; stays[g.stay].push(g); } });
     if (Object.keys(stays).length) h += '<h2 class="sec">' + B('Who stays where', 'कौन कहाँ ठहरेगा') + '</h2><div class="card">' + Object.keys(stays).sort().map(function (s) { return '<div class="task" data-act="gt" data-v="rooms" style="display:flex;justify-content:space-between;gap:.6rem;align-items:center"><span><b>🏨 ' + esc(s) + '</b><div class="rem">' + stays[s].length + ' ' + L('families', 'परिवार') + '</div></span><span class="amt">' + people(stays[s]) + '</span></div>'; }).join('') + '</div>';
@@ -589,6 +634,51 @@ function viewAllGuests() {
     h += '<h2 class="sec">' + (side ? B(side + "'s side", WHO_HI[side] + ' की ओर') : B('Side not set', 'ओर तय नहीं')) + ' <span class="n">' + people(list) + '</span></h2><div class="card">' + list.map(function (g) { return guestRow(g); }).join('') + '</div>';
   });
   return h;
+}
+
+/* RSVP summary tables (like the "RSVP Summary" tab of the wedding sheet): families, men, women, children, total */
+function sumRow(label, rr, cls) {
+  var m = 0, w = 0, c = 0; rr.forEach(function (r) { m += num(r.men); w += num(r.women); c += num(r.children); });
+  var t = m + w + c; if (!t) rr.forEach(function (r) { t += num(r.total); });
+  return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td>' + rr.length + '</td><td>' + m + '</td><td>' + w + '</td><td>' + c + '</td><td class="tot">' + t + '</td></tr>';
+}
+function famTh() { return '<span class="wide">' + esc(L('Families', 'परिवार')) + '</span><span class="narrow">' + esc(L('Fam.', 'परि.')) + '</span>'; }
+function tblHead(first) { return '<thead><tr><th>' + esc(first) + '</th><th>' + famTh() + '</th><th>' + esc(L('Men', 'पुरुष')) + '</th><th>' + esc(L('Women', 'महिला')) + '</th><th>' + esc(L('Kids', 'बच्चे')) + '</th><th class="tot">' + esc(L('Total', 'कुल')) + '</th></tr></thead>'; }
+function fnTable(title, note, rr) {
+  var rows = FUNCTIONS.slice(1, 6).map(function (f) { return sumRow(B2(f.n, f.hi), rr.filter(function (r) { return String(r.functions || '').indexOf(f.n) >= 0; })); }).join('');
+  return '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + title + '</div>' + (note ? '<div class="tbl-note">' + note + '</div>' : '') +
+    '<div class="tbl-wrap"><table class="tbl">' + tblHead(L('Function', 'कार्यक्रम')) + '<tbody>' + rows + sumRow(L('Total coming', 'कुल मेहमान'), rr, 'sum') + '</tbody></table></div></div>';
+}
+function rsvpTables(R) {
+  var ry = R.filter(function (r) { return yes(r.attending); }), rn = R.filter(function (r) { return !yes(r.attending); });
+  var three = ry.filter(function (r) { return /3/.test(r.invite || ''); }), wed = ry.filter(function (r) { return !/3/.test(r.invite || ''); });
+  var h = '<h2 class="sec">' + B('Website RSVP — totals', 'वेबसाइट RSVP — कुल गिनती') + '</h2>';
+  if (!R.length) return h + '<div class="card empty">' + L('No replies on the wedding website yet.', 'वेबसाइट पर अभी कोई जवाब नहीं।') + '</div>';
+  h += fnTable(B('All guests — each function', 'सभी मेहमान — हर कार्यक्रम'), L('Everyone who said yes, from both invite links.', 'दोनों निमंत्रण से हाँ कहने वाले सभी।'), ry);
+  h += fnTable(B('3-day invite guests — each function', '3 दिन वाले मेहमान — हर कार्यक्रम'), L('Guests who got the 3-day invite and the functions they ticked.', '3 दिन के निमंत्रण वाले मेहमान और उनके चुने कार्यक्रम।'), three);
+  h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Wedding-day invite guests', 'सिर्फ़ शादी वाले मेहमान') + '</div><div class="tbl-wrap"><table class="tbl">' + tblHead(L('Invite', 'निमंत्रण')) + '<tbody>' + sumRow(B2('Varmala & Shaadi', 'वरमाला और शादी'), wed, 'sum') + '</tbody></table></div></div>';
+  // replies
+  h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Replies', 'जवाब') + '</div><div class="tbl-wrap"><table class="tbl"><thead><tr><th></th><th>' + esc(L('Families', 'परिवार')) + '</th><th class="tot">' + esc(L('People', 'लोग')) + '</th></tr></thead><tbody>' +
+    '<tr><td>' + B2('Coming', 'आएँगे') + '</td><td>' + ry.length + '</td><td class="tot">' + ry.reduce(function (s, r) { return s + num(r.total); }, 0) + '</td></tr>' +
+    '<tr><td>' + B2('Not coming', 'नहीं आएँगे') + '</td><td>' + rn.length + '</td><td class="tot">—</td></tr>' +
+    '<tr><td>' + B2('Need a room', 'कमरा चाहिए') + '</td><td>' + ry.filter(function (r) { return yes(r.room); }).length + '</td><td class="tot">' + ry.filter(function (r) { return yes(r.room); }).reduce(function (s, r) { return s + num(r.total); }, 0) + '</td></tr>' +
+    '<tr class="sum"><td>' + B2('Total replies', 'कुल जवाब') + '</td><td>' + R.length + '</td><td class="tot"></td></tr></tbody></table></div></div>';
+  // arrivals by date
+  var by = {}; ry.forEach(function (r) { var k = r.arrDate || '—'; (by[k] = by[k] || []).push(r); });
+  var days = Object.keys(by).sort();
+  h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Arrivals (website RSVP)', 'आगमन (वेबसाइट)') + '</div><div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(L('Date', 'तारीख़')) + '</th><th>' + esc(L('Families', 'परिवार')) + '</th><th>' + esc(L('Rooms', 'कमरे')) + '</th><th class="tot">' + esc(L('People', 'लोग')) + '</th></tr></thead><tbody>' +
+    days.map(function (d) { var rr = by[d]; return '<tr><td>' + (d === '—' ? L('Not given', 'नहीं बताया') : niceDate(d)) + '</td><td>' + rr.length + '</td><td>' + rr.filter(function (r) { return yes(r.room); }).length + '</td><td class="tot">' + rr.reduce(function (s, r) { return s + num(r.total); }, 0) + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
+  return h;
+}
+/* the planner's own guest list, by side */
+function guestTable(G) {
+  function row(label, gg, cls) {
+    var a = 0, c = 0; gg.forEach(function (g) { var aa = num(g.adults), cc = num(g.children); if (!aa && !cc) aa = 1; a += aa; c += cc; });
+    return '<tr' + (cls ? ' class="' + cls + '"' : '') + '><td>' + label + '</td><td>' + gg.length + '</td><td>' + a + '</td><td>' + c + '</td><td>' + gg.filter(function (g) { return yes(g.roomReq); }).length + '</td><td class="tot">' + (a + c) + '</td></tr>';
+  }
+  var sh = G.filter(function (g) { return g.side === 'Shrijeet'; }), sv = G.filter(function (g) { return g.side === 'Shivangi'; }), ot = G.filter(function (g) { return g.side !== 'Shrijeet' && g.side !== 'Shivangi'; });
+  return '<h2 class="sec">' + B('Our guest list — totals', 'हमारी सूची — कुल गिनती') + '</h2><div class="card"><div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(L('Side', 'ओर')) + '</th><th>' + esc(L('Families', 'परिवार')) + '</th><th>' + esc(L('Adults', 'बड़े')) + '</th><th>' + esc(L('Kids', 'बच्चे')) + '</th><th>' + esc(L('Rooms', 'कमरे')) + '</th><th class="tot">' + esc(L('Total', 'कुल')) + '</th></tr></thead><tbody>' +
+    row(B2('Shrijeet', 'श्रीजीत'), sh) + row(B2('Shivangi', 'शिवांगी'), sv) + (ot.length ? row(B2('Not set', 'तय नहीं'), ot) : '') + row(B2('Total', 'कुल'), G, 'sum') + '</tbody></table></div></div>';
 }
 
 /* ---------- MONEY: vendors, hisaab split, shagun register ---------- */
@@ -677,6 +767,44 @@ function viewShagun() {
 function shagunText(all, rec) {
   return (rec ? 'Shagun received' : 'Shagun given') + ' — ' + CONFIG.weddingTitle + '\nTotal: ' + money(all.reduce(function (s, x) { return s + num(x.amount); }, 0)) + '\n\n' +
     all.slice().sort(function (a, b) { return a.name.localeCompare(b.name); }).map(function (x) { return '• ' + x.name + (x.relation ? ' (' + x.relation + ')' : '') + ' — ' + (num(x.amount) ? money(x.amount) : '') + (x.kind === 'Gift' ? ' 🎁 ' + (x.item || 'gift') : ''); }).join('\n');
+}
+
+/* ---------- SHAGUN DESK (second PIN): find the guest's name, write the envelope / gift ---------- */
+function nkey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]/g, ''); }
+function shagunNames() {   // guest list + website RSVP names (family view builds the same list from its own data)
+  if (S.role === 'shagun') return S.names || [];
+  var out = [], seen = {};
+  S.guests.forEach(function (g) { var k = nkey(g.name); if (k && !seen[k]) { seen[k] = 1; out.push({ name: g.name, group: g.group || '', side: g.side || '' }); } });
+  rsvpList().forEach(function (r) { var k = nkey(r.name); if (k && !seen[k]) { seen[k] = 1; out.push({ name: r.name, group: '', side: '' }); } });
+  return out;
+}
+function viewDesk() {
+  var rec = shagunList('Received'), q = S.dq.trim().toLowerCase();
+  var cash = rec.reduce(function (s, x) { return s + num(x.amount); }, 0), gifts = rec.filter(function (x) { return x.kind === 'Gift'; }).length;
+  var h = '<p style="margin:.2rem .2rem .8rem;font-size:1.1rem">🙏 <b>' + L('Namaste', 'नमस्ते') + ', ' + esc(S.me) + '</b></p>';
+  h += '<div class="hero"><div class="sub">' + B('Shagun received', 'मिला शगुन') + '</div><div class="big" style="font-size:2.6rem">' + money(cash) + '</div><div class="sub">' + L(rec.length + ' entries · ' + gifts + ' gifts', rec.length + ' नाम · ' + gifts + ' तोहफ़े') + '</div></div>';
+  h += '<label class="l">' + B('Whose envelope / gift?', 'किसका शगुन?') + '</label><input class="input desk-q" id="dq" type="search" autocomplete="off" placeholder="' + esc(L('Type the guest\'s name…', 'मेहमान का नाम लिखें…')) + '" value="' + esc(S.dq) + '" />';
+  if (q) {
+    var words = q.split(/\s+/), names = shagunNames().filter(function (n) { return matchAll((n.name + ' ' + n.group).toLowerCase(), words); }).slice(0, 25);
+    var already = rec.filter(function (x) { return matchAll((x.name + ' ' + x.relation).toLowerCase(), words); });
+    h += '<div class="card" style="margin-top:.8rem">' + names.map(function (n) {
+      var w = rec.filter(function (x) { return nkey(x.name) === nkey(n.name); });
+      return '<div class="task" data-act="deskpick" data-v="' + esc(n.name) + '" style="display:flex;justify-content:space-between;gap:.6rem;align-items:center"><div style="min-width:0;flex:1"><div class="t">' + esc(n.name) + '</div>' + (n.group ? '<div class="rem">' + esc(n.group) + '</div>' : '') + '</div>' +
+        (w.length ? '<span class="badge b-ok">' + L('Written', 'लिखा') + ' · ' + esc(w.map(function (x) { return num(x.amount) ? money(x.amount) : '🎁'; }).join(' + ')) + '</span>' : '<span class="btn sm" style="pointer-events:none">＋ ' + L('Write', 'लिखें') + '</span>') + '</div>';
+    }).join('') +
+      '<div class="task" data-act="deskpick" data-v="' + esc(S.dq.trim()) + '" style="background:#fff8e8"><b>＋ ' + B('Add “' + S.dq.trim() + '” as a new name', '“' + S.dq.trim() + '” नया नाम जोड़ें') + '</b><div class="rem">' + L('Not in the list? Write it here with the amount or gift.', 'सूची में नहीं है? नाम और रकम / तोहफ़ा यहाँ लिखें।') + '</div></div></div>';
+    if (already.length) h += '<h2 class="sec">' + B('Already written', 'पहले से लिखा') + ' <span class="n">' + already.length + '</span></h2>' + shagunRows(already);
+    return h;
+  }
+  h += '<button class="addbig" data-act="deskpick" data-v="">＋ ' + B('Write an envelope / gift', 'शगुन लिखें') + '</button>';
+  var latest = rec.slice().sort(function (a, b) { return (b.at || '') < (a.at || '') ? -1 : 1; });
+  h += '<h2 class="sec">' + B('Written so far', 'अब तक लिखा') + ' <span class="n">' + rec.length + '</span></h2>' + (latest.length ? shagunRows(latest) : '<div class="card empty">' + L('Nothing written yet.', 'अभी कुछ नहीं लिखा।') + '</div>');
+  return h;
+}
+function shagunRows(arr) {
+  return '<div class="card">' + arr.map(function (x) {
+    return '<div class="task" data-act="editshagun" data-id="' + esc(x.id) + '" style="display:flex;justify-content:space-between;gap:.6rem;align-items:center"><div style="min-width:0;flex:1"><div class="t">' + esc(x.name) + '</div><div class="rem">' + [x.relation, x.side ? L(x.side, WHO_HI[x.side] || x.side) : '', x.date ? niceDate(x.date) : '', x.kind === 'Gift' ? '🎁 ' + (x.item || L('Gift', 'तोहफ़ा')) : '', x.note].filter(Boolean).map(esc).join(' · ') + '</div></div><span class="amt">' + (num(x.amount) ? money(x.amount) : x.kind === 'Gift' ? '🎁' : '') + '</span></div>';
+  }).join('') + '</div>';
 }
 
 /* ---------- SCHEDULE (day-wise run-sheet) ---------- */
@@ -774,9 +902,9 @@ function icon(n) {
 }
 function langSeg(id) { return '<div class="seg" id="' + id + '">' + [['both', 'English + हिंदी', 'English + हिंदी'], ['hi', 'Hindi only', 'सिर्फ़ हिंदी'], ['big', 'Big text', 'बड़े अक्षर']].map(function (x) { return '<button data-v="' + x[0] + '" data-act="setlang" class="' + (S.lang === x[0] ? 'on' : '') + '">' + esc(x[0] === 'both' ? x[1] : L(x[1], x[2])) + '</button>'; }).join('') + '</div>'; }
 function viewGate() {
-  return '<div class="gate card"><div style="font-size:2rem">🪔</div><h2>Shaadi Planner</h2><p class="rem">' + esc(CONFIG.weddingTitle) + '</p>' +
+  return '<div class="gate card"><img class="gan" src="/img/ganesh.webp" alt="Shri Ganesh" /><h2>Shaadi Planner</h2><p class="rem">' + esc(CONFIG.weddingTitle) + '</p>' +
     (S.needPin || !S.pin ? '<label class="l" style="text-align:left">' + B('Family PIN', 'पिन') + '</label><input class="input" id="gpin" inputmode="numeric" autocomplete="off" placeholder="PIN" value="' + (S.needPin ? '' : esc(S.pin)) + '" />' + (S.needPin && S.pin ? '<p style="color:var(--bad)">' + L('That PIN is not right.', 'पिन सही नहीं है।') + '</p>' : '') : '') +
-    '<label class="l" style="text-align:left">' + B('Your name', 'आपका नाम') + '</label><input class="input" id="gme" placeholder="' + esc(L('Your name', 'आपका नाम')) + '" value="' + esc(S.me) + '" />' +
+    '<label class="l" style="text-align:left">' + B('Your name / Login ID', 'आपका नाम / लॉगिन') + '</label><input class="input" id="gme" autocapitalize="words" placeholder="' + esc(L('Your name', 'आपका नाम')) + '" value="' + esc(S.me) + '" />' +
     '<div class="chips" style="margin-top:.5rem;flex-wrap:wrap">' + CONFIG.people.map(function (p) { return '<button class="chip" data-act="pickme" data-v="' + esc(p) + '">' + esc(p) + '</button>'; }).join('') + '</div>' +
     '<label class="l" style="text-align:left">' + B('Language', 'भाषा') + '</label>' + langSeg('glang') +
     '<button class="btn block" style="margin-top:1.2rem" data-act="enter">' + B('Open planner', 'खोलें') + '</button></div>';
@@ -789,10 +917,18 @@ function render() {
   document.getElementById('sbar').style.display = loggedIn && S.loaded ? 'block' : 'none';
   document.getElementById('whoBtn').textContent = '👤 ' + S.me;
   document.getElementById('gqx').style.display = S.gq ? 'block' : 'none';
+  document.body.classList.toggle('gatebg', !loggedIn);
   if (!loggedIn) { $app.innerHTML = viewGate(); return; }
+  if (S.role === 'shagun') {
+    document.getElementById('sbar').style.display = 'none';
+    document.querySelector('#hdr h1').innerHTML = '<img src="/img/ganesh.webp" alt="" />' + esc(L('Shagun Desk', 'शगुन डेस्क'));
+    $app.innerHTML = '<main>' + (S.loaded ? viewDesk() : (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">' + B('Refresh', 'ताज़ा करें') + '</button></div>' : '<div class="card empty">' + B('Opening…', 'खुल रहा है…') + '</div>')) + (S.loaded ? '<div class="sync" id="syncLine">' + syncText() + '</div>' : '') + '</main>';
+    renderStatus(); return;
+  }
+  document.querySelector('#hdr h1').innerHTML = '<img src="/img/ganesh.webp" alt="" />Shaadi Planner';
   if (S.tab === 'vendors') S.tab = 'money';
   if (S.tab === 'check') { S.tab = 'tasks'; S.ttab = 'check'; }
-  if (S.tab === 'guests' && S.loaded) loadRsvp();
+  if ((S.tab === 'guests' || (S.tab === 'money' && S.vtab === 'shagun')) && S.loaded && S.role !== 'shagun') loadRsvp();
   var body = !S.loaded ? (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">' + B('Refresh', 'ताज़ा करें') + '</button></div>' : '<div class="card empty">' + B('Loading your plan…', 'आपका प्लान खुल रहा है…') + '</div>')
     : S.gq.trim() ? viewSearch() : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : S.tab === 'guests' ? viewGuests() : S.tab === 'money' ? viewMoney() : viewSchedule();
   $app.innerHTML = '<main>' + body + (S.loaded ? '<div class="sync" id="syncLine">' + syncText() + '</div>' : '') + '</main>' +
@@ -916,12 +1052,13 @@ function rsvpToGuest(key) {
   openGuest('', { name: r.name, phone: r.phone, adults: (r.men + r.women) || '', children: r.children || '', arrDate: r.arrDate, roomReq: yes(r.room) ? 'Yes' : 'No', remarks: r.note, rsvp: r.phone || r.name });
 }
 /* shagun */
-function openShagun(id) {
-  var x = id ? S.shagun.filter(function (s) { return s.id === id; })[0] : { type: S.stype, name: '', relation: '', side: '', kind: 'Cash', amount: '', item: '', date: today(), note: '' };
+function openShagun(id, preName) {
+  var desk = S.role === 'shagun';
+  var x = id ? S.shagun.filter(function (s) { return s.id === id; })[0] : { type: desk ? 'Received' : S.stype, name: preName || '', relation: '', side: '', kind: 'Cash', amount: '', item: '', date: today(), note: '' };
   if (!x) return; S.sheet = { shagun: id || 'new' };
   showSheet('<h3>' + (id ? esc(x.name) : B('Shagun register', 'शगुन रजिस्टर')) + '</h3>' +
-    segOf('h_type', [['Received', 'Received', 'मिला'], ['Given', 'Given', 'दिया']], x.type || 'Received') +
-    '<label class="l">' + B('Name', 'नाम') + '</label><input class="input" id="h_name" value="' + esc(x.name) + '" placeholder="' + esc(L('e.g. Sharma ji (Patna)', 'जैसे: शर्मा जी (पटना)')) + '" />' +
+    (desk ? '' : segOf('h_type', [['Received', 'Received', 'मिला'], ['Given', 'Given', 'दिया']], x.type || 'Received')) +
+    '<label class="l">' + B('Name', 'नाम') + '</label><input class="input" id="h_name" list="hnames" autocomplete="off" value="' + esc(x.name) + '" placeholder="' + esc(L('e.g. Sharma ji (Patna)', 'जैसे: शर्मा जी (पटना)')) + '" />' + dlist('hnames', shagunNames().map(function (n) { return n.name; })) +
     '<label class="l">' + B('Relation / place', 'रिश्ता / जगह') + '</label><input class="input" id="h_rel" value="' + esc(x.relation) + '" />' +
     '<label class="l">' + B('Cash or gift?', 'नकद या तोहफ़ा?') + '</label>' + segOf('h_kind', [['Cash', 'Cash / envelope', 'नकद / लिफ़ाफ़ा'], ['Gift', 'Gift', 'तोहफ़ा']], x.kind || 'Cash') +
     '<label class="l">' + B('Amount', 'रकम') + ' ₹</label><input class="input" id="h_amt" inputmode="numeric" value="' + esc(x.amount) + '" placeholder="0" />' +
@@ -929,8 +1066,8 @@ function openShagun(id) {
     '<label class="l">' + B('Side', 'ओर') + '</label>' + segOf('h_side', [['Shrijeet', 'Shrijeet', 'श्रीजीत'], ['Shivangi', 'Shivangi', 'शिवांगी']], x.side) +
     '<label class="l">' + B('Date', 'तारीख़') + '</label><input class="input" type="date" id="h_date" value="' + esc(x.date || today()) + '" />' +
     '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="h_note" value="' + esc(x.note) + '" />' +
-    saveBar('saveshagun', id) + (id ? '<button class="delbtn" data-act="delshagun" data-id="' + esc(id) + '">🗑 ' + B('Delete this entry', 'हटाएँ') + '</button>' : ''));
-  setTimeout(function () { var i = document.getElementById('h_name'); if (i && !id) i.focus(); }, 50);
+    saveBar('saveshagun', id) + (id && !desk ? '<button class="delbtn" data-act="delshagun" data-id="' + esc(id) + '">🗑 ' + B('Delete this entry', 'हटाएँ') + '</button>' : ''));
+  setTimeout(function () { var i = document.getElementById(x.name ? 'h_amt' : 'h_name'); if (i && !id) i.focus(); }, 60);
 }
 /* schedule */
 function openFlow(id) {
@@ -1017,13 +1154,14 @@ document.addEventListener('click', function (e) {
     case 'settings': openSettings(); return;
     case 'install': closeSheet(true); S.sheet = null; doInstall(); return;
     case 'hideinstall': LS.set('pl_hideinstall', '1'); render(); return;
-    case 'logout': LS.set('pl_pin', ''); LS.set('pl_me', ''); S.pin = ''; S.me = ''; closeSheet(); return;
+    case 'logout': ['pl_pin', 'pl_me', 'pl_cache', 'pl_rsvp', 'pl_role', 'pl_q'].forEach(function (k) { LS.set(k, ''); }); Q = []; S.pin = ''; S.me = ''; S.role = ''; S.loaded = false; S.tasks = []; S.shagun = []; S.names = []; closeSheet(); return;
     case 'savesettings': var nm = val('st_me'); if (!nm) { toast(L('Please enter your name', 'कृपया नाम लिखें'), true); return; } S.me = nm; LS.set('pl_me', nm); closeSheet(); toast(L('Saved ✓', 'सेव हुआ ✓')); return;
     case 'enter':
       var pe = document.getElementById('gpin'), me = val('gme');
       if (pe) S.pin = pe.value.trim();
       if (!S.pin) { toast(L('Please enter the PIN', 'कृपया पिन लिखें'), true); return; }
       if (!me) { toast(L('Please enter your name', 'कृपया नाम लिखें'), true); return; }
+      if (S.pin !== LS.get('pl_pin')) { LS.set('pl_cache', ''); S.loaded = false; S.role = ''; }
       S.me = me; LS.set('pl_pin', S.pin); LS.set('pl_me', S.me); S.needPin = false; S.error = ''; render(); load(false, true); return;
     case 'saveedit':
       var t2 = find(S.sheet.id), f = {};
@@ -1087,11 +1225,12 @@ document.addEventListener('click', function (e) {
     case 'confirmdelg': closeSheet(true); S.sheet = null; rowDel('guests', id, L('Deleted', 'हटा दिया')); return;
     /* shagun */
     case 'addshagun': openShagun(''); return;
+    case 'deskpick': openShagun('', v); return;
     case 'editshagun': openShagun(id); return;
     case 'saveshagun':
-      var hf = { type: segVal('h_type') || 'Received', name: val('h_name'), relation: val('h_rel'), kind: segVal('h_kind') || 'Cash', amount: val('h_amt'), item: val('h_item'), side: segVal('h_side'), date: document.getElementById('h_date').value, note: val('h_note') };
+      var hf = { type: S.role === 'shagun' ? 'Received' : (segVal('h_type') || 'Received'), name: val('h_name'), relation: val('h_rel'), kind: segVal('h_kind') || 'Cash', amount: val('h_amt'), item: val('h_item'), side: segVal('h_side'), date: document.getElementById('h_date').value, note: val('h_note') };
       if (!hf.name) { toast(L('Please type the name', 'कृपया नाम लिखें'), true); return; }
-      closeSheet(true); S.sheet = null; S.stype = hf.type; rowSave('shagun', id, hf, L('Written ✓', 'लिख लिया ✓')); return;
+      closeSheet(true); S.sheet = null; S.stype = hf.type; S.dq = ''; rowSave('shagun', id, hf, L('Written ✓', 'लिख लिया ✓')); return;
     case 'delshagun': var ds = S.shagun.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Delete this entry?', 'क्या यह हटाना है?'), ds ? ds.name : '', '', 'confirmdels', id); return;
     case 'confirmdels': closeSheet(true); S.sheet = null; rowDel('shagun', id, L('Deleted', 'हटा दिया')); return;
     /* schedule */
@@ -1108,6 +1247,7 @@ document.addEventListener('click', function (e) {
 var searchT = 0;
 document.addEventListener('input', function (e) {
   if (e.target.id === 'gq') { S.gq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { render(); window.scrollTo(0, 0); }, 120); }
+  if (e.target.id === 'dq') { S.dq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.getElementById('dq'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (er) {} } }, 150); }
   if (e.target.id === 'sq') { S.sq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { var pos = e.target.selectionStart; render(); var i = document.getElementById('sq'); if (i) { i.focus(); try { i.setSelectionRange(pos, pos); } catch (er) {} } }, 150); }
 });
 document.addEventListener('change', function (e) {
@@ -1122,7 +1262,7 @@ document.addEventListener('visibilitychange', function () { if (!document.hidden
   if (!S.pin || !S.me) return;
   try {
     var c = JSON.parse(LS.get('pl_cache') || 'null');
-    if (c && c.t && c.t.length) { S.tasks = c.t; S.vendors = c.v || []; S.payments = c.p || []; S.guests = c.g || []; S.shagun = c.s || []; S.flow = c.f || []; S.ver = c.ver || ''; S.v4 = c.v4; S.loaded = true; S.lastSync = c.at || 0; }
+    if (c && ((c.t && c.t.length) || c.role === 'shagun')) { S.role = c.role || 'family'; S.tasks = c.t || []; S.vendors = c.v || []; S.payments = c.p || []; S.guests = c.g || []; S.shagun = c.s || []; S.flow = c.f || []; S.names = c.n || []; S.ver = c.ver || ''; S.v4 = c.v4; S.loaded = true; S.lastSync = c.at || 0; }
     var r = JSON.parse(LS.get('pl_rsvp') || 'null'); if (r) S.rsvp = r;
   } catch (e) {}
 })();

@@ -10,6 +10,10 @@
 > 4. Open the planner on your phone and tap **Refresh**. A card on **Today** says **Install** (Android) — tap it. On iPhone: Safari → Share ⬆️ → **Add to Home Screen**. The 🪔 icon appears on the phone; the name and PIN are remembered.
 > 5. Do step 4 on Mummy's and Papa's phones too. On the name screen pick **Language: Hindi only** or **Big text** for them (they can change it any time by tapping their name at the top).
 >
+> **Shagun desk (optional, for a helper at the wedding):** in `Code.gs`, set `var SHAGUN_PIN = '';` to a second number, e.g. `'5151'` (different from the family PIN), then Save and deploy a new version (step 2 above).
+> The helper opens the planner link and logs in with **Login ID: shagun** and **PIN: that number**. They see only the **Shagun Desk**: type a guest's name (the guest list and everyone who replied on the wedding website appear), tap it, and write the amount or the gift. A name that is not in the list can be added as new. They cannot see tasks, money, guest phone numbers or what you gave, and they cannot delete anything. Everything they write appears in your **Money → Shagun register** at once.
+> To stop it after the wedding, set `SHAGUN_PIN` back to `''` and deploy a new version.
+
 > **If Guests → RSVP replies says it could not open the wedding website sheet:** the planner and the wedding website use different Google accounts. Open the "Wedding Data" sheet → **Share** → add the planner's Google account as **Viewer**.
 
 ## What is new in version 4
@@ -29,6 +33,8 @@
 - **Given to you** on Today: each person sees the open tasks with their name first.
 - **WhatsApp buttons** on tasks (send a reminder), vendors, guests, the week's list, the schedule and the Hisaab summary.
 - **Shristi** is on the name list.
+- **New look** matching the wedding invitation (navy, gold, marigold toran) and a **Shri Ganesh app icon**.
+- **Guests → Summary** has the count tables: guests coming to each function (families, men, women, children, total), 3-day vs wedding-day invites, replies, arrivals by date, and your own guest list by side.
 - **Checklist** is now inside **Tasks** (Tasks → Checklist), and **Last 7 days** too.
 - If you type straight into the Google Sheet, the planner shows it on its next refresh (a few seconds to half a minute).
 

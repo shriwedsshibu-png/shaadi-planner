@@ -6,6 +6,10 @@
  */
 
 var PIN = '0000';                       // <-- CHANGE THIS to your own family PIN, then re-deploy
+// Shagun desk: a second PIN for a helper who should see and fill ONLY the shagun register
+// (no tasks, no money, no guest phone numbers). Login ID: shagun  ·  PIN: the number below.
+// Leave it empty ('') to switch the Shagun desk off.
+var SHAGUN_PIN = '';
 var TASK_SHEET = 'Master Tracker';
 var VENDOR_SHEET = 'Vendors & Payments';
 var PAY_SHEET = 'Payments';
@@ -33,10 +37,20 @@ function guessFunction_(t) {
 
 function setup() { ensureColumns_(); }   // optional: run once from the editor
 
+function role_(pin) {
+  pin = String(pin || '');
+  if (pin && pin === PIN) return 'family';
+  if (SHAGUN_PIN && pin === String(SHAGUN_PIN)) return 'shagun';
+  return '';
+}
 function doGet(e) {
   try {
-    var p = (e && e.parameter) || {};
-    if (String(p.pin || '') !== PIN) return json_({ success: false, code: 'PIN', message: 'Wrong PIN' });
+    var p = (e && e.parameter) || {}, role = role_(p.pin);
+    if (!role) return json_({ success: false, code: 'PIN', message: 'Wrong PIN' });
+    if (role === 'shagun') {      // the Shagun desk only ever gets the shagun register and a list of guest names
+      if (p.action === 'all') return json_(readShagunDesk_(p.have));
+      return json_({ success: true, role: 'shagun', ver: ver_() });
+    }
     if (p.action === 'ver') return json_({ success: true, ver: ver_() });
     if (p.action === 'all') {
       if (p.have && String(p.have) === ver_()) return json_({ success: true, same: true, ver: ver_() });   // nothing changed: tiny answer
@@ -49,8 +63,13 @@ function doGet(e) {
 
 function doPost(e) {
   try {
-    var b = JSON.parse(e.postData.contents);
-    if (String(b.pin || '') !== PIN) return json_({ success: false, code: 'PIN', message: 'Wrong PIN' });
+    var b = JSON.parse(e.postData.contents), role = role_(b.pin);
+    if (!role) return json_({ success: false, code: 'PIN', message: 'Wrong PIN' });
+    if (role === 'shagun') {
+      if ((b.action !== 'rowAdd' && b.action !== 'rowUpdate') || b.table !== 'shagun') return json_({ success: false, message: 'The Shagun desk can only write in the shagun register.' });
+      b.fields = b.fields || {}; b.fields.type = 'Received';
+      if (b.action === 'rowUpdate' && !shagunIsReceived_(b.id)) return json_({ success: false, message: 'Not allowed.' });
+    }
     // each change carries its own number (cid): if the phone sends it again (weak network), it is not saved twice
     var cid = String(b.cid || '').slice(0, 40), cache = null;
     if (cid) { try { cache = CacheService.getScriptCache(); var seen = cache.get('C' + cid); if (seen) return text_(seen); } catch (e2) { cache = null; } }
@@ -222,7 +241,7 @@ function readAllFresh_() {
     });
   }
   if (!flags.FLOW_SEED_V1) seedFlow_();
-  return { success: true, tasks: tasks, vendors: vendors, payments: payments,
+  return { success: true, role: 'family', tasks: tasks, vendors: vendors, payments: payments,
     guests: readTable_('guests'), shagun: readTable_('shagun'), flow: readTable_('flow'),
     serverTime: new Date().getTime() };
 }
@@ -714,6 +733,29 @@ function seedFlow_() {
     }
     props.setProperty('FLOW_SEED_V1', '1');
   } finally { lock.releaseLock(); }
+}
+
+/* ---------------- Shagun desk (second PIN) ---------------- */
+function shagunIsReceived_(id) {
+  var r = readTable_('shagun').filter(function (x) { return x.id === String(id); })[0];
+  return !!r && (r.type || 'Received') === 'Received';
+}
+function readShagunDesk_(have) {
+  var v = ver_(), cache = CacheService.getScriptCache(), base = null;
+  var hit = cache.get('H' + v);
+  if (hit) base = JSON.parse(hit);
+  else {
+    base = {
+      shagun: readTable_('shagun').filter(function (x) { return (x.type || 'Received') === 'Received'; }),
+      guests: readTable_('guests').map(function (g) { return { name: g.name, group: g.group || '', side: g.side || '' }; })
+    };
+    try { cache.put('H' + v, JSON.stringify(base), 21600); } catch (e) {}
+  }
+  // names to pick from: the guest list + everyone who replied on the wedding website (names only)
+  var names = [], seen = {};
+  base.guests.forEach(function (g) { var k = norm_(g.name); if (k && !seen[k]) { seen[k] = 1; names.push({ name: g.name, group: g.group, side: g.side }); } });
+  (readRsvp_().rsvp || []).forEach(function (r) { var k = norm_(r.name); if (k && !seen[k]) { seen[k] = 1; names.push({ name: r.name, group: '', side: '' }); } });
+  return { success: true, role: 'shagun', ver: v, shagun: base.shagun, names: names };
 }
 
 /* ---------------- RSVP replies from the wedding website (read only) ---------------- */
