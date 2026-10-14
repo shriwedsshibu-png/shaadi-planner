@@ -1,5 +1,5 @@
 /**
- * Wedding Planner — Google backend (Apps Script)   · version 5 (invite tracker + RSVP reminders)
+ * Wedding Planner — Google backend (Apps Script)   · version 6 (invite lists that stay saved + reception replies)
  * Lives inside YOUR "Wedding Master Tracker" Google Sheet.
  * The planner web page reads and writes the tabs "Master Tracker" and "Vendors & Payments".
  * Follow GUIDE-PLANNER.md. The only thing to edit here is the PIN below.
@@ -762,12 +762,15 @@ function readShagunDesk_(have) {
 
 /* ---------------- RSVP replies from the wedding website (read only) ---------------- */
 function readRsvp_() {
-  var cache = CacheService.getScriptCache(), hit = cache.get('RSVP');
+  var cache = CacheService.getScriptCache(), hit = cache.get('RSVP2');
   if (hit) return JSON.parse(hit);
   var out = { success: true, rsvp: [] };
   try {
-    var sh = SpreadsheetApp.openById(RSVP_SHEET_ID).getSheetByName('RSVP');
-    if (sh && sh.getLastRow() >= 2) {
+    var book = SpreadsheetApp.openById(RSVP_SHEET_ID);
+    // the wedding replies ("RSVP" tab) and the reception replies ("Reception RSVP" tab, same columns)
+    ['RSVP', 'Reception RSVP'].forEach(function (tab) {
+      var sh = book.getSheetByName(tab);
+      if (!sh || sh.getLastRow() < 2) return;
       var data = sh.getDataRange().getValues(), hm = {};
       data[0].forEach(function (h, i) { hm[norm_(h)] = i; });
       var g = function (r, k) { return hm[k] === undefined ? '' : r[hm[k]]; };
@@ -776,10 +779,10 @@ function readRsvp_() {
         out.rsvp.push({ name: String(g(r, 'mainguest')).trim(), phone: String(g(r, 'phone') || '').replace(/\D/g, ''), attending: String(g(r, 'attending') || ''),
           men: num_(g(r, 'men')), women: num_(g(r, 'women')), children: num_(g(r, 'children')), total: num_(g(r, 'totalguests')),
           arrDate: str_(g(r, 'arrivaldate')), room: String(g(r, 'needsroom') || ''), note: String(g(r, 'anythingelse') || ''),
-          invite: String(g(r, 'invitetype') || ''), functions: String(g(r, 'functions') || ''), updated: str_(g(r, 'lastupdated')) });
+          invite: tab === 'RSVP' ? String(g(r, 'invitetype') || '') : 'Reception', functions: String(g(r, 'functions') || ''), updated: str_(g(r, 'lastupdated')) });
       }
-    }
+    });
   } catch (e) { out = { success: true, rsvp: [], note: 'Could not open the wedding website sheet: ' + e }; }
-  try { cache.put('RSVP', JSON.stringify(out), 120); } catch (e) {}
+  try { cache.put('RSVP2', JSON.stringify(out), 120); } catch (e) {}
   return out;
 }

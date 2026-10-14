@@ -569,7 +569,7 @@ function viewGuests() {
   if (S.gtab === 'rsvp') return h + viewRsvp();
   if (S.gtab === 'all') return h + viewAllGuests();
   // summary
-  var G = S.guests, R = rsvpList(), ry = R.filter(function (r) { return yes(r.attending); });
+  var G = S.guests, R = rsvpWed(), ry = R.filter(function (r) { return yes(r.attending); });
   var noRoom = G.filter(function (g) { return yes(g.roomReq) && !g.stay; }), noPick = G.filter(function (g) { return yes(g.vehicle) && !g.pickupBy; });
   var notIn = ry.filter(function (r) { return !rsvpInGuests(r); });
   h += '<div class="hero"><div class="sub">' + B('Guest list', 'मेहमानों की सूची') + '</div><div style="display:flex;gap:1.2rem;align-items:flex-end;flex-wrap:wrap"><div><div class="big">' + people(G) + '</div><div class="sub">' + L('people · ' + G.length + ' families', 'लोग · ' + G.length + ' परिवार') + '</div></div>' +
@@ -584,6 +584,8 @@ function viewGuests() {
     '<button class="tile ' + (G.some(function (g) { return invState(g) === 'wait'; }) ? 'warn' : '') + '" data-act="gt" data-v="inv"><b>' + (S.rsvp ? G.filter(function (g) { return invState(g) === 'wait'; }).length : '…') + '</b><span>' + L('invited, no RSVP yet', 'निमंत्रण गया, जवाब बाकी') + '</span></button></div>';
   h += '<button class="addbig" data-act="addguest">＋ ' + B('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
   if (S.rsvp) h += rsvpTables(R);
+  var RR = rsvpList().filter(isRecReply), rry = RR.filter(function (r) { return yes(r.attending); });
+  if (RR.length) h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Reception (8 Dec, Mishra Niwas)', 'आशीर्वाद समारोह (8 दिसंबर)') + '</div><div class="tbl-wrap"><table class="tbl">' + tblHead(L('Reception', 'समारोह')) + '<tbody>' + sumRow(B2('Coming', 'आएँगे'), rry, 'sum') + '</tbody></table></div><div class="tbl-note">' + L((RR.length - rry.length) + ' cannot come', (RR.length - rry.length) + ' नहीं आ पाएँगे') + '</div></div>';
   if (G.length) h += guestTable(G);
   if (G.length) {
     var stays = {}; G.forEach(function (g) { if (g.stay) { stays[g.stay] = stays[g.stay] || []; stays[g.stay].push(g); } });
@@ -625,7 +627,7 @@ function viewRsvp() {
   var h = '<p class="rem">' + L('Replies people sent from the wedding website. Tap “Add to guest list” to plan their room and pickup.', 'वेबसाइट से आए जवाब। कमरा और लेने की व्यवस्था के लिए “सूची में जोड़ें” दबाएँ।') + '</p>';
   function row(r) {
     var inG = rsvpInGuests(r);
-    return '<div class="task" style="cursor:default"><div class="t">' + esc(r.name) + ' ' + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
+    return '<div class="task" style="cursor:default"><div class="t">' + esc(r.name) + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : '') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
       (yes(r.attending) ? '<div class="meta">' + L(r.men + ' men · ' + r.women + ' women · ' + r.children + ' children', r.men + ' पुरुष · ' + r.women + ' महिलाएँ · ' + r.children + ' बच्चे') + (r.arrDate ? ' · ' + L('arrives ', 'आगमन ') + niceDate(r.arrDate) : '') + (yes(r.room) ? ' · <span class="badge b-warn">' + L('needs room', 'कमरा चाहिए') + '</span>' : '') + '</div><div class="rem">' + esc(r.functions.split(' | ').map(function (f) { return L(f, fnHi(f)); }).join(', ')) + '</div>' : '') +
       (r.note ? '<div class="rem">💬 ' + esc(r.note) + '</div>' : '') +
       '<div class="acts">' + (yes(r.attending) && !inG ? '<button class="btn sm" data-act="rsvpadd" data-v="' + esc(r.phone || r.name) + '">＋ ' + B('Add to guest list', 'सूची में जोड़ें') + '</button>' : '') + callBtns(r.phone, L('Namaste ', 'नमस्ते ') + r.name + ' ji 🙏') + '</div></div>';
@@ -865,17 +867,24 @@ function flowText(d, items) {
    it opens WhatsApp with the message ready (one tap to send). Replies are matched with the website RSVP by mobile number. */
 var SITE = 'https://shibugotjeetuu2bethere.vercel.app';
 var INVITES = ['shrijeet/parivaar', 'shrijeet/shubh-vivah', 'shivangi/parivaar', 'shivangi/shubh-vivah'];
-function invCode(side, full, hi) { return (side === 'Shivangi' ? 'shivangi' : 'shrijeet') + '/' + (full ? 'parivaar' : 'shubh-vivah') + (hi ? '/hindi' : ''); }
-function invInfo(code) { var c = String(code || ''); return { side: /^shivangi/.test(c) ? 'Shivangi' : 'Shrijeet', full: /parivaar/.test(c), hi: /hindi/.test(c), ok: /^(shrijeet|shivangi)\/(parivaar|shubh-vivah)/.test(c) }; }
+// type: 'full' (Parivaar, 3 days) · 'wed' (Shubh Vivah, wedding day) · 'rec' (Reception at home, 8 Dec)
+function invCode(side, type, hi) { if (type === true) type = 'full'; else if (type === false) type = 'wed'; return (side === 'Shivangi' ? 'shivangi' : 'shrijeet') + '/' + (type === 'full' ? 'parivaar' : type === 'rec' ? 'reception' : 'shubh-vivah') + (hi ? '/hindi' : ''); }
+function invInfo(code) { var c = String(code || ''); var type = /parivaar/.test(c) ? 'full' : /reception/.test(c) ? 'rec' : 'wed'; return { side: /^shivangi/.test(c) ? 'Shivangi' : 'Shrijeet', type: type, full: type === 'full', rec: type === 'rec', hi: /hindi/.test(c), ok: /^(shrijeet|shivangi)\/(parivaar|shubh-vivah|reception)/.test(c) }; }
 function invLabel(code) {
   var i = invInfo(code); if (!i.ok) return '';
-  return L(i.side, WHO_HI[i.side]) + ' · ' + (i.full ? L('Parivaar (3 days)', 'परिवार (3 दिन)') : L('Shubh Vivah (wedding day)', 'शुभ विवाह (शादी का दिन)')) + (i.hi ? ' · हिंदी' : '');
+  return L(i.side, WHO_HI[i.side]) + ' · ' + (i.full ? L('Parivaar (3 days)', 'परिवार (3 दिन)') : i.rec ? L('Reception (8 Dec, home)', 'आशीर्वाद समारोह (8 दिसंबर)') : L('Shubh Vivah (wedding day)', 'शुभ विवाह (शादी का दिन)')) + (i.hi ? ' · हिंदी' : '');
 }
 function invUrl(code) { return SITE + '/invite/' + code; }
 function rsvpUrl(code) { return invInfo(code).ok ? SITE + '/invite/' + code + '/rsvp' : SITE + '/rsvp'; }
 function couple(side, hi) { return side === 'Shivangi' ? (hi ? 'शिवांगी एवं श्रीजीत' : 'Shivangi & Shrijeet') : (hi ? 'श्रीजीत एवं शिवांगी' : 'Shrijeet & Shivangi'); }
 function defInvMsg(code) {
   var i = invInfo(code), c = couple(i.side, i.hi);
+  if (i.rec) {
+    if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nईश्वर की कृपा से हमारे सुपुत्र *श्रीजीत* का शुभ विवाह *शिवांगी* के साथ 2 दिसंबर 2026 को सम्पन्न हुआ।\n\nनवदंपति को आशीर्वाद देने हेतु *आशीर्वाद समारोह* में आप सपरिवार सादर आमंत्रित हैं:\n📅 *मंगलवार, 8 दिसंबर 2026 · शाम 6:30 बजे से*\n📍 *मिश्रा निवास*, सिलौत रोड, सिलौत वासुदेव, मुज़फ़्फ़रपुर, बिहार 843119\n🗺️ https://maps.app.goo.gl/3GcWmJahuHtE1i8X8\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
+      '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट:*\n👉 ' + rsvpUrl(code);
+    return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith the blessings of the Almighty, our son *Shrijeet* was married to *Shivangi* on 2nd December 2026.\n\nWe warmly invite you and your family to the *Wedding Reception* to bless the newlyweds:\n📅 *Tuesday, 8 December 2026 · 6:30 PM onwards*\n📍 *Mishra Niwas*, Silout Rd, Silout Basudeo, Muzaffarpur, Bihar 843119\n🗺️ https://maps.app.goo.gl/3GcWmJahuHtE1i8X8\n\nYour invitation 👇\n' + invUrl(code) +
+      '\n\n*🙏 Kindly confirm on the RSVP — it takes 1 minute:*\n👉 ' + rsvpUrl(code);
+  }
   if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nअत्यंत हर्ष के साथ आपको सपरिवार *' + c + '* के ' + (i.full ? 'शुभ विवाह समारोह (30 नवंबर से 2 दिसंबर 2026)' : 'शुभ विवाह (बुधवार, 2 दिसंबर 2026)') + ' में सादर आमंत्रित करते हैं।\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
     '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा। इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:*\n👉 ' + rsvpUrl(code);
   return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith immense joy, we invite you and your family to ' + (i.full ? 'the wedding celebrations of *' + c + '* — 30 November to 2 December 2026.' : 'the wedding of *' + c + '* on Wednesday, 2 December 2026.') + '\n\nYour invitation 👇\n' + invUrl(code) +
@@ -892,8 +901,10 @@ function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_
 
 function guestByPhone(phone) { var p = last10(phone); return p ? S.guests.filter(function (g) { return last10(g.phone) === p || last10(g.rsvp) === p; })[0] : null; }
 function guestByName(name) { var k = nkey(name); return k ? S.guests.filter(function (g) { return nkey(g.name) === k; })[0] : null; }
+function isRecReply(r) { return /reception/i.test(String(r.invite || '')); }
+function rsvpWed() { return rsvpList().filter(function (r) { return !isRecReply(r); }); }   // wedding replies only (the reception has its own)
 function replyOf(g) {
-  var R = rsvpList(), p = last10(g.phone), rp = last10(g.rsvp);
+  var rec = invInfo(g.invLink).rec, R = rsvpList().filter(function (x) { return isRecReply(x) === rec; }), p = last10(g.phone), rp = last10(g.rsvp);
   var r = R.filter(function (x) { var q = last10(x.phone); return q && (q === p || q === rp); })[0];
   if (!r && g.name) { var k = nkey(g.name); r = R.filter(function (x) { return k && nkey(x.name) === k; })[0]; }
   return r || null;
@@ -919,61 +930,81 @@ function invRow(g) {
     '<div class="meta">' + (st === 'none' ? [g.group ? esc(g.group) : '', g.side ? esc(L(g.side, WHO_HI[g.side] || g.side)) : '', g.phone ? esc(g.phone) : L('no number', 'नंबर नहीं')].filter(Boolean).join(' · ') : invMeta(g)) + '</div>' +
     (acts ? '<div class="acts">' + acts + '</div>' : '') + '</div>';
 }
+function planned(g) { return !g.invSent && invInfo(g.invLink).ok; }      // picked for an invite, not sent yet ("To send")
+function comingOf(list) { var n = 0; list.forEach(function (g) { var r = replyOf(g); if (r && yes(r.attending)) n += num(r.total); }); return n; }
 function viewInvites() {
   var G = S.guests, sent = G.filter(function (g) { return g.invSent; });
-  var rep = sent.filter(function (g) { return invState(g) === 'replied'; }), wait = sent.filter(function (g) { return invState(g) === 'wait'; }), none = G.filter(function (g) { return !g.invSent; });
-  var todayN = sent.filter(function (g) { return g.invSent === today(); }).length;
+  var rep = sent.filter(function (g) { return invState(g) === 'replied'; }), wait = sent.filter(function (g) { return invState(g) === 'wait'; });
+  var plan = G.filter(planned), none = G.filter(function (g) { return !g.invSent && !planned(g); });
+  var todayN = sent.filter(function (g) { return g.invSent === today(); }).length, coming = comingOf(rep);
   var h = '';
   if (S.v5 === false) h += '<div class="card" style="padding:1rem;margin-bottom:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch this on', 'इसे चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version (see the guide). Until then, invites you mark here are not saved.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। तब तक यहाँ लिखे निमंत्रण सेव नहीं होंगे।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
-  h += '<div class="hero"><div class="sub">' + B('Invites sent', 'भेजे गए निमंत्रण') + (todayN ? ' · ' + L(todayN + ' today', 'आज ' + todayN) : '') + '</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.6rem;align-items:end">' +
-    '<div><div class="big" style="font-size:2.4rem">' + sent.length + '</div><div class="sub">' + L('families', 'परिवार') + '</div></div>' +
-    '<div><div class="big" style="font-size:2.4rem">' + rep.length + '</div><div class="sub">' + L('replied', 'जवाब मिला') + '</div></div><div><div class="big" style="font-size:2.4rem">' + wait.length + '</div><div class="sub">' + L('waiting', 'जवाब बाकी') + '</div></div></div>' +
+  h += '<div class="hero"><div class="sub">' + B('Invites', 'निमंत्रण') + (todayN ? ' · ' + L(todayN + ' sent today', 'आज ' + todayN + ' भेजे') : '') + '</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;align-items:end">' +
+    '<div><div class="big" style="font-size:2.1rem">' + sent.length + '</div><div class="sub">' + L('sent', 'भेजे') + '</div></div>' +
+    '<div><div class="big" style="font-size:2.1rem">' + rep.length + '</div><div class="sub">' + L('replied', 'जवाब मिला') + '</div></div>' +
+    '<div><div class="big" style="font-size:2.1rem">' + wait.length + '</div><div class="sub">' + L('waiting', 'जवाब बाकी') + '</div></div>' +
+    '<div><div class="big" style="font-size:2.1rem">' + plan.length + '</div><div class="sub">' + L('to send', 'भेजने हैं') + '</div></div></div>' +
+    '<div class="stats" style="margin-top:.6rem"><div class="stat"><b>' + coming + '</b> ' + L('people coming (from replies)', 'लोग आ रहे हैं (जवाबों से)') + '</div></div>' +
     (S.rsvp ? '' : '<div class="sub" style="margin-top:.4rem">' + L('Checking the website replies…', 'वेबसाइट के जवाब देख रहे हैं…') + '</div>') + '</div>';
-  h += '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="addbig" style="margin:0;flex:1.3" data-act="invsend">📨 ' + B('Send invites', 'निमंत्रण भेजें') + '</button><button class="btn ghost" style="flex:1;min-height:3.2rem;padding:.4rem .7rem;border-radius:1rem;font-size:.92rem" data-act="invmark">✓ ' + B('Already sent? Mark', 'पहले भेजे? लिखें') + '</button></div>';
-  var tab = S.itab || 'wait';
-  h += '<div class="chips" style="margin-top:.9rem">' + [['wait', 'Waiting', 'जवाब बाकी', wait.length], ['rep', 'Replied', 'जवाब मिला', rep.length], ['none', 'Not sent', 'नहीं भेजा', none.length], ['all', 'All sent', 'सभी भेजे', sent.length]].map(function (x) { return chip('itab', x[0], B(x[1], x[2]) + ' <b>' + x[3] + '</b>', tab === x[0]); }).join('') + '</div>';
-  var list = tab === 'wait' ? wait : tab === 'rep' ? rep : tab === 'none' ? none : sent;
-  list = list.slice().sort(function (a, b) { return tab === 'none' ? a.name.localeCompare(b.name) : (a.invSent || '') < (b.invSent || '') ? -1 : (a.invSent || '') > (b.invSent || '') ? 1 : a.name.localeCompare(b.name); });
-  if (tab === 'wait' && wait.length) {
-    var withNo = wait.filter(function (g) { return digits(g.phone).length >= 10; }).length;
-    h += '<button class="btn block" style="width:100%;margin-bottom:.4rem" data-act="remall">🔔 ' + B('Remind all ' + withNo + ', one by one', 'सभी ' + withNo + ' को याद दिलाएँ, एक-एक करके') + '</button>' +
-      '<button class="btn ghost block" style="width:100%;margin-bottom:.4rem" data-act="rembc">📢 ' + B('Remind all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से याद दिलाएँ') + '</button>' +
-      '<div style="text-align:center;margin-bottom:.6rem"><a href="#" data-act="remedit" style="color:var(--navy);font-weight:600;font-size:.9rem">✎ ' + B('See / change the reminder message', 'याद दिलाने का संदेश देखें / बदलें') + '</a></div>';
+  h += '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="addbig" style="margin:0;flex:1.3" data-act="invsend">＋ ' + B('Pick people to invite', 'निमंत्रण के लिए लोग चुनें') + '</button><button class="btn ghost" style="flex:1;min-height:3.2rem;padding:.4rem .7rem;border-radius:1rem;font-size:.92rem" data-act="invmark">✓ ' + B('Already sent? Mark', 'पहले भेजे? लिखें') + '</button></div>';
+  var tab = S.itab || (plan.length ? 'plan' : 'wait');
+  h += '<div class="chips" style="margin-top:.9rem">' + [['plan', 'To send', 'भेजने हैं', plan.length], ['wait', 'Waiting', 'जवाब बाकी', wait.length], ['rep', 'Replied', 'जवाब मिला', rep.length], ['all', 'All sent', 'सभी भेजे', sent.length], ['none', 'Not invited yet', 'अभी नहीं चुना', none.length]].map(function (x) { return chip('itab', x[0], B(x[1], x[2]) + ' <b>' + x[3] + '</b>', tab === x[0]); }).join('') + '</div>';
+  if (tab === 'plan') {
+    if (!plan.length) h += '<div class="card empty">' + L('Nothing waiting to be sent. Tap “Pick people to invite” — everyone you pick is saved here at once, even if you close the planner.', 'भेजने के लिए कोई नहीं। “निमंत्रण के लिए लोग चुनें” दबाएँ — जिन्हें चुनेंगे वे तुरंत यहाँ सेव हो जाएँगे, प्लानर बंद करने पर भी।') + '</div>';
+    var by = {}; plan.forEach(function (g) { (by[g.invLink] = by[g.invLink] || []).push(g); });
+    Object.keys(by).sort().forEach(function (code) {
+      var list = by[code].sort(function (a, b) { return a.name.localeCompare(b.name); });
+      h += '<div class="card group" style="margin-top:.9rem;padding-bottom:.6rem"><div class="catHead"><span>' + esc(invLabel(code)) + '</span><small>' + list.length + ' ' + L('people', 'लोग') + '</small></div>' +
+        '<div style="display:grid;gap:.5rem;padding:.7rem .9rem .3rem"><button class="btn block" style="width:100%" data-act="grpsend" data-v="' + esc(code) + '">💬 ' + B('Send one by one', 'एक-एक करके भेजें') + '</button>' +
+        '<div style="display:flex;gap:.5rem"><button class="btn ghost sm" style="flex:1" data-act="grpbc" data-v="' + esc(code) + '">📢 ' + esc(L('Broadcast', 'ब्रॉडकास्ट')) + '</button><button class="btn ghost sm" style="flex:1" data-act="grpadd" data-v="' + esc(code) + '">＋ ' + esc(L('Add more', 'और जोड़ें')) + '</button></div></div>' +
+        list.map(function (g) {
+          return '<div class="task" style="display:flex;justify-content:space-between;align-items:center;gap:.5rem" data-act="editguest" data-id="' + esc(g.id) + '"><div style="min-width:0"><b>' + esc(g.name) + '</b><div class="rem">' + esc(g.phone || L('no number', 'नंबर नहीं')) + '</div></div>' +
+            '<div style="display:flex;gap:.35rem;flex:none">' + (digits(g.phone).length >= 10 ? '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, invMsg(code))) + '" data-act="sendnow" data-id="' + esc(g.id) + '">💬</a>' : '') + '<button class="call" data-act="unplan" data-id="' + esc(g.id) + '" aria-label="Remove">✕</button></div></div>';
+        }).join('') + '</div>';
+    });
+  } else {
+    var list = tab === 'wait' ? wait : tab === 'rep' ? rep : tab === 'none' ? none : sent;
+    list = list.slice().sort(function (a, b) { return tab === 'none' ? a.name.localeCompare(b.name) : (a.invSent || '') < (b.invSent || '') ? -1 : (a.invSent || '') > (b.invSent || '') ? 1 : a.name.localeCompare(b.name); });
+    if (tab === 'wait' && wait.length) {
+      var withNo = wait.filter(function (g) { return digits(g.phone).length >= 10; }).length;
+      h += '<button class="btn block" style="width:100%;margin-bottom:.4rem" data-act="remall">🔔 ' + B('Remind all ' + withNo + ', one by one', 'सभी ' + withNo + ' को याद दिलाएँ, एक-एक करके') + '</button>' +
+        '<button class="btn ghost block" style="width:100%;margin-bottom:.4rem" data-act="rembc">📢 ' + B('Remind all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से याद दिलाएँ') + '</button>' +
+        '<div style="text-align:center;margin-bottom:.6rem"><a href="#" data-act="remedit" style="color:var(--navy);font-weight:600;font-size:.9rem">✎ ' + B('See / change the reminder message', 'याद दिलाने का संदेश देखें / बदलें') + '</a></div>';
+    }
+    if (tab === 'rep' && rep.length) h += '<div class="card" style="padding:.7rem 1rem;margin-bottom:.6rem"><b>' + coming + '</b> ' + L('people coming · ', 'लोग आ रहे हैं · ') + rep.filter(function (g) { var r = replyOf(g); return r && !yes(r.attending); }).length + ' ' + L('families cannot come', 'परिवार नहीं आ पाएँगे') + '</div>';
+    if (!list.length) h += '<div class="card empty">' + (tab === 'wait' ? (sent.length ? L('Everyone you invited has replied 🎉', 'सभी ने जवाब दे दिया 🎉') : L('No invites sent yet.', 'अभी कोई निमंत्रण नहीं भेजा।'))
+      : tab === 'rep' ? L('No replies yet.', 'अभी कोई जवाब नहीं।') : tab === 'none' ? L('Everyone in the guest list has an invite ✓', 'सूची में सभी को निमंत्रण चुना जा चुका ✓') : L('No invites sent yet.', 'अभी कोई निमंत्रण नहीं भेजा।')) + '</div>';
+    else h += '<div class="card">' + list.map(invRow).join('') + '</div>';
   }
-  if (!list.length) h += '<div class="card empty">' + (tab === 'wait' ? (sent.length ? L('Everyone you invited has replied 🎉', 'सभी ने जवाब दे दिया 🎉') : L('No invites noted yet. Tap “Send invites”, or “Already sent? Mark” for the ones you sent before.', 'अभी कोई निमंत्रण नहीं लिखा। “निमंत्रण भेजें” दबाएँ, या पहले भेजे हुए “पहले भेजे? लिखें” से जोड़ें।'))
-    : tab === 'rep' ? L('No replies yet.', 'अभी कोई जवाब नहीं।') : tab === 'none' ? L('Everyone in the guest list has been sent an invite ✓', 'सूची में सभी को निमंत्रण भेज दिया ✓') : L('No invites noted yet.', 'अभी कोई निमंत्रण नहीं लिखा।')) + '</div>';
-  else h += '<div class="card">' + list.map(invRow).join('') + '</div>';
-  h += '<div class="card" style="padding:.9rem 1rem;margin-top:1rem;font-size:.88rem;color:var(--muted)"><b style="color:var(--navy)">' + B('How replies are matched', 'जवाब कैसे मिलते हैं') + '</b><br>' +
-    L('A guest counts as replied when they fill the RSVP on the website with the same mobile number you sent the invite to (or the same name). If someone replied on a call or with another number, tap “They replied”.', 'जिस नंबर पर निमंत्रण भेजा, उसी नंबर (या उसी नाम) से वेबसाइट पर RSVP भरते ही “जवाब मिला” में आ जाते हैं। फ़ोन पर या दूसरे नंबर से बताया हो तो “जवाब मिल गया” दबाएँ।') +
-    '<br><br><b style="color:var(--navy)">' + B('Message many people at once?', 'एक साथ सबको भेजना?') + '</b><br>' + L('WhatsApp opens one chat at a time. For a single message to everyone, make a WhatsApp broadcast list (it reaches only people who have saved your number) or post in a guests’ WhatsApp group.', 'WhatsApp एक बार में एक चैट खोलता है। सबको एक साथ भेजने के लिए WhatsApp में ब्रॉडकास्ट लिस्ट बनाएँ (सिर्फ़ उन्हीं तक जाता है जिनके फ़ोन में आपका नंबर सेव है) या मेहमानों के ग्रुप में भेजें।') + '</div>';
+  h += '<div class="card" style="padding:.9rem 1rem;margin-top:1rem;font-size:.88rem;color:var(--muted)"><b style="color:var(--navy)">' + B('How it works', 'यह कैसे काम करता है') + '</b><br>' +
+    L('1. Pick people — from contacts, the guest list or by typing. Each one is saved at once in “To send”, so nothing is lost if the app closes or the internet goes.<br>2. Send — one by one (WhatsApp opens with the message ready) or as a broadcast. Each is moved to “Waiting”.<br>3. When they fill the RSVP with the same number, they move to “Replied” with how many are coming. Remind the rest from “Waiting”.',
+      '1. लोग चुनें — कॉन्टैक्ट, सूची से या लिखकर। हर नाम तुरंत “भेजने हैं” में सेव होता है, ऐप बंद हो या इंटरनेट जाए तो भी।<br>2. भेजें — एक-एक करके (WhatsApp में संदेश तैयार मिलेगा) या ब्रॉडकास्ट से। फिर वे “जवाब बाकी” में चले जाते हैं।<br>3. उसी नंबर से RSVP भरते ही वे “जवाब मिला” में आ जाते हैं, कितने लोग आ रहे हैं के साथ। बाकी को “जवाब बाकी” से याद दिलाएँ।') + '</div>';
   h += '<div class="sync"><a href="#" data-act="rsvprefresh" style="color:inherit">' + B('Check for new replies', 'नए जवाब देखें') + '</a></div>';
   return h;
 }
 
-/* send / mark sheet */
+/* pick people for an invite: every pick is saved at once in the guest list ("To send"), so it survives closing the app */
 function canPickContacts() { return !!(navigator.contacts && navigator.contacts.select); }
 function iseg(k, opts, cur) { return '<div class="seg">' + opts.map(function (o) { return '<button data-act="invpick" data-k="' + k + '" data-v="' + esc(o[0]) + '" class="' + (cur === o[0] ? 'on' : '') + '">' + B2(o[1], o[2]) + '</button>'; }).join('') + '</div>'; }
-function openSend(mode, preIds) {
-  var last = invInfo(LS.get('pl_inv') || 'shrijeet/parivaar');
-  var sh = S.sheet && S.sheet.send ? S.sheet : { send: 1, mode: mode, side: last.side, full: last.full, hi: last.hi, people: [], showList: false, lq: '', tn: '', tp: '' };
-  if (!(S.sheet && S.sheet.send)) (preIds || []).forEach(function (id) { var g = S.guests.filter(function (x) { return x.id === id; })[0]; if (g) { sh.people.push({ name: g.name, phone: g.phone, gid: g.id }); if (g.side === 'Shrijeet' || g.side === 'Shivangi') sh.side = g.side; } });
+function sheetCode() { var sh = S.sheet; return invCode(sh.side, sh.type, sh.hi); }
+function openSend(mode, code0) {
+  var last = invInfo(code0 || LS.get('pl_inv') || 'shrijeet/parivaar');
+  var sh = S.sheet && S.sheet.send ? S.sheet : { send: 1, mode: mode, side: last.side, type: last.type, hi: last.hi, showList: false, lq: '', tn: '', tp: '' };
   S.sheet = sh;
-  var code = invCode(sh.side, sh.full, sh.hi), send = sh.mode === 'send';
-  var h = '<h3>' + (send ? '📨 ' + B('Send invites', 'निमंत्रण भेजें') : '✓ ' + B('Mark invites as already sent', 'पहले भेजे निमंत्रण लिखें')) + '</h3>' +
-    (send ? '' : '<div class="rem">' + L('For invites you already sent on WhatsApp yourself. Nothing is sent now — they are only noted, so their RSVP can be tracked.', 'जो निमंत्रण आपने पहले ही WhatsApp पर भेज दिए। अभी कुछ नहीं भेजा जाएगा — सिर्फ़ लिखा जाएगा, ताकि RSVP पर नज़र रहे।') + '</div>') +
+  var code = sheetCode(), mark = sh.mode === 'mark';
+  var mine = S.guests.filter(function (g) { return g.invLink === code && (mark ? g.invSent === today() : !g.invSent); }).sort(function (a, b) { return a.name.localeCompare(b.name); });
+  var h = '<h3>' + (mark ? '✓ ' + B('Mark invites as already sent', 'पहले भेजे निमंत्रण लिखें') : '＋ ' + B('Pick people to invite', 'निमंत्रण के लिए लोग चुनें')) + '</h3>' +
+    '<div class="rem">' + (mark ? L('For invites you already sent on WhatsApp yourself. Each person you pick is noted as sent at once.', 'जो निमंत्रण आपने पहले ही भेज दिए। जिसे चुनेंगे, वह तुरंत “भेजा” में लिख जाएगा।') : L('Each person you pick is saved at once in “To send” — you can close the planner and send later.', 'जिसे चुनेंगे, वह तुरंत “भेजने हैं” में सेव हो जाएगा — प्लानर बंद करके बाद में भेज सकते हैं।')) + '</div>' +
     '<label class="l">' + B('Which invite?', 'कौन सा निमंत्रण?') + '</label>' +
     iseg('side', [['Shrijeet', "Shrijeet's side", 'श्रीजीत की ओर से'], ['Shivangi', "Shivangi's side", 'शिवांगी की ओर से']], sh.side) +
-    '<div style="height:.4rem"></div>' + iseg('full', [['1', 'Parivaar · 3 days', 'परिवार · 3 दिन'], ['0', 'Shubh Vivah · wedding day', 'शुभ विवाह · शादी का दिन']], sh.full ? '1' : '0') +
+    '<div style="height:.4rem"></div>' + iseg('type', [['full', 'Parivaar · 3 days', 'परिवार · 3 दिन'], ['wed', 'Wedding day', 'शादी का दिन'], ['rec', 'Reception', 'आशीर्वाद समारोह']], sh.type) +
     '<div style="height:.4rem"></div>' + iseg('hi', [['0', 'English', 'अंग्रेज़ी'], ['1', 'Hindi', 'हिंदी']], sh.hi ? '1' : '0') +
     '<div class="rem" style="margin-top:.3rem">🔗 <a href="' + esc(invUrl(code)) + '" target="_blank" rel="noopener" style="color:var(--navy)">' + esc(invUrl(code).replace('https://', '')) + '</a></div>';
-  if (send) h += '<label class="l">' + B('Message', 'संदेश') + '</label><textarea class="input" id="inv_msg" rows="9" style="min-height:12rem;font-size:.92rem">' + esc(invMsg(code)) + '</textarea>' +
-    '<div class="rem">' + L('Words between *stars* show in bold on WhatsApp. You can paste your own message here — it is remembered on this phone. ', '*तारों* के बीच के शब्द WhatsApp पर मोटे दिखते हैं। अपना संदेश यहाँ डाल सकते हैं — इस फ़ोन पर याद रहेगा। ') + '<a href="#" data-act="invreset" style="color:var(--navy)">↺ ' + L('Default message', 'पहले वाला संदेश') + '</a></div>';
-  h += '<label class="l">' + B('To whom?', 'किसे?') + ' <span class="n">' + sh.people.length + '</span></label>';
-  if (sh.people.length) h += '<div class="card" style="margin:.2rem 0 .5rem">' + sh.people.map(function (p, i) {
-    var g = p.gid ? S.guests.filter(function (x) { return x.id === p.gid; })[0] : guestByPhone(p.phone);
-    return '<div class="task" style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;cursor:default"><div style="min-width:0"><b>' + esc(p.name || p.phone) + '</b><div class="rem">' + esc(p.phone || L('no number', 'नंबर नहीं')) + (g && g.invSent ? ' · ' + L('already sent ', 'पहले भेजा ') + niceDate(g.invSent) : '') + '</div></div><button class="call" data-act="invrm" data-v="' + i + '" aria-label="Remove">✕</button></div>';
+  h += '<label class="l">' + (mark ? B('Marked as sent today', 'आज भेजा लिखा') : B('Saved to send', 'भेजने के लिए सेव')) + ' <span class="n">' + mine.length + '</span></label>';
+  if (mine.length) h += '<div class="card" style="margin:.2rem 0 .5rem;max-height:16rem;overflow-y:auto">' + mine.map(function (g) {
+    return '<div class="task" style="display:flex;justify-content:space-between;align-items:center;gap:.5rem;cursor:default"><div style="min-width:0"><b>' + esc(g.name) + '</b><div class="rem">' + esc(g.phone || L('no number', 'नंबर नहीं')) + '</div></div><button class="call" data-act="' + (mark ? 'unmark' : 'unplan') + '" data-id="' + esc(g.id) + '" aria-label="Remove">✕</button></div>';
   }).join('') + '</div>';
-  h += (canPickContacts() ? '<button class="btn ghost block" style="width:100%" data-act="invcontacts">📇 ' + B('Pick from phone contacts', 'फ़ोन के कॉन्टैक्ट से चुनें') + '</button>' : '') +
+  h += (canPickContacts() ? '<button class="btn block" style="width:100%" data-act="invcontacts">📇 ' + B('Pick from phone contacts', 'फ़ोन के कॉन्टैक्ट से चुनें') + '</button>' : '') +
     '<button class="btn ghost block" style="width:100%;margin-top:.5rem" data-act="invlist">👥 ' + B('Pick from our guest list', 'हमारी सूची से चुनें') + ' ' + (sh.showList ? '▴' : '▾') + '</button>';
   if (sh.showList) {
     var q = sh.lq.trim().toLowerCase(), words = q.split(/\s+/).filter(Boolean);
@@ -981,32 +1012,45 @@ function openSend(mode, preIds) {
       .sort(function (a, b) { return (a.invSent ? 1 : 0) - (b.invSent ? 1 : 0) || a.name.localeCompare(b.name); }).slice(0, 60);
     h += '<input class="input" id="inv_lq" type="search" style="margin-top:.5rem" placeholder="' + esc(L('Search the guest list…', 'सूची में खोजें…')) + '" value="' + esc(sh.lq) + '" />' +
       '<div class="card" style="margin-top:.4rem;max-height:18rem;overflow-y:auto">' + (cand.length ? cand.map(function (g) {
-        var on = sh.people.some(function (p) { return p.gid === g.id; });
-        return '<div class="task" data-act="invtog" data-id="' + esc(g.id) + '" style="display:flex;gap:.6rem;align-items:center"><span style="font-size:1.3rem">' + (on ? '☑' : '☐') + '</span><div style="min-width:0"><b>' + esc(g.name) + '</b><div class="rem">' + [g.phone || L('no number', 'नंबर नहीं'), g.invSent ? L('sent ', 'भेजा ') + niceDate(g.invSent) : ''].filter(Boolean).map(esc).join(' · ') + '</div></div></div>';
+        var on = g.invLink === code && (mark ? !!g.invSent : !g.invSent);
+        return '<div class="task" data-act="invtog" data-id="' + esc(g.id) + '" style="display:flex;gap:.6rem;align-items:center"><span style="font-size:1.3rem">' + (on ? '☑' : '☐') + '</span><div style="min-width:0"><b>' + esc(g.name) + '</b><div class="rem">' + [g.phone || L('no number', 'नंबर नहीं'), g.invSent ? L('sent ', 'भेजा ') + niceDate(g.invSent) : (planned(g) && g.invLink !== code ? L('in another list', 'दूसरी सूची में') : '')].filter(Boolean).map(esc).join(' · ') + '</div></div></div>';
       }).join('') : '<div class="empty">' + L('No guest found.', 'कोई नहीं मिला।') + '</div>') + '</div>';
   }
   h += '<label class="l">' + B('Or type a name and number', 'या नाम और नंबर लिखें') + '</label><div class="two"><div><input class="input" id="inv_tn" placeholder="' + esc(L('Name', 'नाम')) + '" value="' + esc(sh.tn) + '" /></div><div><input class="input" id="inv_tp" inputmode="tel" placeholder="' + esc(L('Mobile', 'मोबाइल')) + '" value="' + esc(sh.tp) + '" /></div></div>' +
     '<button class="btn ghost sm" style="margin-top:.5rem" data-act="invadd">＋ ' + B('Add', 'जोड़ें') + '</button>';
-  h += '<button class="btn block" style="width:100%;margin-top:1.2rem" data-act="invgo">' + (send ? '💬 ' + B('Send one by one', 'एक-एक करके भेजें') : '✓ ' + B('Mark ' + sh.people.length + ' as sent', sh.people.length + ' को भेजा लिखें')) + '</button>' +
-    (send ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="invbc">📢 ' + B('Send all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से भेजें') + '</button>' : '') +
-    '<button class="btn ghost block" style="width:100%;margin-top:.6rem;border-color:#cbbfa8;color:var(--muted)" data-act="closesheet">' + B('Cancel', 'रद्द करें') + '</button>';
+  if (!mark) h += '<details style="margin-top:1rem"><summary style="cursor:pointer;color:var(--navy);font-weight:600">✎ ' + B('See / change the message', 'संदेश देखें / बदलें') + '</summary><textarea class="input" id="inv_msg" rows="9" style="min-height:12rem;font-size:.92rem;margin-top:.5rem">' + esc(invMsg(code)) + '</textarea>' +
+    '<div class="rem">' + L('Words between *stars* show in bold on WhatsApp. Your changes are remembered on this phone. ', '*तारों* के बीच के शब्द WhatsApp पर मोटे दिखते हैं। बदलाव इस फ़ोन पर याद रहेंगे। ') + '<a href="#" data-act="invreset" style="color:var(--navy)">↺ ' + L('Default message', 'पहले वाला संदेश') + '</a></div></details>';
+  if (!mark && mine.length) h += '<button class="btn block" style="width:100%;margin-top:1.1rem" data-act="grpsend" data-v="' + esc(code) + '">💬 ' + B('Send now, one by one (' + mine.length + ')', 'अभी भेजें, एक-एक करके (' + mine.length + ')') + '</button>' +
+    '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="grpbc" data-v="' + esc(code) + '">📢 ' + B('Send all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से भेजें') + '</button>';
+  h += '<button class="btn ghost block" style="width:100%;margin-top:.6rem;border-color:#cbbfa8;color:var(--muted)" data-act="closesheet">' + (mine.length && !mark ? B('Done for now — send later', 'अभी के लिए बस — बाद में भेजें') : B('Close', 'बंद करें')) + '</button>';
   var keep = window.scrollY, box = document.querySelector('#sheetbg .sheet'), st = box ? box.scrollTop : 0;
   showSheet(h);
   var nb = document.querySelector('#sheetbg .sheet'); if (nb && st) nb.scrollTop = st; window.scrollTo(0, keep);
 }
 function sendKeep() { var sh = S.sheet; if (!sh || !sh.send) return; var tn = document.getElementById('inv_tn'), tp = document.getElementById('inv_tp'), lq = document.getElementById('inv_lq'); if (tn) sh.tn = tn.value; if (tp) sh.tp = tp.value; if (lq) sh.lq = lq.value; }
-function addPerson(name, phone, gid) {
-  var sh = S.sheet, p = last10(phone);
-  if (sh.people.some(function (x) { return (gid && x.gid === gid) || (p && last10(x.phone) === p); })) return false;
-  if (!gid) { var g = guestByPhone(phone); if (g) gid = g.id; }
-  sh.people.push({ name: name, phone: phone, gid: gid || '' }); return true;
+// save one picked person for the invite in the sheet: 'plan' (to send) or 'mark' (already sent). Returns 'added' | 'have' | 'sent'
+function pickPerson(name, phone, gid, mode, code, quiet) {
+  var info = invInfo(code), g = gid ? S.guests.filter(function (x) { return x.id === gid; })[0] : guestByPhone(phone);
+  if (g && g.invSent && mode === 'plan') return 'sent';
+  if (g && g.invLink === code && (mode === 'mark' ? g.invSent : !g.invSent)) return 'have';
+  var f = mode === 'mark' ? { invSent: today(), invLink: code, invBy: S.me } : { invLink: code };
+  if (g) { if (!g.phone && phone) f.phone = phone; if (g.side !== 'Shrijeet' && g.side !== 'Shivangi' && g.side !== 'Both') f.side = info.side; rowQuiet('guests', g.id, f); }
+  else rowQuiet('guests', '', Object.assign({ name: name || phone, phone: phone || '', side: info.side }, f));
+  return 'added';
+}
+// like rowSave, without redrawing the screen each time (many contacts at once)
+function rowQuiet(table, id, fields) {
+  var arr = tableArr(table);
+  if (id) { var x = arr.filter(function (r) { return r.id === id; })[0]; if (x) Object.assign(x, fields, { by: S.me }); enqueue({ action: 'rowUpdate', table: table, id: id, fields: fields }); }
+  else { var tmp = 'tmp' + uid(); arr.push(Object.assign({ id: tmp, by: S.me, at: today() }, fields)); enqueue({ action: 'rowAdd', table: table, fields: fields }, tmp); }
 }
 function markInvited(p, code) {
-  var info = invInfo(code), g = p.gid ? S.guests.filter(function (x) { return x.id === p.gid; })[0] : (guestByPhone(p.phone) || (p.phone ? null : guestByName(p.name)));
+  var g = p.gid ? S.guests.filter(function (x) { return x.id === p.gid; })[0] : (guestByPhone(p.phone) || (p.phone ? null : guestByName(p.name)));
   var f = { invSent: today(), invLink: code, invBy: S.me };
-  if (g) { if (!g.phone && p.phone) f.phone = p.phone; if (g.side !== 'Shrijeet' && g.side !== 'Shivangi' && g.side !== 'Both') f.side = info.side; rowSave('guests', g.id, f); }
-  else rowSave('guests', '', Object.assign({ name: p.name || p.phone, phone: p.phone || '', side: info.side }, f));
+  if (g) { if (!g.phone && p.phone) f.phone = p.phone; if (g.side !== 'Shrijeet' && g.side !== 'Shivangi' && g.side !== 'Both') f.side = invInfo(code).side; rowQuiet('guests', g.id, f); }
+  else rowQuiet('guests', '', Object.assign({ name: p.name || p.phone, phone: p.phone || '', side: invInfo(code).side }, f));
 }
+function plannedFor(code) { return S.guests.filter(function (g) { return g.invLink === code && !g.invSent; }).sort(function (a, b) { return a.name.localeCompare(b.name); }); }
 
 /* one-by-one sender: invites, reminders, event-day messages */
 function startRun(run) { S.run = run; S.sheet = { run: 1 }; showRun(); }
@@ -1521,58 +1565,62 @@ document.addEventListener('click', function (e) {
     case 'confirmdels': closeSheet(true); S.sheet = null; rowDel('shagun', id, L('Deleted', 'हटा दिया')); return;
     /* invites */
     case 'itab': S.itab = v; render(); return;
-    case 'invsend': S.sheet = null; openSend('send'); return;
+    case 'invsend': S.sheet = null; openSend('plan'); return;
     case 'invmark': S.sheet = null; openSend('mark'); return;
-    case 'sendone': e.stopPropagation(); S.sheet = null; openSend('send', [id]); return;
+    case 'grpadd': S.sheet = null; openSend('plan', v); return;
+    case 'sendone': e.stopPropagation(); var sg = S.guests.filter(function (x) { return x.id === id; })[0]; S.sheet = null; openSend('plan', sg && invInfo(sg.invLink).ok ? sg.invLink : (sg && sg.side === 'Shivangi' ? 'shivangi/parivaar' : '')); if (sg) { pickPerson(sg.name, sg.phone, sg.id, 'plan', sheetCode()); openSend(); } return;
     case 'invpick':
       sendKeep(); var ish = S.sheet, k = el.getAttribute('data-k');
-      if (k === 'side') ish.side = v; else if (k === 'full') ish.full = v === '1'; else ish.hi = v === '1';
-      LS.set('pl_inv', invCode(ish.side, ish.full, ish.hi)); openSend(); return;
-    case 'invreset': e.preventDefault(); var ic0 = invCode(S.sheet.side, S.sheet.full, S.sheet.hi); LS.set('pl_im_' + ic0, ''); document.getElementById('inv_msg').value = defInvMsg(ic0); return;
+      if (k === 'side') ish.side = v; else if (k === 'type') ish.type = v; else ish.hi = v === '1';
+      LS.set('pl_inv', sheetCode()); openSend(); return;
+    case 'invreset': e.preventDefault(); var ic0 = sheetCode(); LS.set('pl_im_' + ic0, ''); document.getElementById('inv_msg').value = defInvMsg(ic0); return;
     case 'invlist': sendKeep(); S.sheet.showList = !S.sheet.showList; openSend(); return;
     case 'invtog':
-      sendKeep(); var tsh = S.sheet, tix = tsh.people.findIndex(function (p) { return p.gid === id; });
-      if (tix >= 0) tsh.people.splice(tix, 1); else { var tg = S.guests.filter(function (x) { return x.id === id; })[0]; if (tg) tsh.people.push({ name: tg.name, phone: tg.phone, gid: tg.id }); }
-      openSend(); return;
-    case 'invrm': sendKeep(); S.sheet.people.splice(+v, 1); openSend(); return;
+      sendKeep(); var tg = S.guests.filter(function (x) { return x.id === id; })[0]; if (!tg) return;
+      var tcode = sheetCode(), tmark = S.sheet.mode === 'mark';
+      if (tg.invLink === tcode && (tmark ? tg.invSent : !tg.invSent)) rowQuiet('guests', tg.id, tmark ? { invSent: '', invBy: '' } : { invLink: '' });
+      else { var tr = pickPerson(tg.name, tg.phone, tg.id, tmark ? 'mark' : 'plan', tcode); if (tr === 'sent') toast(L('Already sent on ', 'पहले भेजा: ') + niceDate(tg.invSent), true); }
+      openSend(); render(); return;
+    case 'unplan': e.stopPropagation(); rowQuiet('guests', id, { invLink: '' }); if (S.sheet && S.sheet.send) openSend(); render(); return;
+    case 'unmark': rowQuiet('guests', id, { invSent: '', invBy: '' }); openSend(); render(); return;
     case 'invadd':
       sendKeep(); var ash = S.sheet, an = ash.tn.trim(), ap = ash.tp.trim();
       if (digits(ap).length < 10) { toast(L('Please type a 10-digit mobile number', 'कृपया 10 अंकों का मोबाइल नंबर लिखें'), true); return; }
-      if (!addPerson(an || ap, ap, '')) { toast(L('Already in the list', 'पहले से जोड़ा है'), true); return; }
-      ash.tn = ''; ash.tp = ''; openSend(); return;
+      var ar = pickPerson(an || ap, ap, '', ash.mode === 'mark' ? 'mark' : 'plan', sheetCode());
+      if (ar === 'have') { toast(L('Already in this list', 'पहले से इस सूची में है'), true); return; }
+      if (ar === 'sent') { toast(L('This number was already sent an invite', 'इस नंबर पर पहले ही निमंत्रण भेजा जा चुका है'), true); return; }
+      ash.tn = ''; ash.tp = ''; toast(L('Saved ✓', 'सेव हुआ ✓')); openSend(); render(); return;
     case 'invcontacts':
       sendKeep();
       navigator.contacts.select(['name', 'tel'], { multiple: true }).then(function (list) {
-        var n = 0; (list || []).forEach(function (c) { var tel = (c.tel || [])[0] || '', nm = ((c.name || [])[0] || '').trim(); if (!tel) return; if (addPerson(nm || tel, tel, '')) n++; });
-        if (S.sheet && S.sheet.send) openSend(); if (n) toast(L(n + ' added ✓', n + ' जोड़े ✓'));
+        if (!S.sheet || !S.sheet.send) return;
+        var n = 0, had = 0, sentB = 0, cmode = S.sheet.mode === 'mark' ? 'mark' : 'plan', ccode = sheetCode();
+        (list || []).forEach(function (c) { var tel = (c.tel || [])[0] || '', nm = ((c.name || [])[0] || '').trim(); if (!tel) return; var r = pickPerson(nm || tel, tel, '', cmode, ccode); if (r === 'added') n++; else if (r === 'have') had++; else sentB++; });
+        openSend(); render();
+        toast(L(n + ' saved ✓' + (had ? ' · ' + had + ' already in the list' : '') + (sentB ? ' · ' + sentB + ' already sent' : ''), n + ' सेव ✓' + (had ? ' · ' + had + ' पहले से सूची में' : '') + (sentB ? ' · ' + sentB + ' को पहले भेजा' : '')));
       }).catch(function () {});
       return;
-    case 'invgo':
-      sendKeep(); var gsh = S.sheet, gcode = invCode(gsh.side, gsh.full, gsh.hi);
-      if (!gsh.people.length) { toast(L('Add at least one person', 'कम से कम एक व्यक्ति जोड़ें'), true); return; }
-      LS.set('pl_inv', gcode);
-      if (gsh.mode === 'mark') {
-        var mp = gsh.people.slice(); closeSheet(true); S.sheet = null;
-        mp.forEach(function (p) { markInvited(p, gcode); });
-        S.tab = 'guests'; S.gtab = 'inv'; S.itab = 'wait'; toast(L(mp.length + ' marked as sent ✓', mp.length + ' को भेजा लिखा ✓')); render(); return;
-      }
-      var gmsg = (document.getElementById('inv_msg') || {}).value || invMsg(gcode);
-      startRun({ kind: 'inv', code: gcode, title: L('Sending invites', 'निमंत्रण भेज रहे हैं') + ' · ' + invLabel(gcode), items: gsh.people.map(function (p) { return { name: p.name, phone: p.phone, gid: p.gid, text: gmsg }; }), i: 0, sent: 0, skipped: 0 });
+    case 'grpsend':
+      var scode = v, slist = plannedFor(scode).filter(function (g) { return digits(g.phone).length >= 10; });
+      if (!slist.length) { toast(L('Nobody with a mobile number in this list', 'इस सूची में मोबाइल नंबर वाला कोई नहीं'), true); return; }
+      var smsg = (document.getElementById('inv_msg') || {}).value || invMsg(scode); LS.set('pl_inv', scode);
+      startRun({ kind: 'inv', code: scode, title: L('Sending invites', 'निमंत्रण भेज रहे हैं') + ' · ' + invLabel(scode), items: slist.map(function (g) { return { name: g.name, phone: g.phone, gid: g.id, text: smsg }; }), i: 0, sent: 0, skipped: 0 });
       return;
-    case 'invbc':
-      sendKeep(); var bsh = S.sheet, bcode = invCode(bsh.side, bsh.full, bsh.hi);
-      if (!bsh.people.length) { toast(L('Add at least one person', 'कम से कम एक व्यक्ति जोड़ें'), true); return; }
-      LS.set('pl_inv', bcode);
-      openBroadcast({ kind: 'inv', groups: [{ code: bcode, title: invLabel(bcode), text: (document.getElementById('inv_msg') || {}).value || invMsg(bcode), people: bsh.people.slice() }] });
+    case 'grpbc':
+      var bcode = v, blist = plannedFor(bcode);
+      if (!blist.length) { toast(L('Nobody in this list yet', 'इस सूची में अभी कोई नहीं'), true); return; }
+      openBroadcast({ kind: 'inv', groups: [{ code: bcode, title: invLabel(bcode), text: (document.getElementById('inv_msg') || {}).value || invMsg(bcode), people: blist.map(function (g) { return { name: g.name, phone: g.phone, gid: g.id }; }) }] });
       return;
+    case 'sendnow': var sn = S.guests.filter(function (x) { return x.id === id; })[0]; setTimeout(function () { if (sn) { markInvited({ name: sn.name, phone: sn.phone, gid: sn.id }, sn.invLink); toast(L('Moved to Waiting ✓', '“जवाब बाकी” में ✓')); render(); } }, 500); return;
     case 'rembc': var rgs = remGroups(); if (!rgs.length) { toast(L('Nobody to remind', 'याद दिलाने को कोई नहीं'), true); return; } openBroadcast({ kind: 'rem', groups: rgs }); return;
     case 'bccopy': copyText(S.bc.groups[+v].text); return;
     case 'bcmark':
       var bg = S.bc.groups[+v]; if (!bg || bg.done) return; bg.done = true;
       bg.people.forEach(function (p) {
         if (S.bc.kind === 'inv') markInvited(p, bg.code);
-        else { var gx = S.guests.filter(function (x) { return x.id === p.gid; })[0]; if (gx) rowSave('guests', gx.id, { remAt: today(), remN: num(gx.remN) + 1 }); }
+        else { var gx = S.guests.filter(function (x) { return x.id === p.gid; })[0]; if (gx) rowQuiet('guests', gx.id, { remAt: today(), remN: num(gx.remN) + 1 }); }
       });
+      render();
       toast(S.bc.kind === 'inv' ? L(bg.people.length + ' marked as sent ✓', bg.people.length + ' को भेजा लिखा ✓') : L(bg.people.length + ' marked as reminded ✓', bg.people.length + ' को याद दिलाया लिखा ✓'));
       openBroadcast(); return;
     case 'runsend': setTimeout(function () { runDone(true); showRun(); }, 500); return;      // the link itself opens WhatsApp
@@ -1611,7 +1659,7 @@ document.addEventListener('click', function (e) {
 var searchT = 0;
 document.addEventListener('input', function (e) {
   if (e.target.id === 'gq') { S.gq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { render(); window.scrollTo(0, 0); }, 120); }
-  if (e.target.id === 'inv_msg' && S.sheet && S.sheet.send) LS.set('pl_im_' + invCode(S.sheet.side, S.sheet.full, S.sheet.hi), e.target.value);
+  if (e.target.id === 'inv_msg' && S.sheet && S.sheet.send) LS.set('pl_im_' + sheetCode(), e.target.value);
   if (e.target.id === 'rm_en' || e.target.id === 'rm_hi') LS.set(e.target.id === 'rm_en' ? 'pl_rm_en' : 'pl_rm_hi', e.target.value);
   if (e.target.id === 'dm_en' || e.target.id === 'dm_hi') LS.set('pl_dm_' + e.target.getAttribute('data-d') + (e.target.id === 'dm_en' ? '_en' : '_hi'), e.target.value);
   if (e.target.id === 'inv_lq' && S.sheet && S.sheet.send) { S.sheet.lq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { sendKeep(); openSend(); var i = document.getElementById('inv_lq'); if (i) { i.focus(); var n = i.value.length; try { i.setSelectionRange(n, n); } catch (er) {} } }, 200); }

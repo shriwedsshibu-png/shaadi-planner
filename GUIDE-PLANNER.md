@@ -1,5 +1,7 @@
 # Shaadi Planner — setup and updates
 
+> **Version 6 (invite lists that stay saved + reception):** in Guests → Invites tap **＋ Pick people to invite**, choose the invite (side · Parivaar / Wedding day / Reception · English / Hindi) and pick contacts. Every person is saved at once in **To send** (also in the Guest List tab), so closing the app or losing the internet loses nothing. Send them later **one by one** or as a **broadcast**; they move to **Waiting**, then to **Replied** when they fill the RSVP. Reception replies show only after you paste the new `Code.gs` into the Wedding Master Tracker script and deploy a new version.
+
 > **Version 5 update: Invite tracker (who got the invite, who filled the RSVP, reminders). Do this once (3 minutes):**
 > 1. Open the **Wedding Master Tracker** Google Sheet (drive.google.com → search "Wedding Master Tracker") → **Extensions → Apps Script**. The first line must say *Wedding Planner — Google backend*.
 > 2. Select all, delete, paste the new `Code.gs`. **Put your family PIN in `var PIN = '…';` and the helper's PIN in `var SHAGUN_PIN = '…';` again.** Click **Save 💾**.
