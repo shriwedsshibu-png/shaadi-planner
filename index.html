@@ -587,9 +587,7 @@ function viewGuests() {
   var G = S.guests, R = rsvpWed(), ry = R.filter(function (r) { return yes(r.attending); });
   var noRoom = G.filter(function (g) { return yes(g.roomReq) && !g.stay; }), noPick = G.filter(function (g) { return yes(g.vehicle) && !g.pickupBy; });
   var notIn = ry.filter(function (r) { return !rsvpInGuests(r); });
-  h += '<div class="hero"><div class="sub">' + B('Guest list', 'मेहमानों की सूची') + '</div><div style="display:flex;gap:1.2rem;align-items:flex-end;flex-wrap:wrap"><div><div class="big">' + people(G) + '</div><div class="sub">' + L('people · ' + G.length + ' families', 'लोग · ' + G.length + ' परिवार') + '</div></div>' +
-    (S.rsvp ? '<div><div class="big" style="font-size:2.2rem">' + ry.reduce(function (s, r) { return s + (r.total || 0); }, 0) + '</div><div class="sub">' + L('coming (website RSVP · ' + ry.length + ' replies)', 'आ रहे हैं (वेबसाइट से · ' + ry.length + ' जवाब)') + '</div></div>' : '') + '</div>' +
-    '<div class="stats"><div class="stat"><b>' + people(G.filter(function (g) { return g.side === 'Shrijeet'; })) + '</b> ' + L('Shrijeet side', 'श्रीजीत की ओर') + '</div><div class="stat"><b>' + people(G.filter(function (g) { return g.side === 'Shivangi'; })) + '</b> ' + L('Shivangi side', 'शिवांगी की ओर') + '</div></div></div>';
+  h += comingHero();
   h += '<div class="tiles">' +
     '<button class="tile ' + (noRoom.length ? 'warn' : '') + '" data-act="gt" data-v="rooms"><b>' + noRoom.length + '</b><span>' + L('need a room — not given yet', 'को कमरा चाहिए — अभी नहीं मिला') + '</span></button>' +
     '<button class="tile ' + (noPick.length ? 'warn' : '') + '" data-act="gopick"><b>' + noPick.length + '</b><span>' + L('need pickup — no one assigned', 'को लेने कोई तय नहीं') + '</span></button>' +
@@ -1136,6 +1134,24 @@ function tripTable() {
   return '<div class="card" style="margin-top:1rem"><div class="tbl-title">🚐 ' + B('Vehicles needed', 'गाड़ियाँ') + '</div><div class="tbl-note">' + L('Every pickup, move and drop in the plan. Fill arrival times and train / flight in each family’s “Arrival & departure” and the trips group themselves by time.', 'योजना की हर पिक-अप, जगह बदलना और छोड़ना। हर परिवार के “आना-जाना” में समय और ट्रेन भरें, गाड़ियाँ समय से अपने आप बँट जाएँगी।') + '</div>' +
     r.map(function (x) { return '<div style="padding:.55rem .9rem;border-top:1px solid #f1e7d6;font-size:.92rem"><div style="display:flex;justify-content:space-between;gap:.6rem"><b>' + niceDate(x.d) + (x.d2 && x.d2 !== x.d ? ' – ' + niceDate(x.d2) : '') + ' · ' + esc(x.what) + '</b><span class="amt" style="flex:none">' + (x.p !== '' ? x.p + ' 👤' : '') + '</span></div>' + (x.who ? '<div class="rem" style="margin:.1rem 0 0">' + esc(x.who) + '</div>' : '') + '<div style="margin-top:.15rem;color:var(--navy);font-weight:600">🚗 ' + esc(x.v) + (x.maybe ? ' <span class="rem" style="margin:0">(' + L('to be confirmed', 'पक्का नहीं') + ')</span>' : '') + '</div></div>'; }).join('') + '</div>';
 }
+/* who is coming: only the room plan (families confirmed by the family) and website RSVPs that said yes. Invited people who have not replied are NOT counted. */
+function comingNow() {
+  var fams = famList().filter(function (f) { return !f.maybe; }), maybe = famList().filter(function (f) { return f.maybe; });
+  var ph = {}; famList().forEach(function (f) { famPhones(f.name).forEach(function (p) { ph[p.d.slice(-10)] = 1; }); });
+  var R = rsvpWed(), yesR = R.filter(function (r) { return yes(r.attending); }), noR = R.filter(function (r) { return !yes(r.attending); });
+  var extra = yesR.filter(function (r) { return !ph[last10(r.phone)]; });
+  var side = function (s) { return fams.filter(function (f) { return (f.side === 'Shivangi') === (s === 'Shivangi'); }).reduce(function (t, f) { return t + f.people; }, 0); };
+  var plan = fams.reduce(function (t, f) { return t + f.people; }, 0), ex = extra.reduce(function (t, r) { return t + num(r.total); }, 0);
+  return { total: plan + ex, plan: plan, planF: fams.length, ex: ex, exN: extra.length, yesN: yesR.length, yesP: yesR.reduce(function (t, r) { return t + num(r.total); }, 0), noN: noR.length, maybeP: maybe.reduce(function (t, f) { return t + f.people; }, 0), ours: side('Shrijeet'), shiv: side('Shivangi'), wait: S.rsvp ? S.guests.filter(function (g) { return invState(g) === 'wait'; }).length : null };
+}
+function comingHero() {
+  var c = comingNow();
+  return '<div class="hero"><div class="sub">' + B('Coming', 'आ रहे हैं') + '</div><div style="display:flex;gap:1.2rem;align-items:flex-end;flex-wrap:wrap"><div><div class="big">' + c.total + '</div><div class="sub">' + L('people coming', 'लोग आ रहे हैं') + '</div></div>' +
+    '<div><div class="big" style="font-size:2.2rem">' + c.plan + '</div><div class="sub">' + L('room plan · ' + c.planF + ' families', 'कमरों की योजना · ' + c.planF + ' परिवार') + '</div></div>' +
+    '<div><div class="big" style="font-size:2.2rem">' + (S.rsvp ? c.ex : '…') + '</div><div class="sub">' + L('more from RSVP “yes”', 'RSVP “हाँ” से और') + '</div></div></div>' +
+    '<div class="stats"><div class="stat"><b>' + c.ours + '</b> ' + L('Shrijeet side (room plan)', 'श्रीजीत की ओर') + '</div><div class="stat"><b>' + c.shiv + '</b> ' + L('Shivangi side (room plan)', 'शिवांगी की ओर') + '</div>' + (c.maybeP ? '<div class="stat"><b>+' + c.maybeP + '</b> ' + L('not confirmed', 'पक्का नहीं') + '</div>' : '') + '</div>' +
+    '<div class="sub" style="margin-top:.5rem">' + (S.rsvp ? L('RSVP: ' + c.yesN + ' said yes (' + c.yesP + ' people) · ' + c.noN + ' said no · ' + (c.wait || 0) + ' invited, no reply yet (not counted)', 'RSVP: ' + c.yesN + ' हाँ (' + c.yesP + ' लोग) · ' + c.noN + ' नहीं · ' + (c.wait || 0) + ' का जवाब बाकी (गिने नहीं)') : L('Loading RSVP replies…', 'जवाब आ रहे हैं…')) + '</div></div>';
+}
 function viewDays() {
   if (!S.rsvp && (!S.rsvpAt || Date.now() - S.rsvpAt > 30000)) loadRsvp();
   var fams = famList(), dates = {};
@@ -1182,7 +1198,7 @@ function viewAllGuests() {
   ['Shrijeet', 'Shivangi', ''].forEach(function (side) {
     var list = G.filter(function (g) { return side ? g.side === side : (g.side !== 'Shrijeet' && g.side !== 'Shivangi'); });
     if (!list.length) return;
-    h += '<h2 class="sec">' + (side ? B(side + "'s side", WHO_HI[side] + ' की ओर') : B('Side not set', 'ओर तय नहीं')) + ' <span class="n">' + people(list) + '</span></h2><div class="card">' + list.map(function (g) { return guestRow(g); }).join('') + '</div>';
+    h += '<h2 class="sec">' + (side ? B(side + "'s side", WHO_HI[side] + ' की ओर') : B('Side not set', 'ओर तय नहीं')) + ' <span class="n">' + list.length + ' ' + L('contacts', 'संपर्क') + '</span></h2><div class="card">' + list.map(function (g) { return guestRow(g); }).join('') + '</div>';
   });
   return h;
 }
