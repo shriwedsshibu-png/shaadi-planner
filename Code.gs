@@ -53,6 +53,7 @@ function doGet(e) {
     }
     if (p.action === 'ver') return json_({ success: true, ver: ver_() });
     if (p.action === 'all') {
+      if (p.fresh) clearCache_();   // Refresh button: read the sheet again (picks up changes made outside the app)
       if (p.have && String(p.have) === ver_()) return json_({ success: true, same: true, ver: ver_() });   // nothing changed: tiny answer
       return text_(readAllText_());
     }
@@ -753,8 +754,8 @@ var ROOM_SEED_STAYS = [
   ['Vishakha Command Mess', 'Shivangi', 'Booked', 10, '2026-11-28', '2026-12-03', 'Meals come packed from the Officers Mess', 'https://maps.app.goo.gl/9WhPNTfZs2sEp5E77', '', '', "Shivangi's side decides who stays here."],
   ['NOI', 'Shrijeet', 'Booked', 6, '2026-11-28', '2026-11-29', '2 rooms with 2 flats inside each + 2 rooms with one bed', 'https://maps.app.goo.gl/NosKjfXVnCdrZnA16', '', '', ''],
   ['HSL Guest Rooms', 'Shrijeet', 'Booked', 4, '2026-11-28', '2026-12-02', 'GH 1 - GH 4', 'https://maps.app.goo.gl/abWmPEdsGeFtVRRg7', '', '', 'Booked till 2 Dec for now. Plan: extend it, or shift the booking to 28-30 Nov and 3-4 Dec.'],
-  ['Bungalow 1 (Flat One)', 'Shrijeet', 'Booked', 5, '2026-11-30', '2026-12-02', '5 BHK + hall (hall with mattresses)', 'https://maps.app.goo.gl/SGE2PJZ9CBvmDqLbA', '', 60000, 'Rs 60,000 for 3 nights (to be confirmed). Extension to be discussed.'],
-  ['Bungalow 2 (Flat Two)', 'Shrijeet', 'Booked', 3, '2026-11-30', '2026-12-02', '3 BHK + hall (hall with mattresses)', 'https://maps.app.goo.gl/Yi4BHpm7Cu8ApvDD9', '', 50000, 'Rs 50,000 for 3 nights (to be confirmed).'],
+  ['Bungalow 1', 'Shrijeet', 'Booked', 5, '2026-11-30', '2026-12-02', '5 BHK + hall (hall with mattresses)', 'https://maps.app.goo.gl/SGE2PJZ9CBvmDqLbA', '', 60000, 'Rs 60,000 for 3 nights (to be confirmed). Extension to be discussed.'],
+  ['Bungalow 2', 'Shrijeet', 'Booked', 3, '2026-11-30', '2026-12-02', '3 BHK + hall (hall with mattresses)', 'https://maps.app.goo.gl/Yi4BHpm7Cu8ApvDD9', '', 50000, 'Rs 50,000 for 3 nights (to be confirmed).'],
   ['Sea Haven Inn', 'Shrijeet', 'Hotel', 10, '2026-11-30', '2026-12-02', 'Artist + photographer team stays here', 'https://maps.app.goo.gl/2LSTDyUS6cwV5C8X7', 1600, 48000, 'Rs 1,600 per room per night (10 rooms x 3 nights).'],
   ['Aarif Seaside Resort (Shrijeet)', 'Shrijeet', 'Resort', 2, '2026-11-30', '2026-12-02', '1 room + 1 villa (villa = 1 BHK, one bed)', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', '', 'Aarif: 4 rooms + 2 villas in all. Check-out 10 AM (being finalised).'],
   ['Aarif Seaside Resort (Shivangi)', 'Shivangi', 'Resort', 4, '2026-11-30', '2026-12-02', '3 rooms + 1 villa (villa = 1 BHK, one bed)', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', '', "Shivangi's side decides who stays here."],
@@ -768,22 +769,22 @@ var ROOM_SEED_STAYS = [
 var ROOM_SEED_ALLOC = [
   // family, people, place, room, first night, last night, status, note
   ['Sudhir Kumar', 2, 'HSL Guest Rooms', 'GH 1', '2026-11-28', '2026-11-29', 'Draft', ''],
-  ['Sudhir Kumar', 2, 'Bungalow 1 (Flat One)', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Sudhir Kumar', 2, 'Bungalow 1', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Sudhir Kumar', 2, 'HSL Guest Rooms', 'GH 1', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
   ['Kaushal Mama', 2, 'HSL Guest Rooms', 'GH 2', '2026-11-28', '2026-11-29', 'Draft', ''],
-  ['Kaushal Mama', 2, 'Bungalow 1 (Flat One)', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Kaushal Mama', 2, 'Bungalow 1', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Kaushal Mama', 2, 'HSL Guest Rooms', 'GH 2', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
   ['Sitamarhi Thakur ji', 2, 'HSL Guest Rooms', 'GH 3', '2026-11-28', '2026-11-29', 'Draft', ''],
-  ['Sitamarhi Thakur ji', 2, 'Bungalow 1 (Flat One)', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Sitamarhi Thakur ji', 2, 'Bungalow 1', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Sitamarhi Thakur ji', 2, 'HSL Guest Rooms', 'GH 3', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
   ['Alok Mishra (couple + 2 kids)', 4, 'NOI', '', '2026-11-28', '2026-11-29', 'Draft', 'Arrives 28 Nov. His NOI location: https://maps.app.goo.gl/78uBSSy958PafV9n7'],
-  ['Alok Mishra (couple + 2 kids)', 4, 'Bungalow 1 (Flat One)', 'Room 4', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Alok Mishra (couple + 2 kids)', 4, 'Bungalow 1', 'Room 4', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Alok Mishra (couple + 2 kids)', 4, 'HSL Guest Rooms', 'GH 4', '2026-12-03', '2026-12-03', 'Draft', 'Checks out early morning 4 Dec'],
-  ['Rani', 4, 'Bungalow 1 (Flat One)', 'Room 5', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Rani', 4, 'Bungalow 1', 'Room 5', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Bhagwanpur wali, Bachi', 2, 'PN Misra ji (family friend)', '', '2026-11-28', '2026-11-29', 'Draft', 'Sudha Didi and Santi Fua come on 30 Nov and join them in Bungalow 2'],
-  ['Bhagwanpur wali, Sudha Didi, Santi Fua, Bachi', 4, 'Bungalow 2 (Flat Two)', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', 'Sudha Didi and Santi Fua arrive 30 Nov'],
-  ['Sambhu', 2, 'Bungalow 2 (Flat Two)', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', 'Arrives 30 Nov'],
-  ['Sunil ji (2), Ranjit Singh', 3, 'Bungalow 2 (Flat Two)', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', 'Arrive 30 Nov'],
+  ['Bhagwanpur wali, Sudha Didi, Santi Fua, Bachi', 4, 'Bungalow 2', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', 'Sudha Didi and Santi Fua arrive 30 Nov'],
+  ['Sambhu', 2, 'Bungalow 2', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', 'Arrives 30 Nov'],
+  ['Sunil ji (2), Ranjit Singh', 3, 'Bungalow 2', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', 'Arrive 30 Nov'],
   ['Artist (vendor team)', 2, 'Sea Haven Inn', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
   ['Photographers (vendor team)', 2, 'Sea Haven Inn', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', 'Arrive 30 Nov. We pay for this room. Artist team is 6 in all'],
   ['Photographers (vendor team)', 2, 'Sea Haven Inn', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],

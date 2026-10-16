@@ -80,6 +80,7 @@ label.l{display:block;font-weight:700;font-size:.85rem;margin:.9rem 0 .3rem;font
 .chip{flex:none;border:1.5px solid #dccbb0;background:#fff;border-radius:99px;padding:.45rem .95rem;font-weight:600;font-size:.88rem;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--maroon);color:#fff7e6;border-color:var(--maroon)}
 .catHead{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.7rem .9rem;background:var(--cream);border-radius:1rem 1rem 0 0;font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;color:var(--maroon);letter-spacing:.05em}
+.placeHead{font-family:'Lora',serif;font-size:1rem;letter-spacing:0;text-transform:none}
 .catHead small{font-family:'Lora',serif;font-weight:600;color:var(--muted);white-space:nowrap}
 .group{margin-bottom:1rem;overflow:hidden}
 .sheetbg{position:fixed;inset:0;z-index:60;background:rgba(46,26,28,.55);display:flex;align-items:flex-end;justify-content:center}
@@ -283,10 +284,10 @@ function needUpdate() {
 }
 // everything the family changed is shown at once and saved in the background (one by one, kept safe if the internet drops)
 var loading = null;
-function load(silent, force) {
+function load(silent, force, fresh) {
   if (Q.length) { pump(); return Promise.resolve(); }
   if (loading) return loading;
-  loading = api('GET', 'action=all' + (force || !S.ver || !S.loaded || !S.v5 || !S.v6 ? '' : '&have=' + encodeURIComponent(S.ver))).then(function (d) {
+  loading = api('GET', 'action=all' + (fresh ? '&fresh=1' : '') + (force || !S.ver || !S.loaded || !S.v5 || !S.v6 ? '' : '&have=' + encodeURIComponent(S.ver))).then(function (d) {
     loading = null; S.offline = false; S.lastSync = Date.now();
     if (Q.length) return;
     if (!d.same) { applyData(d); saveCache(); }
@@ -681,8 +682,9 @@ function allocRow(a, opts) {
     '<div style="min-width:0;flex:1"><div class="t">' + esc(a.family) + (a.status === 'Final' ? ' <span class="badge b-ok">' + L('Final', 'पक्का') + '</span>' : a.status && a.status !== 'Draft' ? ' <span class="badge b-warn">' + esc(L(a.status, a.status === 'Not confirmed' ? 'पक्का नहीं' : a.status)) + '</span>' : '') + '</div>' +
     '<div class="meta">' + num(a.people) + ' ' + L('people', 'लोग') + ' · ' + nightsText(a.from, a.to) + (opts.place && a.stay ? ' · ' + esc(a.stay) + (a.room ? ' ' + esc(a.room) : '') : '') + '</div>' +
     (m ? '<div style="margin-top:.25rem"><span class="badge" style="background:#ffe9c2;color:#8a4b00">🛏 ' + L('extra mattress — ' + m + ' on mattress', 'अतिरिक्त गद्दा — ' + m + ' लोग गद्दे पर') + '</span></div>' : '') +
-    (o.length ? '<div style="margin-top:.25rem"><span class="badge b-no">⚠ ' + L('not booked on ' + rangeText(o), rangeText(o) + ' बुक नहीं') + '</span></div>' : '') +
-    (a.note ? '<div class="rem">' + esc(a.note) + '</div>' : '') + '</div></div>';
+    (o.length ? '<div style="margin-top:.25rem"><span class="badge b-no">⚠ ' + L('room not booked for the night of ' + rangeText(o), rangeText(o) + ' की रात का कमरा बुक नहीं') + '</span></div>' : '') +
+    (a.note ? '<div class="rem">' + esc(a.note) + '</div>' : '') +
+    (function () { var g = guestByName(a.family); return g && digits(g.phone).length >= 10 ? '<div class="acts" style="margin-top:.35rem"><a class="call wa" data-act="walink" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, stayText(a.family))) + '">💬 ' + esc(L('Send stay details', 'जानकारी भेजें')) + '</a></div>' : '<div class="rem" style="margin-top:.2rem;color:#8a5a00">📱 ' + esc(L('No mobile number yet. Tap to add it.', 'मोबाइल नंबर नहीं है। जोड़ने के लिए दबाएँ।')) + '</div>'; })() + '</div></div>';
 }
 function viewRooms() {
   if (S.v6 === false) return '<div class="card" style="padding:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch on the room plan', 'कमरों की योजना चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version. The room plan (all places and families) then appears here by itself.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। फिर पूरी योजना यहाँ अपने आप आ जाएगी।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
@@ -732,7 +734,7 @@ function viewRooms() {
     var list = S.alloc.filter(function (a) { return nkey(a.stay) === nkey(s.name); }).sort(function (a, b) { return String(a.room || 'zz').localeCompare(String(b.room || 'zz'), undefined, { numeric: true }) || (a.from || '9').localeCompare(b.from || '9'); });
     var occ = isBooked(s) && s.from ? nightsOf(s.from, s.to).map(function (n) { var x = nightAt(s, n); return '<span style="white-space:nowrap;' + (x.used > x.booked ? 'color:var(--bad);font-weight:700' : '') + '">' + niceDate(n) + ' ' + x.used + '/' + x.booked + '</span>'; }).join(' · ') : '';
     var note = String(s.notes || '');
-    h += '<div class="card group" style="margin-top:1rem"><div class="catHead" data-act="editstay" data-id="' + esc(s.id) + '" style="cursor:pointer"><span>🏨 ' + esc(s.name) + '</span><small>' + esc(L(s.side || '', WHO_HI[s.side] || s.side || '')) + '</small></div>' +
+    h += '<div class="card group" style="margin-top:1rem"><div class="catHead placeHead" data-act="editstay" data-id="' + esc(s.id) + '" style="cursor:pointer"><span>🏨 ' + esc(s.name) + '</span><small>' + esc(L(s.side || '', WHO_HI[s.side] || s.side || '')) + '</small></div>' +
       '<div style="padding:.6rem .9rem .2rem;font-size:.92rem">' +
       '<div><b>' + (isBooked(s) ? num(s.rooms) + ' ' + L('rooms booked', 'कमरे बुक') : esc(s.kind || '')) + '</b>' + (s.from ? ' · ' + nightsText(s.from, s.to) : '') + '</div>' +
       (s.beds ? '<div class="rem">' + esc(s.beds) + '</div>' : '') + (num(s.cost) || num(s.total) ? '<div class="rem">' + [num(s.cost) ? '₹' + num(s.cost).toLocaleString('en-IN') + ' ' + L('per room per night', 'प्रति कमरा प्रति रात') : '', num(s.total) ? L('total ', 'कुल ') + '₹' + num(s.total).toLocaleString('en-IN') : ''].filter(Boolean).join(' · ') + '</div>' : '') +
@@ -764,6 +766,8 @@ function openAlloc(id, pre) {
   var g = guestByName(a.family), segs = id ? familyStays(a.family) : [];
   showSheet('<h3>' + (id ? esc(a.family) : B('Add to the room plan', 'योजना में जोड़ें')) + '</h3>' +
     '<label class="l">' + B('Family / guest', 'परिवार / मेहमान') + '</label><input class="input" id="al_fam" list="alnames" value="' + esc(a.family) + '" />' + dlist('alnames', names) +
+    '<label class="l">' + B('Mobile number (WhatsApp)', 'मोबाइल नंबर (WhatsApp)') + '</label><input class="input" id="al_ph" type="tel" inputmode="tel" value="' + esc(g ? g.phone : '') + '" placeholder="' + esc(L('10-digit number', '10 अंकों का नंबर')) + '" />' +
+    '<div class="rem">' + L('Saved in the Guest List too. No need to save it in your phone: “Send stay details” opens their WhatsApp chat directly.', 'मेहमान सूची में भी सेव होगा। फ़ोन में सेव करने की ज़रूरत नहीं: “जानकारी भेजें” सीधे उनकी WhatsApp चैट खोलेगा।') + '</div>' +
     '<div class="two"><div><label class="l">' + B('People', 'लोग') + '</label><input class="input" id="al_ppl" inputmode="numeric" value="' + esc(a.people) + '" /></div><div><label class="l">' + B('Room', 'कमरा') + '</label><input class="input" id="al_room" value="' + esc(a.room) + '" placeholder="' + esc(L('e.g. Room 4, GH 2', 'जैसे: Room 4, GH 2')) + '" /></div></div>' +
     '<label class="l">' + B('Where?', 'कहाँ?') + '</label><select class="input" id="al_stay"><option value="">' + esc(L('— not decided yet —', '— अभी तय नहीं —')) + '</option>' + S.stays.map(function (s) { return '<option value="' + esc(s.name) + '" ' + (nkey(s.name) === nkey(a.stay) ? 'selected' : '') + '>' + esc(s.name) + (s.side ? ' · ' + esc(s.side) : '') + '</option>'; }).join('') + '</select>' +
     '<div class="two"><div><label class="l">' + B('First night', 'पहली रात') + '</label><input class="input" type="date" id="al_from" value="' + esc(a.from) + '" /></div><div><label class="l">' + B('Last night', 'आख़िरी रात') + '</label><input class="input" type="date" id="al_to" value="' + esc(a.to) + '" /></div></div>' +
@@ -774,7 +778,7 @@ function openAlloc(id, pre) {
     '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="al_note" value="' + esc(a.note) + '" />' +
     (id && segs.length ? '<div class="card" style="padding:.7rem .9rem;margin-top:1rem"><b>' + B('All stays of this family', 'इस परिवार की पूरी व्यवस्था') + '</b>' + segs.map(function (x) { return '<div class="rem" style="margin-top:.3rem">' + (x.id === id ? '▸ ' : '') + esc(x.stay) + (x.room ? ' ' + esc(x.room) : '') + ' · ' + nightsText(x.from, x.to) + '</div>'; }).join('') +
       '<div class="acts"><a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g ? g.phone : '', stayText(a.family))) + '">💬 ' + B('Send stay details', 'ठहरने की जानकारी भेजें') + '</a><button class="call" data-act="nextalloc" data-id="' + esc(id) + '">＋ ' + B('Next stay', 'अगली जगह') + '</button></div>' +
-      (g && g.phone ? '' : '<div class="rem">' + L('Add this family\'s mobile number in the guest list (same name) and WhatsApp opens straight in their chat.', 'मेहमान सूची में इसी नाम से मोबाइल नंबर जोड़ें, तो WhatsApp सीधे उनकी चैट में खुलेगा।') + '</div>') + '</div>' : '') +
+      (g && g.phone ? '' : '<div class="rem">' + L('Type the mobile number above and save. Then WhatsApp opens straight in their chat.', 'ऊपर मोबाइल नंबर लिखकर सेव करें। फिर WhatsApp सीधे उनकी चैट में खुलेगा।') + '</div>') + '</div>' : '') +
     saveBar('savealloc', id) + (id ? '<button class="delbtn" data-act="delalloc" data-id="' + esc(id) + '">🗑 ' + B('Remove from the room plan', 'योजना से हटाएँ') + '</button>' : ''));
 }
 function openStay(id) {
@@ -1636,8 +1640,9 @@ document.addEventListener('click', function (e) {
     case 'fd': S.fDate = S.fDate === 'none' ? 'all' : 'none'; render(); return;
     case 'fday': S.fday = v; render(); return;
     case 'stype': S.stype = v; render(); return;
-    case 'refresh': e.preventDefault(); toast(L('Refreshing…', 'ताज़ा हो रहा है…')); load(false, true); if (S.tab === 'guests') loadRsvp(true); return;
-    case 'recheck': e.preventDefault(); S.ver = ''; LS.set('pl_cache', ''); toast(L('Checking the script…', 'स्क्रिप्ट देख रहे हैं…')); load(false, true).then(function () { toast(S.v5 === false ? L('Still the old script', 'अभी भी पुरानी स्क्रिप्ट') : L('Connected to the new script ✓', 'नई स्क्रिप्ट से जुड़ गया ✓'), S.v5 === false); }); return;
+    case 'walink': e.stopPropagation(); return;
+    case 'refresh': e.preventDefault(); toast(L('Refreshing…', 'ताज़ा हो रहा है…')); load(false, true, true); if (S.tab === 'guests') loadRsvp(true); return;
+    case 'recheck': e.preventDefault(); S.ver = ''; LS.set('pl_cache', ''); toast(L('Checking the script…', 'स्क्रिप्ट देख रहे हैं…')); load(false, true, true).then(function () { toast(S.v5 === false ? L('Still the old script', 'अभी भी पुरानी स्क्रिप्ट') : L('Connected to the new script ✓', 'नई स्क्रिप्ट से जुड़ गया ✓'), S.v5 === false); }); return;
     case 'rsvprefresh': e.preventDefault(); toast(L('Checking…', 'देख रहे हैं…')); loadRsvp(true); return;
     case 'netinfo': toast(Q.length ? L(Q.length + ' change(s) will be saved as soon as the internet works. You can keep using the planner.', Q.length + ' बदलाव इंटरनेट आते ही सेव हो जाएँगे। आप काम जारी रखें।') : L('No internet right now — showing the last saved plan.', 'अभी इंटरनेट नहीं — पिछला सेव किया प्लान दिख रहा है।')); pump(); return;
     case 'add': openAdd(); return;
@@ -1831,7 +1836,11 @@ document.addEventListener('click', function (e) {
       if (!af.family) { toast(L('Please type the family name', 'कृपया परिवार का नाम लिखें'), true); return; }
       if (af.from && !af.to) af.to = af.from;
       if (af.from && af.to < af.from) { toast(L('The last night is before the first night', 'आख़िरी रात पहली रात से पहले है'), true); return; }
-      closeSheet(true); S.sheet = null; rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
+      var aph = val('al_ph').trim();
+      if (aph && digits(aph).length < 10) { toast(L('The mobile number looks short. Please check it.', 'मोबाइल नंबर छोटा लग रहा है, देख लें।'), true); return; }
+      closeSheet(true); S.sheet = null;
+      if (aph) { var ag = guestByName(af.family); if (ag) { if (digits(ag.phone) !== digits(aph)) rowQuiet('guests', ag.id, { phone: aph }); } else rowQuiet('guests', '', { name: af.family, phone: aph, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room }); }
+      rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
     case 'delalloc': var da = S.alloc.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Remove from the room plan?', 'योजना से हटाना है?'), da ? da.family + (da.stay ? ' · ' + da.stay : '') : '', '', 'confirmdela', id); return;
     case 'confirmdela': closeSheet(true); S.sheet = null; rowDel('alloc', id, L('Removed', 'हटा दिया')); return;
     case 'editstay': openStay(id); return;
