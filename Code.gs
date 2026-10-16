@@ -1,5 +1,5 @@
 /**
- * Wedding Planner — Google backend (Apps Script)   · version 6 (invite lists that stay saved + reception replies)
+ * Wedding Planner — Google backend (Apps Script)   · version 6 (invite lists that stay saved + reception replies + room plan)
  * Lives inside YOUR "Wedding Master Tracker" Google Sheet.
  * The planner web page reads and writes the tabs "Master Tracker" and "Vendors & Payments".
  * Follow GUIDE-PLANNER.md. The only thing to edit here is the PIN below.
@@ -242,8 +242,9 @@ function readAllFresh_() {
     });
   }
   if (!flags.FLOW_SEED_V1) seedFlow_();
+  if (!flags.ROOMS_SEED_V1) seedRooms_();
   return { success: true, role: 'family', tasks: tasks, vendors: vendors, payments: payments,
-    guests: readTable_('guests'), shagun: readTable_('shagun'), flow: readTable_('flow'),
+    guests: readTable_('guests'), shagun: readTable_('shagun'), flow: readTable_('flow'), stays: readTable_('stays'), alloc: readTable_('alloc'),
     serverTime: new Date().getTime() };
 }
 function vendorNeedsSetup_(vs, flags) {
@@ -602,7 +603,14 @@ var TABLES = {
   flow: { sheet: 'Event Flow', prefix: 'E', need: 'what', nums: [], dates: ['date'], times: ['start', 'end'], texts: [],
     cols: [['date', 'Date'], ['fn', 'Function'], ['start', 'Start Time'], ['end', 'End Time'], ['what', 'Event / Ritual'], ['people', 'People Involved'],
       ['song', 'Entry Song / Music'], ['photo', 'Photo/Video Slot'], ['coord', 'Emcee / Coordinator'], ['venue', 'Venue'], ['remarks', 'Remarks'],
-      ['id', 'ID'], ['by', 'Last Updated By'], ['at', 'Last Updated']] }
+      ['id', 'ID'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
+  // places where guests stay (booked rooms), and who stays where on which nights. Dates are NIGHTS: first night and last night (check-out is the next morning)
+  stays: { sheet: 'Stays', prefix: 'L', need: 'name', nums: ['rooms', 'cost'], dates: ['from', 'to'], times: [], texts: ['map'],
+    cols: [['id', 'ID'], ['name', 'Place'], ['side', 'Side'], ['kind', 'Type'], ['rooms', 'Rooms Booked'], ['from', 'First Night'], ['to', 'Last Night'],
+      ['beds', 'Rooms / Beds Detail'], ['map', 'Map Link'], ['cost', 'Cost per Room (Rs)'], ['contact', 'Contact'], ['notes', 'Notes'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
+  alloc: { sheet: 'Room Plan', prefix: 'R', need: 'family', nums: ['people'], dates: ['from', 'to'], times: [], texts: ['room'],
+    cols: [['id', 'ID'], ['family', 'Family / Guest'], ['people', 'People'], ['stay', 'Place'], ['room', 'Room'], ['from', 'First Night'], ['to', 'Last Night'],
+      ['mattress', 'Extra Mattress'], ['side', 'Side'], ['status', 'Status'], ['note', 'Note'], ['by', 'Last Updated By'], ['at', 'Last Updated']] }
 };
 function tableSheet_(name) {
   var t = TABLES[name], ss = SpreadsheetApp.getActive(), sh = ss.getSheetByName(t.sheet);
@@ -734,6 +742,89 @@ function seedFlow_() {
       sh.getRange(2, 1, out.length, sh.getLastColumn()).setValues(out);
     }
     props.setProperty('FLOW_SEED_V1', '1');
+  } finally { lock.releaseLock(); }
+}
+
+
+/* The first draft of the room plan (Papa's list, Oct 2026), written ONE time into the "Stays" and "Room Plan" tabs.
+   After that, everything is changed from the planner (Guests -> Rooms) or straight in the sheet. */
+var ROOM_SEED_STAYS = [
+  // name, side, type, rooms, first night, last night, rooms/beds detail, map, cost per room, notes
+  ['Vishakha Command Mess', 'Shivangi', 'Booked', 10, '2026-11-28', '2026-12-03', 'Meals come packed from the Officers Mess', 'https://maps.app.goo.gl/9WhPNTfZs2sEp5E77', '', "Shivangi's side decides who stays here."],
+  ['NOI', 'Shrijeet', 'Booked', 4, '2026-11-28', '2026-11-29', '2 rooms with two double beds, 2 rooms with one double bed', 'https://maps.app.goo.gl/NosKjfXVnCdrZnA16', '', 'Check: 4 or 6 rooms? (the summary said NOI 6)'],
+  ['HSL Guest Rooms', 'Shrijeet', 'Booked', 4, '2026-11-28', '2026-12-03', 'GH 1 - GH 4', 'https://maps.app.goo.gl/abWmPEdsGeFtVRRg7', '', 'Check: booked till 2 Dec - is the night of 3 Dec booked too?'],
+  ['Bungalow 1 (Flat One)', 'Shrijeet', 'Booked', 5, '2026-11-30', '2026-12-02', '5 rooms + hall (hall with mattresses)', 'https://maps.app.goo.gl/SGE2PJZ9CBvmDqLbA', '', 'Extension to be discussed.'],
+  ['Bungalow 2 (Flat Two)', 'Shrijeet', 'Booked', 3, '2026-11-30', '2026-12-02', '3 rooms + hall', 'https://maps.app.goo.gl/Yi4BHpm7Cu8ApvDD9', '', 'Check: photographer + makeup artist here, or at Sea Haven as in the draft?'],
+  ['Sea Haven Inn', 'Shrijeet', 'Hotel', 10, '2026-11-30', '2026-12-02', '', 'https://maps.app.goo.gl/2LSTDyUS6cwV5C8X7', 1600, 'Rs 1,600 per room for 3 days (check: per night or for all 3 nights?)'],
+  ['Aarif Seaside Resort (Shrijeet)', 'Shrijeet', 'Resort', 2, '2026-11-30', '2026-12-02', '1 room + 1 villa', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', 'Check-out 10 AM (being finalised).'],
+  ['Aarif Seaside Resort (Shivangi)', 'Shivangi', 'Resort', 3, '2026-11-30', '2026-12-02', '2 rooms + 1 villa', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', "Shivangi's side decides. Check: 3 + 2 villas in all, or 6 rooms (2 + 4)?"],
+  ['Hotel FantaSea', 'Shivangi', 'Hotel', 9, '2026-11-30', '2026-12-02', '30 guests', 'https://maps.app.goo.gl/t9wvFRQ3nxergAsVA', '', 'One more day for 5 or 9 rooms being discussed.'],
+  ['PN Misra ji (family friend)', 'Shrijeet', 'Family house', '', '2026-11-28', '2026-11-29', '', '', '', ''],
+  ['Nausena Baugh', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down from the Scindia area to Aarif - car needed.'],
+  ['Sailors Institute', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down - car needed.'],
+  ['PK Rai ji (house)', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down - car needed.'],
+  ['Samrendra ji (house)', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down - car needed.']
+];
+var ROOM_SEED_ALLOC = [
+  // family, people, place, room, first night, last night, status, note
+  ['Sudhir Kumar', 2, 'HSL Guest Rooms', 'GH 1', '2026-11-28', '2026-11-29', 'Draft', ''],
+  ['Sudhir Kumar', 2, 'Bungalow 1 (Flat One)', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Sudhir Kumar', 2, 'HSL Guest Rooms', 'GH 1', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
+  ['Kaushal Mama', 2, 'HSL Guest Rooms', 'GH 2', '2026-11-28', '2026-11-29', 'Draft', ''],
+  ['Kaushal Mama', 2, 'Bungalow 1 (Flat One)', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Kaushal Mama', 2, 'HSL Guest Rooms', 'GH 2', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
+  ['Sitamarhi Thakur ji', 2, 'HSL Guest Rooms', 'GH 3', '2026-11-28', '2026-11-29', 'Draft', ''],
+  ['Sitamarhi Thakur ji', 2, 'Bungalow 1 (Flat One)', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Sitamarhi Thakur ji', 2, 'HSL Guest Rooms', 'GH 3', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
+  ['Alok Mishra (couple + 2 kids)', 4, 'NOI', '', '2026-11-28', '2026-11-29', 'Draft', 'Arrives 28 Nov'],
+  ['Alok Mishra (couple + 2 kids)', 4, 'Bungalow 1 (Flat One)', 'Room 4', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Alok Mishra (couple + 2 kids)', 4, 'HSL Guest Rooms', 'GH 4', '2026-12-03', '2026-12-03', 'Draft', 'Checks out early morning 4 Dec'],
+  ['Rani', 4, 'Bungalow 1 (Flat One)', 'Room 5', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Bhagwanpur wali, Sudha bahan, Santi Fua, Bachi', 4, 'PN Misra ji (family friend)', '', '2026-11-28', '2026-11-29', 'Draft', ''],
+  ['Bhagwanpur wali, Sudha bahan, Santi Fua, Bachi', 4, 'Bungalow 2 (Flat Two)', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Sambhu', 2, 'Bungalow 2 (Flat Two)', 'Room 2', '2026-11-28', '2026-12-02', 'Draft', ''],
+  ['Sunil ji, Dipak, Ranjit ji', 3, 'Bungalow 2 (Flat Two)', 'Room 3', '2026-11-28', '2026-12-02', 'Draft', ''],
+  ['Artist (vendor team)', 2, 'Sea Haven Inn', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
+  ['Photographers (vendor team)', 3, 'Sea Haven Inn', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
+  ['Photographers (vendor team)', 2, 'Sea Haven Inn', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
+  ['SB Mishra', 2, 'HSL Guest Rooms', 'GH 4', '2026-11-28', '2026-11-29', 'Draft', ''],
+  ['SB Mishra', 2, 'Sea Haven Inn', 'Room 4', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ["Abhishek ji's parents", 2, 'Sea Haven Inn', 'Room 5', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Annu (+ one more lady)', 1, 'Sea Haven Inn', 'Room 6', '2026-12-01', '2026-12-02', 'Draft', 'Another lady to share this room'],
+  ['Ruby & Abhishek', 2, 'Sea Haven Inn', 'Room 7', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Mathura, Pawan', 4, 'Sea Haven Inn', 'Room 8', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Dhiraj', 4, 'Sea Haven Inn', 'Room 9', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Gaurav Bharwari', 3, 'Sea Haven Inn', 'Room 10', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Shiv Chander Singh (Nana ji)', 2, 'Nausena Baugh', '', '2026-11-26', '2026-12-02', 'Draft', 'Up and down - car needed'],
+  ['AK Singh (Lucknow)', 2, 'Sailors Institute', '', '2026-12-01', '2026-12-04', 'Draft', 'Up and down - car needed'],
+  ['Girish Rai', 3, 'PK Rai ji (house)', '', '', '', 'Draft', 'Dates to confirm. Up and down - car needed'],
+  ['Niraj Didi, Ashu', 2, 'Samrendra ji (house)', '', '', '', 'Draft', 'Dates to confirm. Up and down - car needed'],
+  ['Manoj Singh, Nisha', 2, 'Samrendra ji (house)', '', '', '', 'Draft', 'Dates to confirm. Up and down - car needed'],
+  ['Capt B Joshi', 2, '', '', '', '', 'Not confirmed', 'Command Mess or HSL'],
+  ['Sailesh', 1, '', '', '', '', 'Not confirmed', 'Command Mess or HSL'],
+  ['Capt PK Pandey', 2, '', '', '', '', 'Not confirmed', 'Command Mess or HSL']
+];
+function seedRooms_() {
+  var props = PropertiesService.getScriptProperties();
+  if (props.getProperty('ROOMS_SEED_V1')) return;
+  var fxs = { stays: fixTable_('stays'), alloc: fixTable_('alloc') };   // (makes the tabs and columns, before taking the lock)
+  var put = function (name, rows) {
+    var fx = fxs[name], sh = fx.sh, map = fx.map;
+    if (sh.getLastRow() >= 2) return;          // the tab already has rows: leave it
+    var out = rows.map(function (f, i) {
+      var row = new Array(sh.getLastColumn()).fill('');
+      Object.keys(f).forEach(function (k) { if (map[k]) row[map[k] - 1] = cellIn_(name, k, f[k]); });
+      row[map.id - 1] = TABLES[name].prefix + ('000' + (i + 1)).slice(-3); row[map.by - 1] = 'Planner'; row[map.at - 1] = stamp_();
+      return row;
+    });
+    if (out.length) sh.getRange(2, 1, out.length, sh.getLastColumn()).setValues(out);
+  };
+  var lock = LockService.getScriptLock(); lock.waitLock(25000);
+  try {
+    if (props.getProperty('ROOMS_SEED_V1')) return;
+    put('stays', ROOM_SEED_STAYS.map(function (x) { return { name: x[0], side: x[1], kind: x[2], rooms: x[3], from: x[4], to: x[5], beds: x[6], map: x[7], cost: x[8], notes: x[9] }; }));
+    put('alloc', ROOM_SEED_ALLOC.map(function (x) { return { family: x[0], people: x[1], stay: x[2], room: x[3], from: x[4], to: x[5], status: x[6], note: x[7], side: 'Shrijeet' }; }));
+    props.setProperty('ROOMS_SEED_V1', '1');
   } finally { lock.releaseLock(); }
 }
 

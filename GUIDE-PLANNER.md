@@ -1,5 +1,7 @@
 # Shaadi Planner — setup and updates
 
+> **Room plan (Guests → Rooms):** every place (booked rooms, dates, map link, cost) and which family stays in which room on which nights. Dates are nights: first night and last night; check-out is the next morning. **By place** shows each place with its families, room by room; **Each night** shows rooms given / booked and people for every night; **To check** lists what needs fixing (stays outside booked dates, two families in one room, more rooms than booked), what is still open, free rooms and every room that needs an extra mattress (3 or more people in a room). Tap a family to change it, add their next stay, or send them their stay details with map links on WhatsApp. The first draft (Papa's list, Oct 2026) is written into new **Stays** and **Room Plan** tabs the first time the new script runs.
+
 > **Version 6 (invite lists that stay saved + reception):** in Guests → Invites tap **＋ Pick people to invite**, choose the invite (side · Parivaar / Wedding day / Reception · English / Hindi) and pick contacts. Every person is saved at once in **To send** (also in the Guest List tab), so closing the app or losing the internet loses nothing. Send them later **one by one** or as a **broadcast**; they move to **Waiting**, then to **Replied** when they fill the RSVP. Reception replies show only after you paste the new `Code.gs` into the Wedding Master Tracker script and deploy a new version.
 
 > **Version 5 update: Invite tracker (who got the invite, who filled the RSVP, reminders). Do this once (3 minutes):**
