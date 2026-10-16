@@ -605,9 +605,9 @@ var TABLES = {
       ['song', 'Entry Song / Music'], ['photo', 'Photo/Video Slot'], ['coord', 'Emcee / Coordinator'], ['venue', 'Venue'], ['remarks', 'Remarks'],
       ['id', 'ID'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
   // places where guests stay (booked rooms), and who stays where on which nights. Dates are NIGHTS: first night and last night (check-out is the next morning)
-  stays: { sheet: 'Stays', prefix: 'L', need: 'name', nums: ['rooms', 'cost'], dates: ['from', 'to'], times: [], texts: ['map'],
+  stays: { sheet: 'Stays', prefix: 'L', need: 'name', nums: ['rooms', 'cost', 'total'], dates: ['from', 'to'], times: [], texts: ['map'],
     cols: [['id', 'ID'], ['name', 'Place'], ['side', 'Side'], ['kind', 'Type'], ['rooms', 'Rooms Booked'], ['from', 'First Night'], ['to', 'Last Night'],
-      ['beds', 'Rooms / Beds Detail'], ['map', 'Map Link'], ['cost', 'Cost per Room (Rs)'], ['contact', 'Contact'], ['notes', 'Notes'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
+      ['beds', 'Rooms / Beds Detail'], ['map', 'Map Link'], ['cost', 'Cost per Room per Night (Rs)'], ['total', 'Total Cost (Rs)'], ['contact', 'Contact'], ['notes', 'Notes'], ['by', 'Last Updated By'], ['at', 'Last Updated']] },
   alloc: { sheet: 'Room Plan', prefix: 'R', need: 'family', nums: ['people'], dates: ['from', 'to'], times: [], texts: ['room'],
     cols: [['id', 'ID'], ['family', 'Family / Guest'], ['people', 'People'], ['stay', 'Place'], ['room', 'Room'], ['from', 'First Night'], ['to', 'Last Night'],
       ['mattress', 'Extra Mattress'], ['side', 'Side'], ['status', 'Status'], ['note', 'Note'], ['by', 'Last Updated By'], ['at', 'Last Updated']] }
@@ -749,21 +749,21 @@ function seedFlow_() {
 /* The first draft of the room plan (Papa's list, Oct 2026), written ONE time into the "Stays" and "Room Plan" tabs.
    After that, everything is changed from the planner (Guests -> Rooms) or straight in the sheet. */
 var ROOM_SEED_STAYS = [
-  // name, side, type, rooms, first night, last night, rooms/beds detail, map, cost per room, notes
-  ['Vishakha Command Mess', 'Shivangi', 'Booked', 10, '2026-11-28', '2026-12-03', 'Meals come packed from the Officers Mess', 'https://maps.app.goo.gl/9WhPNTfZs2sEp5E77', '', "Shivangi's side decides who stays here."],
-  ['NOI', 'Shrijeet', 'Booked', 4, '2026-11-28', '2026-11-29', '2 rooms with two double beds, 2 rooms with one double bed', 'https://maps.app.goo.gl/NosKjfXVnCdrZnA16', '', 'Check: 4 or 6 rooms? (the summary said NOI 6)'],
-  ['HSL Guest Rooms', 'Shrijeet', 'Booked', 4, '2026-11-28', '2026-12-03', 'GH 1 - GH 4', 'https://maps.app.goo.gl/abWmPEdsGeFtVRRg7', '', 'Check: booked till 2 Dec - is the night of 3 Dec booked too?'],
-  ['Bungalow 1 (Flat One)', 'Shrijeet', 'Booked', 5, '2026-11-30', '2026-12-02', '5 rooms + hall (hall with mattresses)', 'https://maps.app.goo.gl/SGE2PJZ9CBvmDqLbA', '', 'Extension to be discussed.'],
-  ['Bungalow 2 (Flat Two)', 'Shrijeet', 'Booked', 3, '2026-11-30', '2026-12-02', '3 rooms + hall', 'https://maps.app.goo.gl/Yi4BHpm7Cu8ApvDD9', '', 'Check: photographer + makeup artist here, or at Sea Haven as in the draft?'],
-  ['Sea Haven Inn', 'Shrijeet', 'Hotel', 10, '2026-11-30', '2026-12-02', '', 'https://maps.app.goo.gl/2LSTDyUS6cwV5C8X7', 1600, 'Rs 1,600 per room for 3 days (check: per night or for all 3 nights?)'],
-  ['Aarif Seaside Resort (Shrijeet)', 'Shrijeet', 'Resort', 2, '2026-11-30', '2026-12-02', '1 room + 1 villa', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', 'Check-out 10 AM (being finalised).'],
-  ['Aarif Seaside Resort (Shivangi)', 'Shivangi', 'Resort', 3, '2026-11-30', '2026-12-02', '2 rooms + 1 villa', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', "Shivangi's side decides. Check: 3 + 2 villas in all, or 6 rooms (2 + 4)?"],
-  ['Hotel FantaSea', 'Shivangi', 'Hotel', 9, '2026-11-30', '2026-12-02', '30 guests', 'https://maps.app.goo.gl/t9wvFRQ3nxergAsVA', '', 'One more day for 5 or 9 rooms being discussed.'],
-  ['PN Misra ji (family friend)', 'Shrijeet', 'Family house', '', '2026-11-28', '2026-11-29', '', '', '', ''],
-  ['Nausena Baugh', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down from the Scindia area to Aarif - car needed.'],
-  ['Sailors Institute', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down - car needed.'],
-  ['PK Rai ji (house)', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down - car needed.'],
-  ['Samrendra ji (house)', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', 'Up and down - car needed.']
+  // name, side, type, rooms, first night, last night, rooms/beds detail, map, cost per room per night, total cost, notes
+  ['Vishakha Command Mess', 'Shivangi', 'Booked', 10, '2026-11-28', '2026-12-03', 'Meals come packed from the Officers Mess', 'https://maps.app.goo.gl/9WhPNTfZs2sEp5E77', '', '', "Shivangi's side decides who stays here."],
+  ['NOI', 'Shrijeet', 'Booked', 6, '2026-11-28', '2026-11-29', '2 rooms with 2 flats inside each + 2 rooms with one bed', 'https://maps.app.goo.gl/NosKjfXVnCdrZnA16', '', '', ''],
+  ['HSL Guest Rooms', 'Shrijeet', 'Booked', 4, '2026-11-28', '2026-12-02', 'GH 1 - GH 4', 'https://maps.app.goo.gl/abWmPEdsGeFtVRRg7', '', '', 'Booked till 2 Dec for now. Plan: extend it, or shift the booking to 28-30 Nov and 3-4 Dec.'],
+  ['Bungalow 1 (Flat One)', 'Shrijeet', 'Booked', 5, '2026-11-30', '2026-12-02', '5 BHK + hall (hall with mattresses)', 'https://maps.app.goo.gl/SGE2PJZ9CBvmDqLbA', '', 60000, 'Rs 60,000 for 3 nights (to be confirmed). Extension to be discussed.'],
+  ['Bungalow 2 (Flat Two)', 'Shrijeet', 'Booked', 3, '2026-11-30', '2026-12-02', '3 BHK + hall (hall with mattresses)', 'https://maps.app.goo.gl/Yi4BHpm7Cu8ApvDD9', '', 50000, 'Rs 50,000 for 3 nights (to be confirmed).'],
+  ['Sea Haven Inn', 'Shrijeet', 'Hotel', 10, '2026-11-30', '2026-12-02', 'Artist + photographer team stays here', 'https://maps.app.goo.gl/2LSTDyUS6cwV5C8X7', 1600, 48000, 'Rs 1,600 per room per night (10 rooms x 3 nights).'],
+  ['Aarif Seaside Resort (Shrijeet)', 'Shrijeet', 'Resort', 2, '2026-11-30', '2026-12-02', '1 room + 1 villa (villa = 1 BHK, one bed)', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', '', 'Aarif: 4 rooms + 2 villas in all. Check-out 10 AM (being finalised).'],
+  ['Aarif Seaside Resort (Shivangi)', 'Shivangi', 'Resort', 4, '2026-11-30', '2026-12-02', '3 rooms + 1 villa (villa = 1 BHK, one bed)', 'https://maps.app.goo.gl/1HVHEgr3f7jfm7fU7', '', '', "Shivangi's side decides who stays here."],
+  ['Hotel FantaSea', 'Shivangi', 'Hotel', 9, '2026-11-30', '2026-12-02', '30 guests', 'https://maps.app.goo.gl/t9wvFRQ3nxergAsVA', '', 78000, 'Rs 78,000 for 9 rooms x 3 nights. 5 rooms for the night of 3 Dec: Rs 15,000 (being discussed).'],
+  ['PN Misra ji (family friend)', 'Shrijeet', 'Family house', '', '2026-11-28', '2026-11-29', '', '', '', '', ''],
+  ['Nausena Baugh', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', '', 'Up and down from the Scindia area to Aarif - car needed.'],
+  ['Sailors Institute', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', '', 'Up and down - car needed.'],
+  ['PK Rai ji (house)', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', '', 'Up and down - car needed.'],
+  ['Samrendra ji (house)', 'Shrijeet', 'Own stay - up and down', '', '', '', '', '', '', '', 'Up and down - car needed.']
 ];
 var ROOM_SEED_ALLOC = [
   // family, people, place, room, first night, last night, status, note
@@ -776,7 +776,7 @@ var ROOM_SEED_ALLOC = [
   ['Sitamarhi Thakur ji', 2, 'HSL Guest Rooms', 'GH 3', '2026-11-28', '2026-11-29', 'Draft', ''],
   ['Sitamarhi Thakur ji', 2, 'Bungalow 1 (Flat One)', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Sitamarhi Thakur ji', 2, 'HSL Guest Rooms', 'GH 3', '2026-12-03', '2026-12-03', 'Draft', 'Leaves 4 Dec'],
-  ['Alok Mishra (couple + 2 kids)', 4, 'NOI', '', '2026-11-28', '2026-11-29', 'Draft', 'Arrives 28 Nov'],
+  ['Alok Mishra (couple + 2 kids)', 4, 'NOI', '', '2026-11-28', '2026-11-29', 'Draft', 'Arrives 28 Nov. His NOI location: https://maps.app.goo.gl/78uBSSy958PafV9n7'],
   ['Alok Mishra (couple + 2 kids)', 4, 'Bungalow 1 (Flat One)', 'Room 4', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Alok Mishra (couple + 2 kids)', 4, 'HSL Guest Rooms', 'GH 4', '2026-12-03', '2026-12-03', 'Draft', 'Checks out early morning 4 Dec'],
   ['Rani', 4, 'Bungalow 1 (Flat One)', 'Room 5', '2026-11-30', '2026-12-02', 'Draft', ''],
@@ -785,7 +785,7 @@ var ROOM_SEED_ALLOC = [
   ['Sambhu', 2, 'Bungalow 2 (Flat Two)', 'Room 2', '2026-11-28', '2026-12-02', 'Draft', ''],
   ['Sunil ji, Dipak, Ranjit ji', 3, 'Bungalow 2 (Flat Two)', 'Room 3', '2026-11-28', '2026-12-02', 'Draft', ''],
   ['Artist (vendor team)', 2, 'Sea Haven Inn', 'Room 1', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
-  ['Photographers (vendor team)', 3, 'Sea Haven Inn', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
+  ['Photographers (vendor team)', 2, 'Sea Haven Inn', 'Room 2', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room. Artist team is 6 in all'],
   ['Photographers (vendor team)', 2, 'Sea Haven Inn', 'Room 3', '2026-11-30', '2026-12-02', 'Draft', 'We pay for this room'],
   ['SB Mishra', 2, 'HSL Guest Rooms', 'GH 4', '2026-11-28', '2026-11-29', 'Draft', ''],
   ['SB Mishra', 2, 'Sea Haven Inn', 'Room 4', '2026-11-30', '2026-12-02', 'Draft', ''],
@@ -795,6 +795,7 @@ var ROOM_SEED_ALLOC = [
   ['Mathura, Pawan', 4, 'Sea Haven Inn', 'Room 8', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Dhiraj', 4, 'Sea Haven Inn', 'Room 9', '2026-11-30', '2026-12-02', 'Draft', ''],
   ['Gaurav Bharwari', 3, 'Sea Haven Inn', 'Room 10', '2026-11-30', '2026-12-02', 'Draft', ''],
+  ['Dadi ji & Badi Mummy (planned)', 2, 'Aarif Seaside Resort (Shrijeet)', 'Villa', '2026-11-30', '2026-12-02', 'Draft', 'Planned - to be confirmed'],
   ['Shiv Chander Singh (Nana ji)', 2, 'Nausena Baugh', '', '2026-11-26', '2026-12-02', 'Draft', 'Up and down - car needed'],
   ['AK Singh (Lucknow)', 2, 'Sailors Institute', '', '2026-12-01', '2026-12-04', 'Draft', 'Up and down - car needed'],
   ['Girish Rai', 3, 'PK Rai ji (house)', '', '', '', 'Draft', 'Dates to confirm. Up and down - car needed'],
@@ -822,7 +823,7 @@ function seedRooms_() {
   var lock = LockService.getScriptLock(); lock.waitLock(25000);
   try {
     if (props.getProperty('ROOMS_SEED_V1')) return;
-    put('stays', ROOM_SEED_STAYS.map(function (x) { return { name: x[0], side: x[1], kind: x[2], rooms: x[3], from: x[4], to: x[5], beds: x[6], map: x[7], cost: x[8], notes: x[9] }; }));
+    put('stays', ROOM_SEED_STAYS.map(function (x) { return { name: x[0], side: x[1], kind: x[2], rooms: x[3], from: x[4], to: x[5], beds: x[6], map: x[7], cost: x[8], total: x[9], notes: x[10] }; }));
     put('alloc', ROOM_SEED_ALLOC.map(function (x) { return { family: x[0], people: x[1], stay: x[2], room: x[3], from: x[4], to: x[5], status: x[6], note: x[7], side: 'Shrijeet' }; }));
     props.setProperty('ROOMS_SEED_V1', '1');
   } finally { lock.releaseLock(); }

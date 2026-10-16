@@ -724,6 +724,7 @@ function viewRooms() {
   h += '<div class="chips">' + [['all', 'Both sides', 'दोनों'], ['Shrijeet', "Shrijeet's side", 'श्रीजीत की ओर'], ['Shivangi', "Shivangi's side", 'शिवांगी की ओर']].map(function (x) { return chip('rside', x[0], B(x[1], x[2]), side === x[0]); }).join('') + '</div>';
   h += '<div class="hero"><div class="sub">' + B('Room plan', 'कमरों की योजना') + (side !== 'all' ? ' · ' + esc(L(side + "'s side", (WHO_HI[side] || side) + ' की ओर'))  : '') + '</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;align-items:end">' +
     '<div><div class="big" style="font-size:2.2rem">' + Object.keys(fams).length + '</div><div class="sub">' + L('families', 'परिवार') + '</div></div><div><div class="big" style="font-size:2.2rem">' + people + '</div><div class="sub">' + L('people', 'लोग') + '</div></div><div><div class="big" style="font-size:2.2rem">' + mat + '</div><div class="sub">' + L('on mattresses', 'गद्दे पर') + '</div></div></div>' +
+    (function () { var cs = S.stays.filter(function (x) { return side === 'all' || x.side === side; }), tot = cs.reduce(function (t, x) { return t + (num(x.total) || num(x.cost) * num(x.rooms) * nightsOf(x.from, x.to).length); }, 0); return tot ? '<div class="sub" style="margin-top:.5rem">' + L('Stay costs noted: ', 'ठहरने का लिखा ख़र्च: ') + '<b>₹' + tot.toLocaleString('en-IN') + '</b></div>' : ''; })() +
     (bad ? '<div class="stats" style="margin-top:.6rem"><button class="stat" data-act="rtab" data-v="check" style="border:0;cursor:pointer;color:inherit;font:inherit">⚠ <b>' + bad + '</b> ' + L('things to fix — tap to see', 'बातें ठीक करनी हैं — देखें') + '</button></div>' : '') + '</div>';
   h += '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="addbig" style="margin:0;flex:1.4" data-act="addalloc">＋ ' + B('Add a family', 'परिवार जोड़ें') + '</button><button class="btn ghost" style="flex:1;min-height:3.2rem;border-radius:1rem;font-size:.92rem;padding:.4rem .6rem" data-act="addstay">＋ ' + B('Add a place', 'जगह जोड़ें') + '</button></div>';
   var stays = S.stays.filter(function (s) { return side === 'all' || s.side === side || s.side === 'Both'; }).slice().sort(function (a, b) { var ka = (isBooked(a) ? 0 : 1) + (a.from || '9'), kb = (isBooked(b) ? 0 : 1) + (b.from || '9'); return ka < kb ? -1 : ka > kb ? 1 : a.name.localeCompare(b.name); });
@@ -734,7 +735,7 @@ function viewRooms() {
     h += '<div class="card group" style="margin-top:1rem"><div class="catHead" data-act="editstay" data-id="' + esc(s.id) + '" style="cursor:pointer"><span>🏨 ' + esc(s.name) + '</span><small>' + esc(L(s.side || '', WHO_HI[s.side] || s.side || '')) + '</small></div>' +
       '<div style="padding:.6rem .9rem .2rem;font-size:.92rem">' +
       '<div><b>' + (isBooked(s) ? num(s.rooms) + ' ' + L('rooms booked', 'कमरे बुक') : esc(s.kind || '')) + '</b>' + (s.from ? ' · ' + nightsText(s.from, s.to) : '') + '</div>' +
-      (s.beds ? '<div class="rem">' + esc(s.beds) + '</div>' : '') + (num(s.cost) ? '<div class="rem">₹' + num(s.cost).toLocaleString('en-IN') + ' ' + L('per room', 'प्रति कमरा') + '</div>' : '') +
+      (s.beds ? '<div class="rem">' + esc(s.beds) + '</div>' : '') + (num(s.cost) || num(s.total) ? '<div class="rem">' + [num(s.cost) ? '₹' + num(s.cost).toLocaleString('en-IN') + ' ' + L('per room per night', 'प्रति कमरा प्रति रात') : '', num(s.total) ? L('total ', 'कुल ') + '₹' + num(s.total).toLocaleString('en-IN') : ''].filter(Boolean).join(' · ') + '</div>' : '') +
       (note ? '<div class="rem" style="' + (/^check/i.test(note) ? 'color:#8a5a00;font-weight:600' : '') + '">' + (/^check/i.test(note) ? '❓ ' : '') + esc(note) + '</div>' : '') +
       (occ ? '<div class="rem" style="margin-top:.2rem">' + L('Rooms given each night: ', 'हर रात दिए कमरे: ') + occ + '</div>' : '') +
       '<div class="acts" style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.4rem">' + (s.map ? '<a class="call" target="_blank" rel="noopener" href="' + esc(s.map) + '">📍 ' + esc(L('Map', 'नक्शा')) + '</a>' : '') + '<button class="call" data-act="addalloc" data-v="' + esc(s.name) + '">＋ ' + esc(L('Family', 'परिवार')) + '</button><button class="call" data-act="editstay" data-id="' + esc(s.id) + '">✎ ' + esc(L('Edit', 'बदलें')) + '</button></div></div>' +
@@ -777,13 +778,14 @@ function openAlloc(id, pre) {
     saveBar('savealloc', id) + (id ? '<button class="delbtn" data-act="delalloc" data-id="' + esc(id) + '">🗑 ' + B('Remove from the room plan', 'योजना से हटाएँ') + '</button>' : ''));
 }
 function openStay(id) {
-  var s = id ? S.stays.filter(function (x) { return x.id === id; })[0] : { name: '', side: 'Shrijeet', kind: 'Booked', rooms: '', from: '', to: '', beds: '', map: '', cost: '', contact: '', notes: '' };
+  var s = id ? S.stays.filter(function (x) { return x.id === id; })[0] : { name: '', side: 'Shrijeet', kind: 'Booked', rooms: '', from: '', to: '', beds: '', map: '', cost: '', total: '', contact: '', notes: '' };
   if (!s) return; S.sheet = { stay: id || 'new', old: s.name };
   showSheet('<h3>' + (id ? esc(s.name) : B('Add a place', 'जगह जोड़ें')) + '</h3>' +
     '<label class="l">' + B('Place name', 'जगह का नाम') + '</label><input class="input" id="st_name" value="' + esc(s.name) + '" />' +
     '<label class="l">' + B('Whose side?', 'किसकी ओर?') + '</label>' + segOf('st_side', [['Shrijeet', 'Shrijeet', 'श्रीजीत'], ['Shivangi', 'Shivangi', 'शिवांगी'], ['Both', 'Both', 'दोनों']], s.side || 'Shrijeet') +
     '<label class="l">' + B('Type', 'प्रकार') + '</label><input class="input" id="st_kind" list="stkinds" value="' + esc(s.kind) + '" />' + dlist('stkinds', ['Booked', 'Hotel', 'Resort', 'Family house', 'Own stay - up and down']) +
-    '<div class="two"><div><label class="l">' + B('Rooms booked', 'बुक कमरे') + '</label><input class="input" id="st_rooms" inputmode="numeric" value="' + esc(s.rooms) + '" /></div><div><label class="l">' + B('Cost per room ₹', 'प्रति कमरा ₹') + '</label><input class="input" id="st_cost" inputmode="numeric" value="' + esc(s.cost) + '" /></div></div>' +
+    '<label class="l">' + B('Rooms booked', 'बुक कमरे') + '</label><input class="input" id="st_rooms" inputmode="numeric" value="' + esc(s.rooms) + '" />' +
+    '<div class="two"><div><label class="l">' + B('₹ per room per night', '₹ प्रति कमरा प्रति रात') + '</label><input class="input" id="st_cost" inputmode="numeric" value="' + esc(s.cost) + '" /></div><div><label class="l">' + B('Total cost ₹', 'कुल ख़र्च ₹') + '</label><input class="input" id="st_total" inputmode="numeric" value="' + esc(s.total) + '" /></div></div>' +
     '<div class="two"><div><label class="l">' + B('First night', 'पहली रात') + '</label><input class="input" type="date" id="st_from" value="' + esc(s.from) + '" /></div><div><label class="l">' + B('Last night', 'आख़िरी रात') + '</label><input class="input" type="date" id="st_to" value="' + esc(s.to) + '" /></div></div>' +
     '<label class="l">' + B('Rooms / beds detail', 'कमरे / बिस्तर') + '</label><input class="input" id="st_beds" value="' + esc(s.beds) + '" />' +
     '<label class="l">' + B('Google Maps link', 'गूगल मैप लिंक') + '</label><input class="input" id="st_map" inputmode="url" value="' + esc(s.map) + '" />' +
@@ -1835,7 +1837,7 @@ document.addEventListener('click', function (e) {
     case 'editstay': openStay(id); return;
     case 'addstay': openStay(''); return;
     case 'savestay':
-      var sf = { name: val('st_name'), side: segVal('st_side') || 'Shrijeet', kind: val('st_kind'), rooms: num(val('st_rooms')) || '', cost: num(val('st_cost')) || '', from: document.getElementById('st_from').value, to: document.getElementById('st_to').value, beds: val('st_beds'), map: val('st_map'), contact: val('st_con'), notes: val('st_notes') };
+      var sf = { name: val('st_name'), side: segVal('st_side') || 'Shrijeet', kind: val('st_kind'), rooms: num(val('st_rooms')) || '', cost: num(val('st_cost')) || '', total: num(val('st_total')) || '', from: document.getElementById('st_from').value, to: document.getElementById('st_to').value, beds: val('st_beds'), map: val('st_map'), contact: val('st_con'), notes: val('st_notes') };
       if (!sf.name) { toast(L('Please type the place name', 'कृपया जगह का नाम लिखें'), true); return; }
       if (sf.from && !sf.to) sf.to = sf.from;
       var oldName = S.sheet.old; closeSheet(true); S.sheet = null;
