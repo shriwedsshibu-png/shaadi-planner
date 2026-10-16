@@ -159,7 +159,7 @@ function clearCache_() { PropertiesService.getScriptProperties().setProperty('VE
 function onEdit(e) { try { clearCache_(); } catch (err) {} }   // you typed in the sheet: the planner shows it on its next refresh
 
 var CHUNK = 90000;
-var CK = 'A5_';   // cache name; changes with each new version of this script, so a new deploy never shows an old copy
+var CK = 'A6_';   // cache name; changes with each new version of this script, so a new deploy never shows an old copy
 function readAllText_() {
   var v = ver_(), cache = null;
   try {
