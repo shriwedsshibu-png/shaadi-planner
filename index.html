@@ -1726,7 +1726,10 @@ document.addEventListener('click', function (e) {
     case 'staygo':
       var sx = stayItems(S.stayPlace), sm = staySent(), sl = v === 'left' ? sx.items.filter(function (i) { return !sm[last10(i.phone)]; }) : sx.items;
       startRun({ kind: 'stay', title: L('Stay details', 'ठहरने की जानकारी') + (S.stayPlace ? ' · ' + S.stayPlace : ''), items: sl, i: 0, sent: 0, skipped: 0 }); return;
-    case 'refresh': e.preventDefault(); toast(L('Refreshing…', 'ताज़ा हो रहा है…')); load(false, true, true); if (S.tab === 'guests') loadRsvp(true); return;
+    case 'refresh': e.preventDefault(); toast(L('Refreshing…', 'ताज़ा हो रहा है…'));
+      // a tiny touch on one row makes the script drop its saved copy, so changes typed straight into the sheet show up too
+      var tr0 = helpRow() || places().filter(function (s) { return s.id && !/^tmp/.test(s.id); })[0];
+      if (tr0 && S.v6) { rowQuiet('stays', tr0.id, {}); pump(); } else load(false, true, true); if (S.tab === 'guests') loadRsvp(true); return;
     case 'recheck': e.preventDefault(); S.ver = ''; LS.set('pl_cache', ''); toast(L('Checking the script…', 'स्क्रिप्ट देख रहे हैं…')); load(false, true, true).then(function () { toast(S.v5 === false ? L('Still the old script', 'अभी भी पुरानी स्क्रिप्ट') : L('Connected to the new script ✓', 'नई स्क्रिप्ट से जुड़ गया ✓'), S.v5 === false); }); return;
     case 'rsvprefresh': e.preventDefault(); toast(L('Checking…', 'देख रहे हैं…')); loadRsvp(true); return;
     case 'netinfo': toast(Q.length ? L(Q.length + ' change(s) will be saved as soon as the internet works. You can keep using the planner.', Q.length + ' बदलाव इंटरनेट आते ही सेव हो जाएँगे। आप काम जारी रखें।') : L('No internet right now — showing the last saved plan.', 'अभी इंटरनेट नहीं — पिछला सेव किया प्लान दिख रहा है।')); pump(); return;
