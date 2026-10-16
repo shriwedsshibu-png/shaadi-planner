@@ -75,9 +75,9 @@ label.l{display:block;font-weight:700;font-size:.85rem;margin:.9rem 0 .3rem;font
 .seg{display:flex;gap:.35rem;flex-wrap:wrap}
 .seg button{flex:1;min-width:4.5rem;border:1.5px solid #dccbb0;background:#fff;border-radius:.8rem;padding:.65rem .4rem;font-weight:700;cursor:pointer;font-size:.92rem}
 .seg button.on{background:var(--maroon);color:#fff7e6;border-color:var(--maroon)}
-.chips{display:flex;gap:.4rem;overflow-x:auto;padding:.2rem 0 .6rem;scrollbar-width:none}
+.chips{display:flex;flex-wrap:wrap;gap:.4rem;padding:.2rem 0 .6rem}
 .chips::-webkit-scrollbar{display:none}
-.chip{flex:none;border:1.5px solid #dccbb0;background:#fff;border-radius:99px;padding:.45rem .95rem;font-weight:600;font-size:.88rem;cursor:pointer;white-space:nowrap}
+.chip{flex:none;border:1.5px solid #dccbb0;background:#fff;border-radius:99px;padding:.4rem .8rem;font-weight:600;font-size:.86rem;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--maroon);color:#fff7e6;border-color:var(--maroon)}
 .catHead{display:flex;justify-content:space-between;align-items:center;gap:.5rem;padding:.7rem .9rem;background:var(--cream);border-radius:1rem 1rem 0 0;font-family:'Cinzel',serif;font-weight:700;font-size:.85rem;color:var(--maroon);letter-spacing:.05em}
 .placeHead{font-family:'Lora',serif;font-size:1rem;letter-spacing:0;text-transform:none}
@@ -251,7 +251,8 @@ function last10(p) { var d = digits(mainPhone(p)); return d.slice(-10); }
 function hasPhone(s, p10) { if (!p10) return false; var l = phonesOf(s); return l.length ? l.some(function (x) { return x.d.slice(-10) === p10; }) : last10(s) === p10; }
 
 /* ---------- words in the guest's language: English + Hindi, Hindi only, or big text ---------- */
-function B(en, hi) { return S.lang === 'hi' ? '<span class="hi">' + esc(hi) + '</span>' : esc(en) + ' <span class="hi">· ' + esc(hi) + '</span>'; }    // inline
+function K(en, hi) { return S.lang === 'hi' ? '<span class="hi">' + esc(hi) + '</span>' : esc(en) + ' <span class="hi">· ' + esc(hi) + '</span>'; }    // key buttons Papa needs: English + Hindi
+function B(en, hi) { return S.lang === 'hi' ? '<span class="hi">' + esc(hi) + '</span>' : esc(en); }    // everything else: one language (Hindi when Hindi is chosen)
 function B2(en, hi) { return S.lang === 'hi' ? '<span class="hi">' + esc(hi) + '</span>' : '<span>' + esc(en) + '</span><span class="sub2 hi">' + esc(hi) + '</span>'; }  // stacked
 function L(en, hi) { return S.lang === 'hi' ? hi : en; }   // plain text (toasts, placeholders)
 function applyLang() { var h = document.documentElement; h.classList.toggle('big', S.lang === 'big'); h.classList.toggle('hionly', S.lang === 'hi'); h.lang = S.lang === 'hi' ? 'hi' : 'en'; var q = document.getElementById('gq'); if (q) q.placeholder = L('Search task, guest, vendor, date…', 'काम, मेहमान, नाम या तारीख़ खोजें…'); }
@@ -291,7 +292,7 @@ function needUpdate() {
     '<li>' + L('The new deployment was made with <b>New deployment</b> (it gets a new link). Use <b>Manage deployments → ✏️ (pencil) → Version: New version → Deploy</b> on the existing one instead — or send the new /exec link to be put into the planner.', '<b>New deployment</b> से नया लिंक बन गया। इसके बजाय <b>Manage deployments → ✏️ → New version → Deploy</b> करें, या नया /exec लिंक भेजें।') + '</li>' +
     '<li>' + L('The code was pasted but not <b>saved</b> (💾) before deploying.', 'कोड डालकर <b>Save</b> (💾) नहीं किया गया।') + '</li>' +
     '<li>' + L('It was pasted into the wedding website\'s script instead of the <b>Wedding Master Tracker</b> sheet\'s script.', 'कोड वेबसाइट वाली स्क्रिप्ट में चला गया, <b>Wedding Master Tracker</b> वाली में नहीं।') + '</li></ol>' +
-    '<button class="btn sm" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
+    '<button class="btn sm" data-act="recheck">↻ ' + K('Check again', 'फिर से देखें') + '</button></div>';
 }
 // everything the family changed is shown at once and saved in the background (one by one, kept safe if the internet drops)
 var loading = null;
@@ -356,7 +357,7 @@ function renderStatus() {
   else p.style.display = 'none';
   var s = document.getElementById('syncLine'); if (s) s.innerHTML = syncText();
 }
-function syncText() { return (Q.length ? L('Saving…', 'सेव हो रहा है…') : L('Updated ', 'अपडेट ') + (S.lastSync ? new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')) + ' · <a href="#" data-act="refresh" style="color:inherit">' + B('Refresh', 'ताज़ा करें') + '</a>'; }
+function syncText() { return (Q.length ? L('Saving…', 'सेव हो रहा है…') : L('Updated ', 'अपडेट ') + (S.lastSync ? new Date(S.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '')) + ' · <a href="#" data-act="refresh" style="color:inherit">' + K('Refresh', 'ताज़ा करें') + '</a>'; }
 function toast(msg, err, undoId) { S.toast = { msg: msg, err: err, undo: undoId }; renderToast(); clearTimeout(toast.t); toast.t = setTimeout(function () { S.toast = null; renderToast(); }, undoId ? 7000 : err ? 4500 : 1800); }
 function renderToast() {
   var el = document.getElementById('toast'); if (el) el.remove();
@@ -400,7 +401,7 @@ function waLink(phone, text) { var d = digits(mainPhone(phone)); if (/^00/.test(
 function telLink(phone) { var d = String(mainPhone(phone) || '').replace(/[^\d+]/g, ''); return d.length >= 8 ? 'tel:' + d : ''; }
 function callBtns(phone, waText) {
   var t = telLink(phone); if (!t) return '';
-  return '<a class="call" href="' + esc(t) + '" data-stop="1">📞 ' + B('Call', 'कॉल') + '</a><a class="call wa" href="' + esc(waLink(phone, waText || '')) + '" target="_blank" rel="noopener" data-stop="1">💬 WhatsApp</a>';
+  return '<a class="call" href="' + esc(t) + '" data-stop="1">📞 ' + K('Call', 'कॉल') + '</a><a class="call wa" href="' + esc(waLink(phone, waText || '')) + '" target="_blank" rel="noopener" data-stop="1">💬 WhatsApp</a>';
 }
 
 function dueChip(t) {
@@ -419,8 +420,8 @@ function taskRow(t, showCat, started) {
     (t.status === 'In Progress' ? '<span class="pill" style="background:#fff3da;color:#8a5a00">' + L('In progress', 'चल रहा है') + '</span>' : '') +
     (t.owner ? '<span>👤 ' + esc(t.owner) + '</span>' : '') + (showCat === 'fn' ? '<span>' + esc(L(t.fn || 'Before the wedding', fnHi(t.fn || 'Before the wedding'))) + '</span>' : showCat ? '<span>' + esc(t.category) + '</span>' : '') + '</div>' +
     (t.remarks ? '<div class="rem">' + esc(t.remarks) + '</div>' : '') +
-    (isDone ? '<div style="margin-top:.5rem"><span class="doneTag">✓ ' + B('Done', 'पूरा हुआ') + (t.completedOn ? ' · ' + niceDate(t.completedOn) : '') + '</span></div>'
-      : '<div><button class="doneBtn" data-act="askdone" data-id="' + esc(t.id) + '">✓ ' + B('Done', 'पूरा हुआ') + '</button>' +
+    (isDone ? '<div style="margin-top:.5rem"><span class="doneTag">✓ ' + K('Done', 'पूरा हुआ') + (t.completedOn ? ' · ' + niceDate(t.completedOn) : '') + '</span></div>'
+      : '<div><button class="doneBtn" data-act="askdone" data-id="' + esc(t.id) + '">✓ ' + K('Done', 'पूरा हुआ') + '</button>' +
         (started && t.status === 'Pending' ? '<button class="progBtn" data-act="started" data-id="' + esc(t.id) + '">▶ ' + B('Started', 'शुरू किया') + '</button>' : '') + '</div>') + '</div>';
 }
 function list(arr, showCat, empty) { return arr.length ? '<div class="card">' + arr.map(function (t) { return taskRow(t, showCat); }).join('') + '</div>' : (empty ? '<div class="card empty">' + empty + '</div>' : ''); }
@@ -574,11 +575,12 @@ function guestRow(g, opts) {
     (g.remarks ? '<div class="rem">' + esc(g.remarks) + '</div>' : '') + (opts.noCall ? '' : '<div class="acts">' + callBtns(g.phone, msg) + '</div>') + '</div>';
 }
 function viewGuests() {
-  var h = '<div class="chips">' + [['sum', 'Summary', 'सारांश'], ['inv', 'Invites', 'निमंत्रण'], ['arr', 'Arrivals', 'आगमन'], ['rooms', 'Rooms', 'कमरे'], ['rsvp', 'RSVP replies', 'जवाब'], ['all', 'All guests', 'सभी मेहमान']].map(function (x) { return chip('gt', x[0], B(x[1], x[2]), S.gtab === x[0]); }).join('') + '</div>';
+  var h = '<div class="chips">' + [['sum', 'Summary', 'सारांश'], ['days', 'Day by day', 'दिन-ब-दिन'], ['rooms', 'Rooms', 'कमरे'], ['inv', 'Invites', 'निमंत्रण'], ['arr', 'Arrivals', 'आगमन'], ['rsvp', 'RSVP', 'जवाब'], ['all', 'All guests', 'सभी']].map(function (x) { return chip('gt', x[0], B(x[1], x[2]), S.gtab === x[0]); }).join('') + '</div>';
   if (S.gtab === 'inv') return h + viewInvites();
   h += needUpdate();
   if (S.gtab === 'arr') return h + viewArrivals();
   if (S.gtab === 'rooms') return h + viewRooms();
+  if (S.gtab === 'days') return h + viewDays();
   if (S.gtab === 'rsvp') return h + viewRsvp();
   if (S.gtab === 'all') return h + viewAllGuests();
   // summary
@@ -595,7 +597,7 @@ function viewGuests() {
     '<button class="tile" data-act="gt" data-v="arr"><b>' + G.filter(function (g) { return g.arrDate; }).length + '</b><span>' + L('families with arrival dates', 'परिवारों के आने की तारीख़') + '</span></button>' +
     '<button class="tile" data-act="gt" data-v="inv"><b>' + G.filter(function (g) { return g.invSent; }).length + '</b><span>' + L('invites sent', 'निमंत्रण भेजे') + '</span></button>' +
     '<button class="tile ' + (G.some(function (g) { return invState(g) === 'wait'; }) ? 'warn' : '') + '" data-act="gt" data-v="inv"><b>' + (S.rsvp ? G.filter(function (g) { return invState(g) === 'wait'; }).length : '…') + '</b><span>' + L('invited, no RSVP yet', 'निमंत्रण गया, जवाब बाकी') + '</span></button></div>';
-  h += '<button class="addbig" data-act="addguest">＋ ' + B('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
+  h += '<button class="addbig" data-act="addguest">＋ ' + K('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
   if (S.rsvp) h += rsvpTables(R);
   var RR = rsvpList().filter(isRecReply), rry = RR.filter(function (r) { return yes(r.attending); });
   if (RR.length) h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Reception (8 Dec, Mishra Niwas)', 'आशीर्वाद समारोह (8 दिसंबर)') + '</div><div class="tbl-wrap"><table class="tbl">' + tblHead(L('Reception', 'समारोह')) + '<tbody>' + sumRow(B2('Coming', 'आएँगे'), rry, 'sum') + '</tbody></table></div><div class="tbl-note">' + L((RR.length - rry.length) + ' cannot come', (RR.length - rry.length) + ' नहीं आ पाएँगे') + '</div></div>';
@@ -611,7 +613,7 @@ function viewArrivals() {
   var h = '<div class="chips">' + chip('gpick', '0', B('Everyone', 'सभी'), !S.gpick) + chip('gpick', '1', B('Pickup not arranged', 'लेने कोई तय नहीं'), S.gpick) + '</div>';
   var by = {}; G.forEach(function (g) { var k = g.arrDate || 'zzzz'; (by[k] = by[k] || []).push(g); });
   var days = Object.keys(by).sort();
-  if (!days.length) return h + '<div class="card empty">' + (S.gpick ? L('Every guest who needs a pickup has someone assigned 🎉', 'सभी के लिए लेने वाला तय है 🎉') : L('No guests yet. Add guests and their arrival dates.', 'अभी कोई मेहमान नहीं। मेहमान और उनके आने की तारीख़ जोड़ें।')) + '</div><button class="addbig" data-act="addguest">＋ ' + B('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
+  if (!days.length) return h + '<div class="card empty">' + (S.gpick ? L('Every guest who needs a pickup has someone assigned 🎉', 'सभी के लिए लेने वाला तय है 🎉') : L('No guests yet. Add guests and their arrival dates.', 'अभी कोई मेहमान नहीं। मेहमान और उनके आने की तारीख़ जोड़ें।')) + '</div><button class="addbig" data-act="addguest">＋ ' + K('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
   days.forEach(function (d) {
     var list = by[d].sort(function (a, b) { return (a.arrTime || '99') < (b.arrTime || '99') ? -1 : 1; });
     h += '<h2 class="sec">' + (d === 'zzzz' ? B('Arrival date not known', 'आने की तारीख़ नहीं पता') : (diff(d) === 0 ? L('Today · ', 'आज · ') : diff(d) === 1 ? L('Tomorrow · ', 'कल · ') : '') + niceDate(d)) + ' <span class="n">' + people(list) + ' ' + L('people', 'लोग') + '</span></h2><div class="card">' + list.map(function (g) { return guestRow(g); }).join('') + '</div>';
@@ -701,12 +703,12 @@ function allocRow(a, opts) {
     famWa(a.family) + '</div></div>';
 }
 function viewRooms() {
-  if (S.v6 === false) return '<div class="card" style="padding:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch on the room plan', 'कमरों की योजना चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version. The room plan (all places and families) then appears here by itself.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। फिर पूरी योजना यहाँ अपने आप आ जाएगी।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
+  if (S.v6 === false) return '<div class="card" style="padding:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch on the room plan', 'कमरों की योजना चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version. The room plan (all places and families) then appears here by itself.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। फिर पूरी योजना यहाँ अपने आप आ जाएगी।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + K('Check again', 'फिर से देखें') + '</button></div>';
   var tab = S.rtab || 'place', side = S.rside || 'all';
   var issues = roomIssues(), bad = issues.filter(function (x) { return x.kind === 'bad'; }).length;
   var h = '<div class="chips">' + chip('rtab', 'place', B('By place', 'जगह के हिसाब से'), tab === 'place') + chip('rtab', 'night', B('Each night', 'हर रात'), tab === 'night') + chip('rtab', 'check', B('To check', 'जाँचें') + (bad ? ' <b style="color:var(--bad)">' + bad + '</b>' : ''), tab === 'check') + '</div>';
   var mineA = S.alloc.filter(function (a) { return side === 'all' || (a.side || 'Shrijeet') === side; });
-  var people = 0, mat = 0; mineA.forEach(function (a) { mat += mattressN(a); }); var fams = {}; mineA.forEach(function (a) { if (!fams[nkey(a.family)]) { fams[nkey(a.family)] = 1; people += num(a.people); } });
+  var people = 0, mat = 0; mineA.forEach(function (a) { mat += mattressN(a); }); var fams = {}; mineA.forEach(function (a) { var k = nkey(a.family); fams[k] = Math.max(fams[k] || 0, num(a.people)); }); Object.keys(fams).forEach(function (k) { people += fams[k]; });
   if (tab === 'check') {
     h += '<p class="rem">' + L('Things to sort out in the room plan. Tap one to open it.', 'कमरों की योजना में ये बातें देखनी हैं। खोलने के लिए दबाएँ।') + '</p>';
     var grp = [['bad', L('Needs fixing', 'ठीक करना है'), 'bad'], ['warn', L('Still open', 'अभी तय नहीं'), ''], ['info', L('Free rooms', 'ख़ाली कमरे'), '']];
@@ -745,7 +747,7 @@ function viewRooms() {
   h += (function () { var hp = helpRow(), ps = hp ? phonesOf(hp.contact) : [];
     return '<div class="card" style="padding:.8rem 1rem;margin-top:1rem"><b>📞 ' + B('Our numbers in the stay message', 'संदेश में हमारे नंबर') + '</b><div class="rem" style="margin-top:.2rem">' + (ps.length ? ps.map(function (p) { return esc((p.name ? p.name + ': ' : '') + p.num); }).join(' · ') : L('Not added yet. Add Papa / Shrijeet’s numbers so guests can call you.', 'अभी नहीं जोड़े। पापा / श्रीजीत के नंबर जोड़ें ताकि मेहमान कॉल कर सकें।')) + '</div>' +
       '<div class="acts" style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.4rem"><button class="call" data-act="edithelp">✎ ' + B('Edit numbers', 'नंबर बदलें') + '</button><button class="call wa" data-act="stayall">📨 ' + B('Send stay details to all', 'सबको जानकारी भेजें') + '</button></div></div>'; })();
-  h += '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="addbig" style="margin:0;flex:1.4" data-act="addalloc">＋ ' + B('Add a family', 'परिवार जोड़ें') + '</button><button class="btn ghost" style="flex:1;min-height:3.2rem;border-radius:1rem;font-size:.92rem;padding:.4rem .6rem" data-act="addstay">＋ ' + B('Add a place', 'जगह जोड़ें') + '</button></div>';
+  h += '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="addbig" style="margin:0;flex:1.4" data-act="addalloc">＋ ' + K('Add a family', 'परिवार जोड़ें') + '</button><button class="btn ghost" style="flex:1;min-height:3.2rem;border-radius:1rem;font-size:.92rem;padding:.4rem .6rem" data-act="addstay">＋ ' + B('Add a place', 'जगह जोड़ें') + '</button></div>';
   var stays = places().filter(function (s) { return side === 'all' || s.side === side || s.side === 'Both'; }).slice().sort(function (a, b) { var ka = (isBooked(a) ? 0 : 1) + (a.from || '9'), kb = (isBooked(b) ? 0 : 1) + (b.from || '9'); return ka < kb ? -1 : ka > kb ? 1 : a.name.localeCompare(b.name); });
   stays.forEach(function (s) {
     var list = S.alloc.filter(function (a) { return nkey(a.stay) === nkey(s.name); }).sort(function (a, b) { return String(a.room || 'zz').localeCompare(String(b.room || 'zz'), undefined, { numeric: true }) || (a.from || '9').localeCompare(b.from || '9'); });
@@ -824,6 +826,14 @@ function openAlloc(id, pre) {
     '<label class="l">' + B('Status', 'स्थिति') + '</label>' + segOf('al_st', [['Draft', 'Draft', 'कच्चा'], ['Final', 'Final', 'पक्का'], ['Not confirmed', 'Not confirmed', 'पक्का नहीं']], a.status || 'Draft') +
     '<label class="l">' + B('Side', 'ओर') + '</label>' + segOf('al_side', [['Shrijeet', 'Shrijeet', 'श्रीजीत'], ['Shivangi', 'Shivangi', 'शिवांगी']], a.side || 'Shrijeet') +
     '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="al_note" value="' + esc(a.note) + '" />' +
+    (function () { var tg = g || {}, has = tg.arrTime || tg.arrMode || tg.depDate || tg.route || tg.pickupBy;
+      return '<details id="tv_box" style="margin-top:1rem;border:1.5px solid #eadfcb;border-radius:1rem;padding:.6rem .9rem"' + (has ? ' open' : '') + '><summary style="font-weight:700;cursor:pointer">🧳 ' + B('Arrival & departure', 'आना-जाना') + (has ? '' : ' <span class="rem" style="margin:0">(' + L('not filled', 'खाली') + ')</span>') + '</summary>' +
+        '<div class="two"><div><label class="l">' + B('Arrival date', 'आने की तारीख़') + '</label><input class="input" type="date" id="tv_ad" value="' + esc(tg.arrDate || '') + '" /></div><div><label class="l">' + B('Time', 'समय') + '</label><input class="input" type="time" id="tv_at" value="' + esc(tg.arrTime || '') + '" /></div></div>' +
+        '<label class="l">' + B('Coming by', 'कैसे आएँगे') + '</label>' + segOf('tv_md', [['Train', 'Train', 'ट्रेन'], ['Flight', 'Flight', 'फ़्लाइट'], ['Car', 'Car', 'कार'], ['Bus', 'Bus', 'बस']], tg.arrMode || '') +
+        '<div class="two"><div><label class="l">' + B('Pickup needed?', 'लेने जाना है?') + '</label>' + segOf('tv_pk', [['Yes', 'Yes', 'हाँ'], ['No', 'No', 'नहीं']], yes(tg.vehicle) ? 'Yes' : /^n/i.test(tg.vehicle || '') ? 'No' : '') + '</div><div><label class="l">' + B('Pickup by', 'कौन लेने जाएगा') + '</label><input class="input" id="tv_pb" value="' + esc(tg.pickupBy || '') + '" /></div></div>' +
+        '<label class="l">' + B('Departure date', 'जाने की तारीख़') + '</label><input class="input" type="date" id="tv_dd" value="' + esc(tg.depDate || '') + '" />' +
+        '<label class="l">' + B('Train / flight no. and departure time', 'ट्रेन / फ़्लाइट नंबर और जाने का समय') + '</label><input class="input" id="tv_rt" value="' + esc(tg.route || '') + '" placeholder="' + esc(L('e.g. 12841 Coromandel, leaves 3 Dec 10:15 AM', 'जैसे: 12841, 3 दिसंबर सुबह 10:15')) + '" />' +
+        '<div class="rem">' + L('Empty dates? The app uses the first night for arrival and the morning after the last night for departure. Saved in the Guest List too.', 'तारीख़ खाली हो तो पहली रात = आगमन, आख़िरी रात के अगले दिन = जाना। मेहमान सूची में भी सेव होगा।') + '</div></details>'; })() +
     (id && segs.length ? '<div class="card" style="padding:.7rem .9rem;margin-top:1rem"><b>' + B('All stays of this family', 'इस परिवार की पूरी व्यवस्था') + '</b>' + segs.map(function (x) { return '<div class="rem" style="margin-top:.3rem">' + (x.id === id ? '▸ ' : '') + esc(x.stay) + (x.room ? ' ' + esc(x.room) : '') + ' · ' + nightsText(x.from, x.to) + '</div>'; }).join('') +
       '<div class="acts" style="display:flex;flex-wrap:wrap;gap:.4rem">' + (famPhones(a.family).length ? waBtns(a.family, L('Send stay details', 'ठहरने की जानकारी भेजें')) : '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink('', stayText(a.family))) + '">💬 ' + B('Send (pick contact)', 'भेजें (संपर्क चुनें)') + '</a>') + '<button class="call" data-act="nextalloc" data-id="' + esc(id) + '">＋ ' + B('Next stay', 'अगली जगह') + '</button></div>' +
       '<details style="margin-top:.5rem"><summary class="rem" style="cursor:pointer">' + L('See the message', 'संदेश देखें') + '</summary><div class="rem" style="white-space:pre-wrap;margin-top:.3rem">' + esc(stayText(a.family)) + '</div></details></div>' : '') +
@@ -850,7 +860,7 @@ function openStayAll(place) {
     (helpRow() ? '' : '<p class="rem" style="color:#8a5a00">' + L('Tip: add your own numbers first (“Edit numbers”), so guests know whom to call.', 'सुझाव: पहले अपने नंबर जोड़ें (“नंबर बदलें”), ताकि मेहमान जानें किसे कॉल करना है।') + '</p>') +
     (left.length ? '<button class="btn block" style="width:100%;margin-top:.8rem" data-act="staygo" data-v="left">' + B('Send to those not sent yet', 'जिन्हें नहीं भेजा उन्हें भेजें') + ' (' + left.length + ')</button>' : '<p class="rem">✓ ' + L('Everyone here has been sent the details from this phone.', 'इस फ़ोन से सबको भेज दिया गया है।') + '</p>') +
     (x.items.length ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="staygo" data-v="all">' + B('Send to everyone again', 'सबको फिर से भेजें') + ' (' + x.items.length + ')</button><p class="rem">' + L('Use this after you change the plan.', 'योजना बदलने के बाद इसका उपयोग करें।') + '</p>' : '') +
-    '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="closesheet">' + B('Close', 'बंद करें') + '</button>');
+    '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="closesheet">' + K('Close', 'बंद करें') + '</button>');
 }
 function openStay(id) {
   var s = id ? S.stays.filter(function (x) { return x.id === id; })[0] : { name: '', side: 'Shrijeet', kind: 'Booked', rooms: '', from: '', to: '', beds: '', map: '', cost: '', total: '', contact: '', notes: '' };
@@ -867,6 +877,112 @@ function openStay(id) {
     '<label class="l">' + B('Contact', 'संपर्क') + '</label><input class="input" id="st_con" value="' + esc(s.contact) + '" />' +
     '<label class="l">' + B('Notes', 'नोट') + '</label><textarea class="input" id="st_notes">' + esc(s.notes) + '</textarea>' +
     saveBar('savestay', id) + (id ? '<button class="delbtn" data-act="delstay" data-id="' + esc(id) + '">🗑 ' + B('Delete this place', 'यह जगह हटाएँ') + '</button>' : ''));
+}
+
+/* ---------- DAY BY DAY: arrivals, moves, who sleeps where, functions, meals, cars, departures ----------
+   Everything comes from the room plan (+ travel details in the Guest List + website RSVPs), so the numbers stay linked. */
+var CATER = { who: 'Laddu Gopal', from: '2026-11-30', to: '2026-12-03', per: 150, big: 450, bigFn: 'Varmala & Shaadi', expect: '450–500' };
+var MEALS_BEFORE = 'NOI: order basis · HSL: order · Command Mess: mess meal · Home: chef';
+var CARS = '1–2 standby cars (all places are within 1.2 km walking)';
+function isHomePlace(name) { var s = stayOf(name); return !!s && /home/i.test(String(s.kind || '')); }
+function famList() {   // one entry per family in the room plan
+  var by = {}, out = [];
+  S.alloc.forEach(function (a) {
+    var k = nkey(a.family); if (!k) return;
+    var f = by[k]; if (!f) { f = by[k] = { key: k, name: a.family, rows: [], people: 0, side: a.side || 'Shrijeet' }; out.push(f); }
+    f.rows.push(a); f.people = Math.max(f.people, num(a.people));
+  });
+  out.forEach(function (f) {
+    f.rows.sort(function (a, b) { return (a.from || '9').localeCompare(b.from || '9'); });
+    var d = f.rows.filter(function (a) { return a.from; });
+    f.first = d.length ? d[0].from : ''; f.last = d.reduce(function (m, a) { var x = a.to || a.from; return x > m ? x : m; }, '');
+    f.g = guestByName(f.name);
+    f.home = f.rows.every(function (a) { return isHomePlace(a.stay); });
+    f.maybe = f.rows.every(function (a) { return /not confirmed/i.test(a.status || ''); });
+    f.arr = (f.g && f.g.arrDate) || f.first; f.dep = (f.g && f.g.depDate) || (f.last ? nextDay(f.last) : '');
+  });
+  return out;
+}
+function nightRows(n) { return S.alloc.filter(function (a) { return a.from && n >= a.from && n <= (a.to || a.from); }); }
+function headOf(rows) {   // people by side, each family counted once
+  var fam = {};
+  rows.forEach(function (a) { var k = nkey(a.family), m = /not confirmed/i.test(a.status || ''), x = fam[k] || (fam[k] = { p: 0, side: a.side || 'Shrijeet', maybe: true }); x.p = Math.max(x.p, num(a.people)); x.maybe = x.maybe && m; });
+  var o = { Shrijeet: 0, Shivangi: 0, maybe: 0 };
+  Object.keys(fam).forEach(function (k) { var x = fam[k]; if (x.maybe) o.maybe += x.p; else o[x.side === 'Shivangi' ? 'Shivangi' : 'Shrijeet'] += x.p; });
+  o.all = o.Shrijeet + o.Shivangi; return o;
+}
+function fnMorning(f) { return flowMin(f) < 12 * 60; }
+function fnRows(f) { return nightRows(fnMorning(f) ? dayStr(dayNum(f.date) - 1) : f.date); }   // morning: who slept here the night before; evening: who sleeps here that night
+function rsvpExtra(fn) {   // website replies not already in the room plan (matched by mobile number)
+  if (!S.rsvp) return null; var ph = {};
+  famList().forEach(function (f) { famPhones(f.name).forEach(function (p) { ph[p.d.slice(-10)] = 1; }); });
+  var t = 0, n = 0;
+  rsvpWed().forEach(function (r) { if (!yes(r.attending) || ph[last10(r.phone)]) return; var fs = String(r.functions || ''); if (fs ? fs.indexOf(fn) >= 0 : fn === CATER.bigFn) { t += num(r.total); n++; } });
+  return { p: t, n: n };
+}
+function caterFor(d, meal, fn) { if (d < CATER.from || d > CATER.to || (d === CATER.from && meal === 'breakfast')) return 0; return fn === CATER.bigFn ? CATER.big : CATER.per; }
+function headTable() {
+  var seen = {}, list = S.flow.filter(function (f) { return f.date && f.fn; }).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || flowMin(a) - flowMin(b); }).filter(function (f) { if (seen[f.fn]) return false; seen[f.fn] = 1; return true; });
+  if (!list.length) return '';
+  var rows = list.map(function (f) {
+    var h = headOf(fnRows(f)), x = rsvpExtra(f.fn), tot = h.all + (x ? x.p : 0), cat = caterFor(f.date, fnMorning(f) ? 'lunch' : 'dinner', f.fn);
+    return '<tr><td><b>' + esc(L(f.fn, fnHi(f.fn))) + '</b><div class="rem" style="margin:0">' + niceDate(f.date) + (f.start ? ' · ' + niceTime(f.start) : '') + '</div></td><td>' + h.Shrijeet + (h.maybe ? '<div class="rem" style="margin:0">+' + h.maybe + '?</div>' : '') + '</td><td>' + (h.Shivangi || '—') + '</td><td>' + (x ? x.p : '…') + '</td><td class="tot"><b>' + tot + '</b></td><td style="' + (cat && tot > cat ? 'color:var(--bad);font-weight:700' : '') + '">' + (cat || '—') + '</td></tr>';
+  }).join('');
+  return '<div class="card" style="margin-top:1rem"><div class="tbl-title">' + B('Guests at each function', 'हर कार्यक्रम में मेहमान') + '</div><div class="tbl-note">' + L('From the room plan (including family at home) + website replies not already in the room plan. Morning functions count who slept here the night before.', 'कमरों की योजना (घर का परिवार भी) + वेबसाइट के जवाब। सुबह के कार्यक्रम में पिछली रात रुके लोग गिने गए।') + '</div>' +
+    '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(L('Function', 'कार्यक्रम')) + '</th><th>' + esc(L('Ours', 'हमारे')) + '</th><th>' + esc(L('Shivangi', 'शिवांगी')) + '</th><th>RSVP</th><th class="tot">' + esc(L('Total', 'कुल')) + '</th><th>' + esc(L('Caterer', 'कैटरर')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="rem" style="padding:0 .9rem .7rem">' + L(CATER.who + ' has ' + CATER.per + ' plates per meal from 30 Nov lunch to 3 Dec dinner, and ' + CATER.big + ' for the wedding dinner. You expect ' + CATER.expect + ' at the wedding dinner: wedding-night guests are added here as their RSVPs come in.', CATER.who + ': 30 नवंबर दोपहर से 3 दिसंबर रात तक हर खाने में ' + CATER.per + ' प्लेट, शादी की रात ' + CATER.big + '। शादी की रात ' + CATER.expect + ' की उम्मीद: RSVP आने पर यहाँ जुड़ते जाएँगे।') + '</div></div>';
+}
+function travelBit(f, which) {
+  var g = f.g; if (!g) return '';
+  if (which === 'arr') return [g.arrMode ? (/flight/i.test(g.arrMode) ? '✈️' : /train/i.test(g.arrMode) ? '🚆' : /car/i.test(g.arrMode) ? '🚗' : '🚌') : '', g.arrTime ? niceTime(g.arrTime) : '', yes(g.vehicle) ? '·' : '', yes(g.vehicle) ? L('pickup', 'लेने जाना') + (g.pickupBy ? ': ' + g.pickupBy : ' ⚠') : ''].filter(Boolean).join(' ');
+  return g.route ? g.route : '';
+}
+function dLine(icon, html) { return '<div style="display:flex;gap:.55rem;padding:.4rem .9rem;border-top:1px solid #f1e7d6;font-size:.93rem;line-height:1.45"><span style="flex:none">' + icon + '</span><div style="min-width:0">' + html + '</div></div>'; }
+function dayCard(d, fams) {
+  var prev = dayStr(dayNum(d) - 1), tn = nightRows(d), ln = nightRows(prev), ht = headOf(tn), hb = headOf(ln);
+  var arr = fams.filter(function (f) { return !f.home && f.arr === d; }), dep = fams.filter(function (f) { return !f.home && f.dep === d; });
+  var moves = []; fams.forEach(function (f) { for (var i = 1; i < f.rows.length; i++) { var a = f.rows[i - 1], b = f.rows[i]; if (b.from === d && a.to && nextDay(a.to) === d && nkey(a.stay) !== nkey(b.stay)) moves.push({ f: f, a: a, b: b }); } });
+  var fns = S.flow.filter(function (x) { return x.date === d; }).sort(function (a, b) { return flowMin(a) - flowMin(b); });
+  var sp = function (l) { return l.reduce(function (s, f) { return s + (f.people || num(f.f && f.f.people)); }, 0); };
+  var nm = function (f) { return esc(f.name) + ' <span class="rem" style="margin:0">(' + f.people + (f.maybe ? '?' : '') + ')</span>'; };
+  var h = '';
+  if (fns.length) h += dLine('🎉', fns.map(function (x) { var c = headOf(fnRows(x)), e = rsvpExtra(x.fn); return '<b>' + esc(L(x.fn || x.what, x.fn ? fnHi(x.fn) : x.what)) + '</b> ' + (x.start ? niceTime(x.start) : '') + ' · ~' + (c.all + (e ? e.p : 0)) + ' ' + L('guests', 'मेहमान'); }).join('<br>'));
+  if (arr.length) h += dLine('🧳', '<b>' + L('Arriving', 'आगमन') + ': ' + sp(arr) + '</b><br>' + arr.map(function (f) { var t = travelBit(f, 'arr'); return '• ' + nm(f) + (t ? ' · ' + esc(t) : ''); }).join('<br>'));
+  if (moves.length) h += dLine('🔁', '<b>' + L('Changing place (check-out → check-in)', 'जगह बदलेंगे') + ': ' + moves.reduce(function (s, m) { return s + m.f.people; }, 0) + '</b><br>' + moves.map(function (m) { return '• ' + esc(m.f.name) + ': ' + esc(m.a.stay || '?') + ' → ' + esc(m.b.stay || '?'); }).join('<br>'));
+  if (dep.length) h += dLine('👋', '<b>' + L('Leaving (check-out)', 'जा रहे (चेक-आउट)') + ': ' + sp(dep) + '</b><br>' + dep.map(function (f) { var t = travelBit(f, 'dep'); return '• ' + nm(f) + (t ? ' · ' + esc(t) : ''); }).join('<br>'));
+  if (tn.length) { var byP = {}; tn.forEach(function (a) { var k = a.stay || L('No place yet', 'जगह तय नहीं'); byP[k] = (byP[k] || 0) + num(a.people); });
+    h += dLine('🛏', '<b>' + L('Tonight', 'आज रात') + ': ' + ht.all + '</b>' + (ht.Shivangi ? ' · ' + L('Shivangi side ', 'शिवांगी की ओर ') + ht.Shivangi : '') + (ht.maybe ? ' · +' + ht.maybe + ' ' + L('if they come', 'अगर आए') : '') + '<br><span class="rem" style="margin:0">' + Object.keys(byP).map(function (k) { return esc(k) + ' ' + byP[k]; }).join(' · ') + '</span>'); }
+  // meals
+  var bf = hb.all, dn = ht.all, ex = fns.some(function (x) { return x.fn === CATER.bigFn; }) ? rsvpExtra(CATER.bigFn) : null, dnAll = dn + (ex ? ex.p : 0);
+  if (bf || dn) {
+    var m = L('Breakfast ~', 'नाश्ता ~') + bf + ' · ' + L('Dinner ~', 'रात का खाना ~') + dnAll;
+    if (d >= CATER.from && d <= CATER.to) { var cap = caterFor(d, 'dinner', ex ? CATER.bigFn : ''); m += '<br>' + esc(CATER.who) + ': ' + (d === CATER.from ? L('from lunch, ', 'दोपहर से, ') : '') + cap + ' ' + L('plates per meal', 'प्लेट हर खाने में') + (d === CATER.to ? L(' (dinner + packed meals)', ' (रात का खाना + पैक्ड)') : '') + (dnAll > cap ? ' <b style="color:var(--bad)">⚠ ' + L('more guests than plates', 'प्लेट से ज़्यादा मेहमान') + '</b>' : ''); if (ex) m += '<br>' + L('You expect ' + CATER.expect + ' at the wedding dinner: ask for a small buffer.', 'शादी की रात ' + CATER.expect + ' की उम्मीद: थोड़ी अतिरिक्त व्यवस्था रखें।'); if (d === CATER.from) m += '<br>' + L('Breakfast: ', 'नाश्ता: ') + esc(MEALS_BEFORE); }
+    else if (d < CATER.from) m += '<br><span class="rem" style="margin:0">' + esc(MEALS_BEFORE) + '</span>';
+    else m += '<br><b style="color:var(--bad)">⚠ ' + L('Meals not arranged yet', 'खाने की व्यवस्था अभी नहीं') + '</b>';
+    h += dLine('🍽', m);
+  }
+  // cars
+  var maybeCar = {}; tn.concat(ln).forEach(function (a) { var s = stayOf(a.stay); if (s && /up and down/i.test(s.kind || '') && /to be confirmed/i.test(s.notes || '')) maybeCar[a.family] = 1; });
+  var picks = arr.filter(function (f) { return f.g && yes(f.g.vehicle); });
+  if (fns.length || arr.length || dep.length || moves.length) h += dLine('🚗', esc(CARS) + (moves.length ? '<br>' + L('Luggage help for the families changing place', 'जगह बदलने वालों के सामान में मदद') : '') + (picks.length ? '<br>' + L('Pickups: ', 'लेने जाना: ') + picks.map(function (f) { return esc(f.name) + (f.g.pickupBy ? ' (' + esc(f.g.pickupBy) + ')' : ' ⚠'); }).join(', ') : '') + (Object.keys(maybeCar).length ? '<br>' + L('Car maybe (to be confirmed): ', 'शायद गाड़ी (पक्का नहीं): ') + Object.keys(maybeCar).map(esc).join(', ') : ''));
+  var isT = d === today();
+  return '<div class="card" style="margin-top:.9rem' + (isT ? ';border-color:var(--gold);box-shadow:0 0 0 2px #f3d27a' : '') + '"><div class="catHead placeHead" style="font-size:1rem"><span>' + esc(wdDate(d)) + (isT ? ' · ' + L('Today', 'आज') : '') + '</span><small>' + (ht.all ? ht.all + ' ' + L('tonight', 'आज रात') : '') + '</small></div>' + (h || '<div class="empty" style="padding:.6rem .9rem">' + L('Nothing planned', 'कुछ तय नहीं') + '</div>') + '</div>';
+}
+function viewDays() {
+  if (!S.rsvp && (!S.rsvpAt || Date.now() - S.rsvpAt > 30000)) loadRsvp();
+  var fams = famList(), dates = {};
+  fams.forEach(function (f) { if (f.arr) dates[f.arr] = 1; if (f.dep) dates[f.dep] = 1; f.rows.forEach(function (a) { nightsOf(a.from, a.to).forEach(function (n) { dates[n] = 1; }); }); });
+  S.flow.forEach(function (f) { if (f.date) dates[f.date] = 1; });
+  var ds = Object.keys(dates).sort(); if (!ds.length) return '<div class="card empty">' + L('Add families to the room plan first.', 'पहले कमरों की योजना में परिवार जोड़ें।') + '</div>';
+  var all = nightsOf(ds[0], ds[ds.length - 1]), peak = 0, peakN = '';
+  all.forEach(function (n) { var x = headOf(nightRows(n)).all; if (x > peak) { peak = x; peakN = n; } });
+  var real = fams.filter(function (f) { return !f.maybe; }), ppl = real.reduce(function (s, f) { return s + f.people; }, 0), noNum = real.filter(function (f) { return !f.home && !famPhones(f.name).length; }).length, noTravel = fams.filter(function (f) { return !f.home && !f.maybe && !(f.g && (f.g.arrTime || f.g.arrMode)); }).length;
+  var h = '<div class="hero"><div class="sub">' + B('Day by day', 'दिन-ब-दिन') + '</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;align-items:end">' +
+    '<div><div class="big" style="font-size:2.2rem">' + real.length + '</div><div class="sub">' + L('families', 'परिवार') + '</div></div><div><div class="big" style="font-size:2.2rem">' + ppl + '</div><div class="sub">' + L('people', 'लोग') + '</div></div><div><div class="big" style="font-size:2.2rem">' + peak + '</div><div class="sub">' + L('most on one night', 'एक रात में सबसे ज़्यादा') + (peakN ? ' (' + niceDate(peakN) + ')' : '') + '</div></div></div>' +
+    ((noNum || noTravel) ? '<div class="sub" style="margin-top:.5rem">' + [noNum ? L(noNum + ' families without a mobile number', noNum + ' परिवारों का नंबर नहीं') : '', noTravel ? L(noTravel + ' without arrival time / train', noTravel + ' के आने का समय नहीं') : ''].filter(Boolean).join(' · ') + '</div>' : '') + '</div>';
+  h += headTable();
+  all.forEach(function (d) { h += dayCard(d, fams); });
+  return h;
 }
 
 function viewRsvp() {
@@ -888,7 +1004,7 @@ function viewRsvp() {
   return h;
 }
 function viewAllGuests() {
-  var h = '<button class="addbig" style="margin-top:0" data-act="addguest">＋ ' + B('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
+  var h = '<button class="addbig" style="margin-top:0" data-act="addguest">＋ ' + K('Add a guest / family', 'मेहमान जोड़ें') + '</button>';
   var G = S.guests.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
   if (!G.length) return h + '<div class="card empty" style="margin-top:.8rem">' + L('No guests yet. Add them here, or from RSVP replies.', 'अभी कोई मेहमान नहीं। यहाँ जोड़ें या वेबसाइट के जवाबों से।') + '</div>';
   ['Shrijeet', 'Shivangi', ''].forEach(function (side) {
@@ -1188,7 +1304,7 @@ function viewInvites() {
   var plan = G.filter(planned), none = G.filter(function (g) { return !g.invSent && !planned(g); });
   var todayN = sent.filter(function (g) { return g.invSent === today(); }).length, coming = comingOf(rep);
   var h = '';
-  if (S.v5 === false) h += '<div class="card" style="padding:1rem;margin-bottom:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch this on', 'इसे चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version (see the guide). Until then, invites you mark here are not saved.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। तब तक यहाँ लिखे निमंत्रण सेव नहीं होंगे।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
+  if (S.v5 === false) h += '<div class="card" style="padding:1rem;margin-bottom:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch this on', 'इसे चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version (see the guide). Until then, invites you mark here are not saved.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। तब तक यहाँ लिखे निमंत्रण सेव नहीं होंगे।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + K('Check again', 'फिर से देखें') + '</button></div>';
   h += '<div class="hero"><div class="sub">' + B('Invites', 'निमंत्रण') + (todayN ? ' · ' + L(todayN + ' sent today', 'आज ' + todayN + ' भेजे') : '') + '</div><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:.4rem;align-items:end">' +
     '<div><div class="big" style="font-size:2.1rem">' + sent.length + '</div><div class="sub">' + L('sent', 'भेजे') + '</div></div>' +
     '<div><div class="big" style="font-size:2.1rem">' + rep.length + '</div><div class="sub">' + L('replied', 'जवाब मिला') + '</div></div>' +
@@ -1272,7 +1388,7 @@ function openSend(mode, code0) {
     '<div class="rem">' + L('Words between *stars* show in bold on WhatsApp. Your changes are remembered on this phone. ', '*तारों* के बीच के शब्द WhatsApp पर मोटे दिखते हैं। बदलाव इस फ़ोन पर याद रहेंगे। ') + '<a href="#" data-act="invreset" style="color:var(--navy)">↺ ' + L('Default message', 'पहले वाला संदेश') + '</a></div></details>';
   if (!mark && mine.length) h += '<button class="btn block" style="width:100%;margin-top:1.1rem" data-act="grpsend" data-v="' + esc(code) + '">💬 ' + B('Send now, one by one (' + mine.length + ')', 'अभी भेजें, एक-एक करके (' + mine.length + ')') + '</button>' +
     '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="grpbc" data-v="' + esc(code) + '">📢 ' + B('Send all together as a broadcast', 'सबको एक साथ ब्रॉडकास्ट से भेजें') + '</button>';
-  h += '<button class="btn ghost block" style="width:100%;margin-top:.6rem;border-color:#cbbfa8;color:var(--muted)" data-act="closesheet">' + (mine.length && !mark ? B('Done for now — send later', 'अभी के लिए बस — बाद में भेजें') : B('Close', 'बंद करें')) + '</button>';
+  h += '<button class="btn ghost block" style="width:100%;margin-top:.6rem;border-color:#cbbfa8;color:var(--muted)" data-act="closesheet">' + (mine.length && !mark ? B('Done for now — send later', 'अभी के लिए बस — बाद में भेजें') : K('Close', 'बंद करें')) + '</button>';
   var keep = window.scrollY, box = document.querySelector('#sheetbg .sheet'), st = box ? box.scrollTop : 0;
   showSheet(h);
   var nb = document.querySelector('#sheetbg .sheet'); if (nb && st) nb.scrollTop = st; window.scrollTo(0, keep);
@@ -1309,7 +1425,7 @@ function showRun() {
   if (r.i >= r.items.length) {
     showSheet('<h3>✓ ' + B('All done', 'सब हो गया') + '</h3><p style="font-size:1.1rem">' + L(r.sent + ' sent' + (r.skipped ? ', ' + r.skipped + ' skipped' : '') + '.', r.sent + ' को भेजा' + (r.skipped ? ', ' + r.skipped + ' छोड़े' : '') + '।') + '</p>' +
       (r.kind === 'inv' || r.kind === 'rem' ? '<p class="rem">' + L('You can see who replies in Guests → Invites.', 'किसने जवाब दिया, यह मेहमान → निमंत्रण में दिखेगा।') + '</p>' : '') +
-      '<button class="btn block" style="width:100%;margin-top:1rem" data-act="closesheet">' + B('Close', 'बंद करें') + '</button>');
+      '<button class="btn block" style="width:100%;margin-top:1rem" data-act="closesheet">' + K('Close', 'बंद करें') + '</button>');
     return;
   }
   var it = r.items[r.i], ok = digits(it.phone).length >= 10;
@@ -1352,7 +1468,7 @@ function openBroadcast(bc) {
       '<div style="margin-top:.6rem;max-height:14rem;overflow-y:auto;border-top:1px solid #eadfcb">' + names.map(function (p, i) { return '<div style="display:flex;justify-content:space-between;gap:.5rem;padding:.4rem 0;border-bottom:1px solid #f1e8d8;font-size:.95rem"><span>' + (i + 1) + '. ' + esc(p.name || p.phone) + '</span><span class="rem" style="white-space:nowrap">' + esc(p.phone || '') + '</span></div>'; }).join('') + '</div>' +
       (g.done ? '<div style="margin-top:.6rem;color:var(--ok);font-weight:700">✓ ' + L('Marked', 'लिख लिया') + '</div>' : '<button class="btn block" style="width:100%;margin-top:.7rem;background:linear-gradient(180deg,#2f9e5a,#1f7a43);border-color:#1f7a43" data-act="bcmark" data-v="' + gi + '">✓ ' + esc(inv ? L('Mark these ' + names.length + ' as sent', 'इन ' + names.length + ' को भेजा लिखें') : L('Mark these ' + names.length + ' as reminded', 'इन ' + names.length + ' को याद दिलाया लिखें')) + '</button>') + '</div>';
   });
-  h += '<button class="btn ghost block" style="width:100%;margin-top:1rem" data-act="closesheet">' + B('Close', 'बंद करें') + '</button>';
+  h += '<button class="btn ghost block" style="width:100%;margin-top:1rem" data-act="closesheet">' + K('Close', 'बंद करें') + '</button>';
   var box = document.querySelector('#sheetbg .sheet'), st = box ? box.scrollTop : 0;
   showSheet(h);
   var nb = document.querySelector('#sheetbg .sheet'); if (nb && st) nb.scrollTop = st;
@@ -1370,7 +1486,7 @@ function openRemEdit() {
   showSheet('<h3>🔔 ' + B('Reminder message', 'याद दिलाने का संदेश') + '</h3><div class="rem">' + L('“' + REM_TOKEN + '” is replaced by each guest\'s own RSVP link (their side, 3-day or wedding-day form). Guests who got the Hindi invite get the Hindi message.', '“' + REM_TOKEN + '” की जगह हर मेहमान का अपना RSVP लिंक लगेगा। हिंदी निमंत्रण वालों को हिंदी संदेश जाएगा।') + '</div>' +
     '<label class="l">English</label><textarea class="input" id="rm_en" style="min-height:10rem;font-size:.92rem">' + esc(remMsg(false)) + '</textarea>' +
     '<label class="l">हिंदी</label><textarea class="input" id="rm_hi" style="min-height:10rem;font-size:.92rem">' + esc(remMsg(true)) + '</textarea>' +
-    '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" style="flex:1" data-act="remreset">↺ ' + B('Default', 'पहले वाला') + '</button><button class="btn" style="flex:2" data-act="closesheet">' + B('Done', 'हो गया') + '</button></div>');
+    '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" style="flex:1" data-act="remreset">↺ ' + B('Default', 'पहले वाला') + '</button><button class="btn" style="flex:2" data-act="closesheet">' + K('Done', 'हो गया') + '</button></div>');
 }
 
 /* event day: everyone who said yes for that day's functions */
@@ -1416,7 +1532,7 @@ function openDay(d) {
   h += '<button class="btn block" style="width:100%;margin-top:1rem" data-act="daygo" data-v="' + esc(d) + '"' + (left.length ? '' : ' disabled') + '>💬 ' + B('Send one by one (' + left.length + ')', 'एक-एक करके भेजें (' + left.length + ')') + '</button>' +
     (list.length - left.length ? '<button class="btn ghost block" style="width:100%;margin-top:.5rem" data-act="dayagain" data-v="' + esc(d) + '">' + B('Send again to all ' + list.length, 'सभी ' + list.length + ' को दोबारा भेजें') + '</button>' : '') +
     '<div class="rem" style="margin-top:.9rem">' + L('For a guests’ WhatsApp group or a broadcast list:', 'मेहमानों के WhatsApp ग्रुप या ब्रॉडकास्ट लिस्ट के लिए:') + '</div><div style="display:flex;gap:.5rem;margin-top:.4rem"><button class="btn ghost sm" style="flex:1" data-act="daycopy" data-v="dm_en">📋 ' + L('Copy English', 'अंग्रेज़ी कॉपी') + '</button><button class="btn ghost sm" style="flex:1" data-act="daycopy" data-v="dm_hi">📋 ' + L('Copy Hindi', 'हिंदी कॉपी') + '</button></div>' +
-    '<button class="btn ghost block" style="width:100%;margin-top:.5rem" data-act="closesheet">' + B('Close', 'बंद करें') + '</button>';
+    '<button class="btn ghost block" style="width:100%;margin-top:.5rem" data-act="closesheet">' + K('Close', 'बंद करें') + '</button>';
   showSheet(h);
 }
 function copyText(t) {
@@ -1478,7 +1594,7 @@ function icon(n) {
     money: '<circle cx="12" cy="12" r="9"/><path d="M8.5 8h7M8.5 11h7M11 8c2.8 0 2.8 6 0 6H9l5 4"/>', sched: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>' }[n];
   return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + p + '</svg>';
 }
-function langSeg(id) { return '<div class="seg" id="' + id + '">' + [['both', 'English + हिंदी', 'English + हिंदी'], ['hi', 'Hindi only', 'सिर्फ़ हिंदी'], ['big', 'Big text', 'बड़े अक्षर']].map(function (x) { return '<button data-v="' + x[0] + '" data-act="setlang" class="' + (S.lang === x[0] ? 'on' : '') + '">' + esc(x[0] === 'both' ? x[1] : L(x[1], x[2])) + '</button>'; }).join('') + '</div>'; }
+function langSeg(id) { return '<div class="seg" id="' + id + '">' + [['both', 'English', 'English'], ['hi', 'Hindi only', 'सिर्फ़ हिंदी'], ['big', 'Big text', 'बड़े अक्षर']].map(function (x) { return '<button data-v="' + x[0] + '" data-act="setlang" class="' + (S.lang === x[0] ? 'on' : '') + '">' + esc(x[0] === 'both' ? x[1] : L(x[1], x[2])) + '</button>'; }).join('') + '</div>'; }
 function viewGate() {
   return '<div class="gate card"><img class="gan" src="/img/ganesh.webp" alt="Shri Ganesh" /><h2>Shaadi Planner</h2><p class="rem">' + esc(CONFIG.weddingTitle) + '</p>' +
     (S.needPin || !S.pin ? '<label class="l" style="text-align:left">' + B('Family PIN', 'पिन') + '</label><input class="input" id="gpin" inputmode="numeric" autocomplete="off" placeholder="PIN" value="' + (S.needPin ? '' : esc(S.pin)) + '" />' + (S.needPin && S.pin ? '<p style="color:var(--bad)">' + L('That PIN is not right.', 'पिन सही नहीं है।') + '</p>' : '') : '') +
@@ -1502,14 +1618,14 @@ function render() {
   if (S.role === 'shagun') {
     document.getElementById('sbar').style.display = 'none';
     document.querySelector('#hdr h1').innerHTML = '<img src="/img/ganesh.webp" alt="" />' + esc(L('Shagun Desk', 'शगुन डेस्क'));
-    $app.innerHTML = '<main>' + (S.loaded ? viewDesk() : (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">' + B('Refresh', 'ताज़ा करें') + '</button></div>' : '<div class="card empty">' + B('Opening…', 'खुल रहा है…') + '</div>')) + (S.loaded ? '<div class="sync" id="syncLine">' + syncText() + '</div>' : '') + '</main>';
+    $app.innerHTML = '<main>' + (S.loaded ? viewDesk() : (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">' + K('Refresh', 'ताज़ा करें') + '</button></div>' : '<div class="card empty">' + B('Opening…', 'खुल रहा है…') + '</div>')) + (S.loaded ? '<div class="sync" id="syncLine">' + syncText() + '</div>' : '') + '</main>';
     renderStatus(); return;
   }
   document.querySelector('#hdr h1').innerHTML = '<img src="/img/ganesh.webp" alt="" />Shaadi Planner';
   if (S.tab === 'vendors') S.tab = 'money';
   if (S.tab === 'check') { S.tab = 'tasks'; S.ttab = 'check'; }
   if ((S.tab === 'guests' || (S.tab === 'money' && S.vtab === 'shagun')) && S.loaded && S.role !== 'shagun') loadRsvp();
-  var body = !S.loaded ? (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">' + B('Refresh', 'ताज़ा करें') + '</button></div>' : '<div class="card empty">' + B('Loading your plan…', 'आपका प्लान खुल रहा है…') + '</div>')
+  var body = !S.loaded ? (S.error ? '<div class="card empty">' + esc(S.error) + '<br><br><button class="btn" data-act="refresh">' + K('Refresh', 'ताज़ा करें') + '</button></div>' : '<div class="card empty">' + B('Loading your plan…', 'आपका प्लान खुल रहा है…') + '</div>')
     : S.gq.trim() ? viewSearch() : S.tab === 'today' ? viewToday() : S.tab === 'tasks' ? viewTasks() : S.tab === 'guests' ? viewGuests() : S.tab === 'money' ? viewMoney() : viewSchedule();
   $app.innerHTML = '<main>' + body + (S.loaded ? '<div class="sync" id="syncLine">' + syncText() + '</div>' : '') + '</main>' +
     '<nav class="bottom">' + TABS.map(function (x) { return '<button class="' + (S.tab === x[0] && !S.gq ? 'on' : '') + '" data-act="tab" data-v="' + x[0] + '">' + icon(x[0]) + B2(x[1], x[2]) + '</button>'; }).join('') + '</nav>';
@@ -1524,15 +1640,15 @@ function val(id) { var e = document.getElementById(id); return e ? e.value.trim(
 function fnSelect(id, cur, list) { return '<select class="input" id="' + id + '">' + (list || FUNCTIONS).map(function (f) { return '<option value="' + esc(f.n) + '" ' + (cur === f.n ? 'selected' : '') + '>' + esc(f.n) + ' · ' + esc(f.hi) + '</option>'; }).join('') + '</select>'; }
 function dlist(id, arr) { return '<datalist id="' + id + '">' + arr.map(function (o) { return '<option value="' + esc(o) + '">'; }).join('') + '</datalist>'; }
 function segOf(id, opts, cur) { return '<div class="seg" id="' + id + '">' + opts.map(function (o) { return '<button data-v="' + esc(o[0]) + '" class="' + (cur === o[0] ? 'on' : '') + '">' + B2(o[1], o[2]) + '</button>'; }).join('') + '</div>'; }
-function saveBar(act, id) { return '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="' + act + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + ' style="flex:2">' + B('Save', 'सेव करें') + '</button></div>'; }
+function saveBar(act, id) { return '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + K('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="' + act + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + ' style="flex:2">' + K('Save', 'सेव करें') + '</button></div>'; }
 function confirmBox(title, line, note, act, id) {
   showSheet('<div class="modal" style="border-top-color:var(--bad)"><h3 style="margin:0;font-family:Cormorant Garamond,serif;font-size:1.5rem;color:var(--maroon)">' + title + '</h3><p style="font-size:1.1rem;font-weight:600;margin:.6rem 0">' + esc(line) + '</p>' + (note ? '<p class="rem">' + note + '</p>' : '') +
-    '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('No', 'नहीं') + '</button><button class="btn red" style="flex:1.4" data-act="' + act + '" data-id="' + esc(id) + '">' + B('Yes, delete', 'हाँ, हटाएँ') + '</button></div></div>', true);
+    '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + K('No', 'नहीं') + '</button><button class="btn red" style="flex:1.4" data-act="' + act + '" data-id="' + esc(id) + '">' + B('Yes, delete', 'हाँ, हटाएँ') + '</button></div></div>', true);
 }
 function askDone(id) {
   var t = find(id); if (!t) return; S.sheet = { confirm: id };
   showSheet('<div class="modal"><h3 style="margin:0;font-family:Cormorant Garamond,serif;font-size:1.5rem;color:var(--maroon)">' + B('Mark as done?', 'क्या यह पूरा हो गया?') + '</h3><p style="font-size:1.1rem;font-weight:600;margin:.6rem 0 1rem">' + esc(t.task) + '</p>' +
-    '<div style="display:flex;gap:.6rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('No', 'नहीं') + '</button><button class="btn green" style="flex:1.4" data-act="confirmdone" data-id="' + esc(id) + '">✓ ' + B('Yes, done', 'हाँ, पूरा हुआ') + '</button></div></div>', true);
+    '<div style="display:flex;gap:.6rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + K('No', 'नहीं') + '</button><button class="btn green" style="flex:1.4" data-act="confirmdone" data-id="' + esc(id) + '">✓ ' + B('Yes, done', 'हाँ, पूरा हुआ') + '</button></div></div>', true);
 }
 function openEditor(id) {
   var t = find(id); if (!t) return; S.sheet = { id: id };
@@ -1560,7 +1676,7 @@ function openAdd(text) {
     '<label class="l">' + B('Which function?', 'कौन सा कार्यक्रम?') + '</label>' + fnSelect('a_fn', 'Before the wedding') +
     '<label class="l">' + B('How important?', 'कितना ज़रूरी?') + '</label>' + segOf('a_prio', ['P0', 'P1', 'P2'].map(function (s) { return [s, PRIO[s].en, PRIO[s].hi]; }), 'P1') +
     '<label class="l">' + B('Notes', 'नोट') + '</label><textarea class="input" id="a_rem"></textarea></div>' +
-    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="saveadd" style="flex:2">' + B('Add task', 'जोड़ें') + '</button></div>');
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + K('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="saveadd" style="flex:2">' + B('Add task', 'जोड़ें') + '</button></div>');
   setTimeout(function () { var i = document.getElementById('a_task'); if (i && !text) i.focus(); }, 50);
 }
 /* vendor / payment / settle */
@@ -1609,7 +1725,7 @@ function stayOptions() { var s = CONFIG.stays.slice(); S.guests.forEach(function
 function openGuest(id, pre) {
   var g = id ? S.guests.filter(function (x) { return x.id === id; })[0] : Object.assign({ name: '', phone: '', side: '', group: '', adults: '', children: '', arrDate: '', arrTime: '', arrMode: '', depDate: '', roomReq: '', stay: '', room: '', vehicle: '', pickupBy: '', remarks: '', rsvp: '' }, pre || {});
   if (!g) return; S.sheet = { guest: id || 'new', rsvp: g.rsvp || '' };
-  showSheet('<h3>' + (id ? esc(g.name) : B('Add a guest / family', 'मेहमान जोड़ें')) + '</h3>' + (g.rsvp ? '<div class="rem">' + L('From the website RSVP', 'वेबसाइट के जवाब से') + '</div>' : '') +
+  showSheet('<h3>' + (id ? esc(g.name) : K('Add a guest / family', 'मेहमान जोड़ें')) + '</h3>' + (g.rsvp ? '<div class="rem">' + L('From the website RSVP', 'वेबसाइट के जवाब से') + '</div>' : '') +
     '<label class="l">' + B('Name (or family)', 'नाम (या परिवार)') + '</label><input class="input" id="g_name" value="' + esc(g.name) + '" placeholder="' + esc(L('e.g. Ruby Mishra & family', 'जैसे: रूबी मिश्रा एवं परिवार')) + '" />' +
     '<label class="l">' + B('Mobile number', 'मोबाइल नंबर') + '</label><input class="input" id="g_phone" inputmode="tel" value="' + esc(g.phone) + '" />' +
     '<div class="rem">' + L('More family members? Separate with commas: Sudhir ji 98200 12345, Bhabhi 97000 11111. The first number is the main one.', 'और सदस्य? कॉमा से अलग करें: सुधीर जी 98200 12345, भाभी 97000 11111। पहला नंबर मुख्य है।') + '</div>' +
@@ -1676,7 +1792,7 @@ function openSettings() {
     '<div class="chips" style="margin-top:.4rem;flex-wrap:wrap">' + CONFIG.people.map(function (p) { return '<button class="chip" data-act="fillme" data-v="' + esc(p) + '">' + esc(p) + '</button>'; }).join('') + '</div>' +
     '<label class="l">' + B('Language', 'भाषा') + '</label>' + langSeg('st_lang') +
     (isStandalone() ? '' : '<button class="btn block ghost" style="margin-top:1.2rem" data-act="install">📲 ' + B('Install as an app', 'ऐप की तरह जोड़ें') + '</button>') +
-    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + B('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="savesettings" style="flex:2">' + B('Save', 'सेव करें') + '</button></div>' +
+    '<div style="display:flex;gap:.6rem;margin-top:1.2rem"><button class="btn ghost" data-act="closesheet" style="flex:1">' + K('Cancel', 'रद्द करें') + '</button><button class="btn" data-act="savesettings" style="flex:2">' + K('Save', 'सेव करें') + '</button></div>' +
     '<button class="delbtn" style="border-color:var(--muted);color:var(--muted)" data-act="logout">' + B('Log out on this phone', 'इस फ़ोन से बाहर निकलें') + '</button>');
 }
 
@@ -1924,12 +2040,15 @@ document.addEventListener('click', function (e) {
       if (!af.family) { toast(L('Please type the family name', 'कृपया परिवार का नाम लिखें'), true); return; }
       if (af.from && !af.to) af.to = af.from;
       if (af.from && af.to < af.from) { toast(L('The last night is before the first night', 'आख़िरी रात पहली रात से पहले है'), true); return; }
-      var aps = readPhoneRows('al_phs'), aph = aps.str;
+      var aps = readPhoneRows('al_phs'), aph = aps.str, tve = function (i) { var e = document.getElementById(i); return e ? e.value.trim() : ''; };
+      var tvv = document.getElementById('tv_box') ? { arrDate: tve('tv_ad'), arrTime: tve('tv_at'), arrMode: segVal('tv_md'), vehicle: segVal('tv_pk'), pickupBy: tve('tv_pb'), depDate: tve('tv_dd'), route: tve('tv_rt') } : null;
       if (aps.bad) { toast(L('A mobile number looks short. Please check it.', 'एक मोबाइल नंबर छोटा लग रहा है, देख लें।'), true); return; }
       closeSheet(true); S.sheet = null;
-      var ag = guestByName(af.family);
-      if (ag) { if (String(ag.phone || '').trim() !== aph && (aph || phonesOf(ag.phone).length)) rowQuiet('guests', ag.id, { phone: aph }); }
-      else if (aph) rowQuiet('guests', '', { name: af.family, phone: aph, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room });
+      var ag = guestByName(af.family), gf = {};
+      if (ag ? (String(ag.phone || '').trim() !== aph && (aph || phonesOf(ag.phone).length)) : aph) gf.phone = aph;
+      if (tvv) Object.keys(tvv).forEach(function (k) { if (String(tvv[k] || '') !== String((ag && ag[k]) || '')) gf[k] = tvv[k]; });
+      if (ag) { if (Object.keys(gf).length) rowQuiet('guests', ag.id, gf); }
+      else if (Object.keys(gf).some(function (k) { return gf[k]; })) rowQuiet('guests', '', Object.assign({ name: af.family, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room }, gf));
       rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
     case 'delalloc': var da = S.alloc.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Remove from the room plan?', 'योजना से हटाना है?'), da ? da.family + (da.stay ? ' · ' + da.stay : '') : '', '', 'confirmdela', id); return;
     case 'confirmdela': closeSheet(true); S.sheet = null; rowDel('alloc', id, L('Removed', 'हटा दिया')); return;
