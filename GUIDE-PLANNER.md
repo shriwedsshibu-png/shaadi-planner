@@ -130,3 +130,10 @@ Files in this folder:
 - **Today → Critical:** open critical tasks are grouped by category, with a button to see every open task of that category.
 - **Privacy:** the PIN keeps casual visitors out, but anyone who has both the link and the PIN can see vendor phone numbers and payments. Share it only with family. Change the PIN in `Code.gs` (then Deploy → Manage deployments → ✏️ → New version → Deploy) if it leaks.
 - **If you change `Code.gs` later:** Deploy → Manage deployments → ✏️ → Version: New version → Deploy. The link stays the same.
+
+## Room plan: numbers and stay messages (all from the phone)
+- Tap a family → **Mobile numbers**: add one row per family member (name + number). Tap **＋ Add another family member** for more. The first number is the main one. Numbers are saved in the Guest List too.
+- Each family card gets one green **💬** button per number. It opens that person's WhatsApp chat with the family's stay message. No need to save the contact.
+- **Our numbers in the stay message** (top of the room plan): add Papa / Shrijeet's numbers. They appear at the end of every stay message.
+- Each place's **Contact** (tap the place → Edit) is added to the message as "Contact there".
+- **📨 Send stay details to all** (or **Send to all here** on a place) sends one by one. "✓ sent" is remembered on that phone. Use "Send to everyone again" after changing the plan.

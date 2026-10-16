@@ -237,7 +237,18 @@ function niceDate(s) { if (!s) return ''; var p = String(s).slice(0, 10).split('
 function niceTime(t) { if (!t) return ''; var p = String(t).split(':'), h = +p[0], m = p[1] || '00'; return (h % 12 || 12) + ':' + m + (h < 12 ? ' AM' : ' PM'); }
 function num(v) { var n = parseFloat(String(v == null ? '' : v).replace(/,/g, '')); return isFinite(n) ? n : 0; }
 function digits(p) { return String(p || '').replace(/\D/g, ''); }
-function last10(p) { var d = digits(p); return d.slice(-10); }
+function phonesOf(s) {   // "Sudhir ji 98200 12345, Bhabhi 97000 11111" -> [{name, num, d}]
+  var out = [];
+  String(s || '').split(/[,;\n\/]+/).forEach(function (part) {
+    var m = part.match(/\+?\d[\d\s-]{8,}\d/); if (!m) return;
+    var d = digits(m[0]); if (d.length < 10) return;
+    out.push({ name: part.replace(m[0], '').replace(/[:()–-]+/g, ' ').replace(/\s+/g, ' ').trim(), num: m[0].trim(), d: d });
+  });
+  return out;
+}
+function mainPhone(s) { var p = phonesOf(s); return p.length ? p[0].num : String(s || ''); }
+function last10(p) { var d = digits(mainPhone(p)); return d.slice(-10); }
+function hasPhone(s, p10) { if (!p10) return false; var l = phonesOf(s); return l.length ? l.some(function (x) { return x.d.slice(-10) === p10; }) : last10(s) === p10; }
 
 /* ---------- words in the guest's language: English + Hindi, Hindi only, or big text ---------- */
 function B(en, hi) { return S.lang === 'hi' ? '<span class="hi">' + esc(hi) + '</span>' : esc(en) + ' <span class="hi">· ' + esc(hi) + '</span>'; }    // inline
@@ -385,8 +396,8 @@ function owners() { var s = {}; S.tasks.forEach(function (t) { if (t.owner) s[t.
 function ownerOptions() { return owners().concat(CONFIG.people).filter(function (v, i, a) { return a.indexOf(v) === i; }); }
 function doneDay(t) { return (t.status === 'Completed' ? (t.completedOn || t.updatedAt || '') : (t.updatedAt || '')).slice(0, 10); }
 function fnHi(n) { var f = FUNCTIONS.filter(function (x) { return x.n === n; })[0]; return f ? f.hi : n; }
-function waLink(phone, text) { var d = digits(phone); if (/^00/.test(d)) d = d.slice(2); if (d.length === 11 && d.charAt(0) === '0') d = d.slice(1); if (d.length === 10) d = '91' + d; return 'https://wa.me/' + (d.length >= 11 ? d : '') + '?text=' + encodeURIComponent(text); }
-function telLink(phone) { var d = String(phone || '').replace(/[^\d+]/g, ''); return d.length >= 8 ? 'tel:' + d : ''; }
+function waLink(phone, text) { var d = digits(mainPhone(phone)); if (/^00/.test(d)) d = d.slice(2); if (d.length === 11 && d.charAt(0) === '0') d = d.slice(1); if (d.length === 10) d = '91' + d; return 'https://wa.me/' + (d.length >= 11 ? d : '') + '?text=' + encodeURIComponent(text); }
+function telLink(phone) { var d = String(mainPhone(phone) || '').replace(/[^\d+]/g, ''); return d.length >= 8 ? 'tel:' + d : ''; }
 function callBtns(phone, waText) {
   var t = telLink(phone); if (!t) return '';
   return '<a class="call" href="' + esc(t) + '" data-stop="1">📞 ' + B('Call', 'कॉल') + '</a><a class="call wa" href="' + esc(waLink(phone, waText || '')) + '" target="_blank" rel="noopener" data-stop="1">💬 WhatsApp</a>';
@@ -546,7 +557,7 @@ function gp(g) { var a = num(g.adults), c = num(g.children); return (a || c) ? a
 function people(arr) { return arr.reduce(function (s, g) { return s + gp(g); }, 0); }
 function yes(v) { return /^(y|yes|haan|ha|true|1)/i.test(String(v || '').trim()); }
 function rsvpList() { return S.rsvp || []; }
-function rsvpInGuests(r) { var p = last10(r.phone); return S.guests.some(function (g) { return (p && (last10(g.phone) === p || last10(g.rsvp) === p)) || (!p && g.name.toLowerCase() === r.name.toLowerCase()); }); }
+function rsvpInGuests(r) { var p = last10(r.phone); return S.guests.some(function (g) { return (p && (hasPhone(g.phone, p) || last10(g.rsvp) === p)) || (!p && g.name.toLowerCase() === r.name.toLowerCase()); }); }
 function modeIcon(m) { m = String(m || '').toLowerCase(); return /train|rail/.test(m) ? '🚆' : /flight|air|plane/.test(m) ? '✈️' : /bus/.test(m) ? '🚌' : /car|road|cab|drive/.test(m) ? '🚗' : ''; }
 function guestRow(g, opts) {
   opts = opts || {};
@@ -619,7 +630,10 @@ function nightsText(a, b) {
   if (!b || b === a) return L('night of ', 'रात ') + niceDate(a) + ' · ' + L('check-out ', 'चेक-आउट ') + niceDate(nextDay(a));
   return niceDate(a) + ' → ' + niceDate(b) + ' · ' + L('check-out ', 'चेक-आउट ') + niceDate(nextDay(b));
 }
-function stayOf(name) { var k = nkey(name); return k ? S.stays.filter(function (s) { return nkey(s.name) === k; })[0] : null; }
+function isHelp(s) { return /^helpline$/i.test(String(s.kind || '')); }
+function places() { return S.stays.filter(function (s) { return !isHelp(s); }); }
+function helpRow() { return S.stays.filter(isHelp)[0] || null; }
+function stayOf(name) { var k = nkey(name); return k ? places().filter(function (s) { return nkey(s.name) === k; })[0] : null; }
 function isBooked(s) { return !!(s && num(s.rooms) > 0); }
 function mattressN(a) { var p = num(a.people); if (/^n/i.test(a.mattress || '')) return 0; if (yes(a.mattress)) return Math.max(1, p - 2); return isBooked(stayOf(a.stay)) ? Math.max(0, p - 2) : 0; }   // a double bed takes 2 (only in rooms we book)
 function allocNights(a) { return nightsOf(a.from, a.to); }
@@ -640,7 +654,7 @@ function nightAt(s, n) {
   return { booked: booked, used: Object.keys(rooms).length + extra, people: here.reduce(function (t, a) { return t + num(a.people); }, 0), mat: here.reduce(function (t, a) { return t + mattressN(a); }, 0), list: here };
 }
 function allNights() {
-  var d = []; S.stays.forEach(function (s) { if (isBooked(s) && s.from) d = d.concat(nightsOf(s.from, s.to)); });
+  var d = []; places().forEach(function (s) { if (isBooked(s) && s.from) d = d.concat(nightsOf(s.from, s.to)); });
   S.alloc.forEach(function (a) { d = d.concat(allocNights(a)); });
   d = d.filter(function (x, i) { return d.indexOf(x) === i; }).sort(); return d.length ? nightsOf(d[0], d[d.length - 1]) : [];
 }
@@ -657,7 +671,7 @@ function roomIssues() {
   var told = {};
   Object.keys(seen).forEach(function (k) { var l = seen[k], fam = l.map(function (a) { return a.family; }).filter(function (x, i, z) { return z.indexOf(x) === i; }); if (fam.length < 2) return; var key = k.split('|').slice(0, 2).join('|') + fam.join(); if (told[key]) return; told[key] = 1; out.push({ kind: 'bad', id: l[1].id, text: L(l[0].stay + ' ' + l[0].room + ' has two families on the same night: ' + fam.join(' + '), l[0].stay + ' ' + l[0].room + ' में एक ही रात दो परिवार: ' + fam.join(' + ')) }); });
   // more rooms used than booked
-  S.stays.forEach(function (s) {
+  places().forEach(function (s) {
     if (!isBooked(s)) return; var over = [];
     allNights().forEach(function (n) { var x = nightAt(s, n); if (x.used > x.booked) over.push(n); });
     if (over.length) out.push({ kind: 'bad', place: s.id, text: L(s.name + ' — more rooms given than booked on ' + rangeText(over), s.name + ' — ' + rangeText(over) + ' को बुक से ज़्यादा कमरे दिए') });
@@ -667,7 +681,7 @@ function roomIssues() {
     else if (!a.from) out.push({ kind: 'warn', id: a.id, text: L(a.family + ' — dates not known yet (' + a.stay + ')', a.family + ' — तारीख़ अभी तय नहीं (' + a.stay + ')') });
   });
   // rooms booked but empty
-  S.stays.forEach(function (s) {
+  places().forEach(function (s) {
     if (!isBooked(s) || s.side === 'Shivangi') return; var free = {};
     nightsOf(s.from, s.to).forEach(function (n) { var x = nightAt(s, n), f = x.booked - x.used; if (f > 0) (free[f] = free[f] || []).push(n); });
     Object.keys(free).forEach(function (f) { out.push({ kind: 'info', place: s.id, text: L(s.name + ' — ' + f + ' room' + (f > 1 ? 's' : '') + ' free on ' + rangeText(free[f]), s.name + ' — ' + rangeText(free[f]) + ' को ' + f + ' कमरे ख़ाली') }); });
@@ -684,7 +698,7 @@ function allocRow(a, opts) {
     (m ? '<div style="margin-top:.25rem"><span class="badge" style="background:#ffe9c2;color:#8a4b00">🛏 ' + L('extra mattress — ' + m + ' on mattress', 'अतिरिक्त गद्दा — ' + m + ' लोग गद्दे पर') + '</span></div>' : '') +
     (o.length ? '<div style="margin-top:.25rem"><span class="badge b-no">⚠ ' + L('room not booked for the night of ' + rangeText(o), rangeText(o) + ' की रात का कमरा बुक नहीं') + '</span></div>' : '') +
     (a.note ? '<div class="rem">' + esc(a.note) + '</div>' : '') +
-    (function () { var g = guestByName(a.family); return g && digits(g.phone).length >= 10 ? '<div class="acts" style="margin-top:.35rem"><a class="call wa" data-act="walink" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, stayText(a.family))) + '">💬 ' + esc(L('Send stay details', 'जानकारी भेजें')) + '</a></div>' : '<div class="rem" style="margin-top:.2rem;color:#8a5a00">📱 ' + esc(L('No mobile number yet. Tap to add it.', 'मोबाइल नंबर नहीं है। जोड़ने के लिए दबाएँ।')) + '</div>'; })() + '</div></div>';
+    famWa(a.family) + '</div></div>';
 }
 function viewRooms() {
   if (S.v6 === false) return '<div class="card" style="padding:1rem;border-color:var(--warn);background:#fff8e6"><b>' + B('One small step to switch on the room plan', 'कमरों की योजना चालू करने के लिए एक छोटा कदम') + '</b><div class="rem" style="margin-top:.3rem">' + L('Paste the new Code.gs into the Wedding Master Tracker sheet\'s script and deploy a new version. The room plan (all places and families) then appears here by itself.', 'नया Code.gs, Wedding Master Tracker शीट की स्क्रिप्ट में डालकर New version डिप्लॉय करें। फिर पूरी योजना यहाँ अपने आप आ जाएगी।') + '</div><button class="btn sm" style="margin-top:.6rem" data-act="recheck">↻ ' + B('Check again', 'फिर से देखें') + '</button></div>';
@@ -711,7 +725,7 @@ function viewRooms() {
     h += '<p class="rem">' + L('Rooms given / rooms booked, and people, for every night. Check-out is the next morning.', 'हर रात: दिए गए / बुक कमरे और लोग। चेक-आउट अगली सुबह।') + '</p>';
     nights.forEach(function (n) {
       var rows = [], tp = 0, tr = 0, tb = 0, tm = 0;
-      S.stays.forEach(function (s) {
+      places().forEach(function (s) {
         var x = nightAt(s, n); if (!x.booked && !x.list.length) return;
         tp += x.people; tm += x.mat; if (isBooked(s)) { tr += x.used; tb += x.booked; }
         var st = x.used > x.booked && isBooked(s) ? 'color:var(--bad);font-weight:700' : x.booked > x.used && s.side !== 'Shivangi' ? 'color:#2a6a38' : '';
@@ -726,10 +740,13 @@ function viewRooms() {
   h += '<div class="chips">' + [['all', 'Both sides', 'दोनों'], ['Shrijeet', "Shrijeet's side", 'श्रीजीत की ओर'], ['Shivangi', "Shivangi's side", 'शिवांगी की ओर']].map(function (x) { return chip('rside', x[0], B(x[1], x[2]), side === x[0]); }).join('') + '</div>';
   h += '<div class="hero"><div class="sub">' + B('Room plan', 'कमरों की योजना') + (side !== 'all' ? ' · ' + esc(L(side + "'s side", (WHO_HI[side] || side) + ' की ओर'))  : '') + '</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;align-items:end">' +
     '<div><div class="big" style="font-size:2.2rem">' + Object.keys(fams).length + '</div><div class="sub">' + L('families', 'परिवार') + '</div></div><div><div class="big" style="font-size:2.2rem">' + people + '</div><div class="sub">' + L('people', 'लोग') + '</div></div><div><div class="big" style="font-size:2.2rem">' + mat + '</div><div class="sub">' + L('on mattresses', 'गद्दे पर') + '</div></div></div>' +
-    (function () { var cs = S.stays.filter(function (x) { return side === 'all' || x.side === side; }), tot = cs.reduce(function (t, x) { return t + (num(x.total) || num(x.cost) * num(x.rooms) * nightsOf(x.from, x.to).length); }, 0); return tot ? '<div class="sub" style="margin-top:.5rem">' + L('Stay costs noted: ', 'ठहरने का लिखा ख़र्च: ') + '<b>₹' + tot.toLocaleString('en-IN') + '</b></div>' : ''; })() +
+    (function () { var cs = places().filter(function (x) { return side === 'all' || x.side === side; }), tot = cs.reduce(function (t, x) { return t + (num(x.total) || num(x.cost) * num(x.rooms) * nightsOf(x.from, x.to).length); }, 0); return tot ? '<div class="sub" style="margin-top:.5rem">' + L('Stay costs noted: ', 'ठहरने का लिखा ख़र्च: ') + '<b>₹' + tot.toLocaleString('en-IN') + '</b></div>' : ''; })() +
     (bad ? '<div class="stats" style="margin-top:.6rem"><button class="stat" data-act="rtab" data-v="check" style="border:0;cursor:pointer;color:inherit;font:inherit">⚠ <b>' + bad + '</b> ' + L('things to fix — tap to see', 'बातें ठीक करनी हैं — देखें') + '</button></div>' : '') + '</div>';
+  h += (function () { var hp = helpRow(), ps = hp ? phonesOf(hp.contact) : [];
+    return '<div class="card" style="padding:.8rem 1rem;margin-top:1rem"><b>📞 ' + B('Our numbers in the stay message', 'संदेश में हमारे नंबर') + '</b><div class="rem" style="margin-top:.2rem">' + (ps.length ? ps.map(function (p) { return esc((p.name ? p.name + ': ' : '') + p.num); }).join(' · ') : L('Not added yet. Add Papa / Shrijeet’s numbers so guests can call you.', 'अभी नहीं जोड़े। पापा / श्रीजीत के नंबर जोड़ें ताकि मेहमान कॉल कर सकें।')) + '</div>' +
+      '<div class="acts" style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.4rem"><button class="call" data-act="edithelp">✎ ' + B('Edit numbers', 'नंबर बदलें') + '</button><button class="call wa" data-act="stayall">📨 ' + B('Send stay details to all', 'सबको जानकारी भेजें') + '</button></div></div>'; })();
   h += '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="addbig" style="margin:0;flex:1.4" data-act="addalloc">＋ ' + B('Add a family', 'परिवार जोड़ें') + '</button><button class="btn ghost" style="flex:1;min-height:3.2rem;border-radius:1rem;font-size:.92rem;padding:.4rem .6rem" data-act="addstay">＋ ' + B('Add a place', 'जगह जोड़ें') + '</button></div>';
-  var stays = S.stays.filter(function (s) { return side === 'all' || s.side === side || s.side === 'Both'; }).slice().sort(function (a, b) { var ka = (isBooked(a) ? 0 : 1) + (a.from || '9'), kb = (isBooked(b) ? 0 : 1) + (b.from || '9'); return ka < kb ? -1 : ka > kb ? 1 : a.name.localeCompare(b.name); });
+  var stays = places().filter(function (s) { return side === 'all' || s.side === side || s.side === 'Both'; }).slice().sort(function (a, b) { var ka = (isBooked(a) ? 0 : 1) + (a.from || '9'), kb = (isBooked(b) ? 0 : 1) + (b.from || '9'); return ka < kb ? -1 : ka > kb ? 1 : a.name.localeCompare(b.name); });
   stays.forEach(function (s) {
     var list = S.alloc.filter(function (a) { return nkey(a.stay) === nkey(s.name); }).sort(function (a, b) { return String(a.room || 'zz').localeCompare(String(b.room || 'zz'), undefined, { numeric: true }) || (a.from || '9').localeCompare(b.from || '9'); });
     var occ = isBooked(s) && s.from ? nightsOf(s.from, s.to).map(function (n) { var x = nightAt(s, n); return '<span style="white-space:nowrap;' + (x.used > x.booked ? 'color:var(--bad);font-weight:700' : '') + '">' + niceDate(n) + ' ' + x.used + '/' + x.booked + '</span>'; }).join(' · ') : '';
@@ -740,7 +757,7 @@ function viewRooms() {
       (s.beds ? '<div class="rem">' + esc(s.beds) + '</div>' : '') + (num(s.cost) || num(s.total) ? '<div class="rem">' + [num(s.cost) ? '₹' + num(s.cost).toLocaleString('en-IN') + ' ' + L('per room per night', 'प्रति कमरा प्रति रात') : '', num(s.total) ? L('total ', 'कुल ') + '₹' + num(s.total).toLocaleString('en-IN') : ''].filter(Boolean).join(' · ') + '</div>' : '') +
       (note ? '<div class="rem" style="' + (/^check/i.test(note) ? 'color:#8a5a00;font-weight:600' : '') + '">' + (/^check/i.test(note) ? '❓ ' : '') + esc(note) + '</div>' : '') +
       (occ ? '<div class="rem" style="margin-top:.2rem">' + L('Rooms given each night: ', 'हर रात दिए कमरे: ') + occ + '</div>' : '') +
-      '<div class="acts" style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.4rem">' + (s.map ? '<a class="call" target="_blank" rel="noopener" href="' + esc(s.map) + '">📍 ' + esc(L('Map', 'नक्शा')) + '</a>' : '') + '<button class="call" data-act="addalloc" data-v="' + esc(s.name) + '">＋ ' + esc(L('Family', 'परिवार')) + '</button><button class="call" data-act="editstay" data-id="' + esc(s.id) + '">✎ ' + esc(L('Edit', 'बदलें')) + '</button></div></div>' +
+      '<div class="acts" style="margin-top:.4rem;display:flex;flex-wrap:wrap;gap:.4rem">' + (s.map ? '<a class="call" target="_blank" rel="noopener" href="' + esc(s.map) + '">📍 ' + esc(L('Map', 'नक्शा')) + '</a>' : '') + '<button class="call" data-act="addalloc" data-v="' + esc(s.name) + '">＋ ' + esc(L('Family', 'परिवार')) + '</button><button class="call" data-act="editstay" data-id="' + esc(s.id) + '">✎ ' + esc(L('Edit', 'बदलें')) + '</button>' + (list.length ? '<button class="call wa" data-act="stayall" data-v="' + esc(s.name) + '">📨 ' + esc(L('Send to all here', 'यहाँ सबको भेजें')) + '</button>' : '') + '</div>' + (s.contact ? '<div class="rem" style="margin-top:.3rem">📞 ' + esc(s.contact) + '</div>' : '<div class="rem" style="margin-top:.3rem;color:#8a5a00">📞 ' + esc(L('No contact number for this place yet. Tap Edit to add it, so guests can call them.', 'इस जगह का संपर्क नंबर नहीं है। बदलें दबाकर जोड़ें।')) + '</div>') + '</div>' +
       (list.length ? list.map(function (a) { return allocRow(a); }).join('') : '<div class="empty" style="padding:.6rem .9rem">' + (s.side === 'Shivangi' ? L("Shivangi's side decides who stays here.", 'यहाँ कौन रुकेगा, शिवांगी की ओर तय करेगी।') : L('Nobody placed here yet.', 'अभी यहाँ कोई नहीं।')) + '</div>') + '</div>';
   });
   var loose = mineA.filter(function (a) { return !a.stay || !stayOf(a.stay); });
@@ -748,16 +765,47 @@ function viewRooms() {
   return h;
 }
 /* the family's stay details, for WhatsApp */
+function famPhones(fam) { var g = guestByName(fam); return g ? phonesOf(g.phone) : []; }
+function staySent() { try { return JSON.parse(LS.get('pl_staysent') || '{}'); } catch (e) { return {}; } }
+function markStaySent(phone) { var m = staySent(), k = last10(phone); if (!k) return; m[k] = today(); LS.set('pl_staysent', JSON.stringify(m)); }
+function waBtns(fam, label) {   // one green button per number
+  var ps = famPhones(fam), txt = stayText(fam);
+  return ps.map(function (p) { return '<a class="call wa" data-act="walink" data-v="' + esc(p.num) + '" target="_blank" rel="noopener" href="' + esc(waLink(p.num, txt)) + '">💬 ' + esc(ps.length === 1 && !p.name ? label : (p.name || '…' + p.d.slice(-4))) + '</a>'; }).join('');
+}
+function famWa(fam) {
+  var ps = famPhones(fam), sent = staySent(), when = ps.map(function (p) { return sent[p.d.slice(-10)]; }).filter(Boolean).sort().pop();
+  if (!ps.length) return '<div class="rem" style="margin-top:.2rem;color:#8a5a00">📱 ' + esc(L('No mobile number yet. Tap to add it.', 'मोबाइल नंबर नहीं है। जोड़ने के लिए दबाएँ।')) + '</div>';
+  return '<div class="acts" style="margin-top:.35rem;display:flex;flex-wrap:wrap;gap:.4rem;align-items:center">' + waBtns(fam, L('Send stay details', 'जानकारी भेजें')) + (when ? '<span class="rem" style="color:#2a6a38">✓ ' + esc(L('sent ', 'भेजा ') + niceDate(when)) + '</span>' : '') + '</div>';
+}
+function phoneRowHtml(n, d) { return '<div class="two phrow"><div><input class="input ph_n" value="' + esc(n || '') + '" placeholder="' + esc(L('Name (e.g. Sudhir ji)', 'नाम (जैसे सुधीर जी)')) + '" /></div><div><input class="input ph_d" type="tel" inputmode="tel" value="' + esc(d || '') + '" placeholder="' + esc(L('Mobile number', 'मोबाइल नंबर')) + '" /></div></div>'; }
+function phoneRows(id, str, addLabel) {
+  var ps = phonesOf(str), raw = String(str || '').trim();
+  var rows = ps.length ? ps.map(function (p) { return phoneRowHtml(p.name, p.num); }).join('') : phoneRowHtml('', raw);
+  return '<div id="' + id + '">' + rows + '</div><button class="btn ghost sm" style="margin-top:.4rem" data-act="addphrow" data-v="' + id + '">＋ ' + esc(addLabel) + '</button>';
+}
+function readPhoneRows(id) {   // -> { str: "Name 98..., Name 97...", bad: true if a number is too short }
+  var box = document.getElementById(id), parts = [], bad = false; if (!box) return { str: '', bad: false };
+  box.querySelectorAll('.phrow').forEach(function (r) {
+    var n = r.querySelector('.ph_n').value.replace(/[,;\/]/g, ' ').replace(/\s+/g, ' ').trim(), d = r.querySelector('.ph_d').value.trim();
+    if (!d) return; if (digits(d).length < 10) { bad = true; return; }
+    parts.push((n ? n + ' ' : '') + d);
+  });
+  return { str: parts.join(', '), bad: bad };
+}
+function helpText(hi) {
+  var h = helpRow(), ps = h ? phonesOf(h.contact) : []; if (!ps.length) return '';
+  return '\n' + (hi ? 'किसी भी ज़रूरत या परेशानी में हमें कॉल करें:' : 'For anything at all, please call us:') + ps.map(function (p) { return '\n📞 ' + (p.name ? p.name + ': ' : '') + p.num; }).join('') + '\n';
+}
 function familyStays(fam) { var k = nkey(fam); return S.alloc.filter(function (a) { return nkey(a.family) === k && a.stay; }).sort(function (a, b) { return (a.from || '9').localeCompare(b.from || '9'); }); }
 function stayText(fam) {
   var segs = familyStays(fam), hi = S.lang === 'hi';
-  var t = (hi ? 'नमस्ते 🙏\n*श्रीजीत एवं शिवांगी* के विवाह में आपके ठहरने की व्यवस्था:' : 'Namaste 🙏\nYour stay for *Shrijeet & Shivangi*\'s wedding:') + '\n';
+  var t = (hi ? 'प्रणाम 🙏\n*श्रीजीत एवं शिवांगी* के विवाह में आपके ठहरने की व्यवस्था:' : 'Pranam 🙏\nYour stay for *Shrijeet & Shivangi*\'s wedding:') + '\n';
   segs.forEach(function (a) {
     var s = stayOf(a.stay) || {};
     t += '\n🏨 *' + a.stay + '*' + (a.room ? ' — ' + (/^\s*(room\s*)?\d/i.test(a.room) ? (hi ? 'कमरा ' : 'Room ') + a.room.replace(/^\s*room\s*/i, '') : a.room) : '') + '\n📅 ' + (a.from ? (a.to && a.to !== a.from ? niceDate(a.from) + ' → ' + niceDate(a.to) : (hi ? 'रात ' : 'Night of ') + niceDate(a.from)) + (hi ? ' (चेक-आउट ' : ' (check-out ') + niceDate(nextDay(a.to || a.from)) + (hi ? ' सुबह)' : ' morning)') : (hi ? 'तारीख़ जल्द बताएँगे' : 'Dates to follow')) +
-      (s.map ? '\n📍 ' + s.map : '') + (mattressN(a) ? '\n' + (hi ? '🛏 कमरे में अतिरिक्त गद्दा रहेगा' : '🛏 Extra mattress will be in the room') : '') + '\n';
+      (s.map ? '\n📍 ' + s.map : '') + (String(s.contact || '').trim() ? '\n📞 ' + (hi ? 'वहाँ का संपर्क: ' : 'Contact there: ') + String(s.contact).trim() : '') + (mattressN(a) ? '\n' + (hi ? '🛏 कमरे में अतिरिक्त गद्दा रहेगा' : '🛏 Extra mattress will be in the room') : '') + '\n';
   });
-  return t + '\n' + (hi ? 'आपके आगमन की प्रतीक्षा है 🌸' : 'Looking forward to welcoming you 🌸');
+  return t + helpText(hi) + '\n' + (hi ? 'आपके आगमन की प्रतीक्षा है 🌸' : 'Looking forward to welcoming you 🌸');
 }
 function openAlloc(id, pre) {
   var a = id ? S.alloc.filter(function (x) { return x.id === id; })[0] : Object.assign({ family: '', people: 2, stay: '', room: '', from: '', to: '', mattress: '', side: 'Shrijeet', status: 'Draft', note: '' }, pre || {});
@@ -766,10 +814,10 @@ function openAlloc(id, pre) {
   var g = guestByName(a.family), segs = id ? familyStays(a.family) : [];
   showSheet('<h3>' + (id ? esc(a.family) : B('Add to the room plan', 'योजना में जोड़ें')) + '</h3>' +
     '<label class="l">' + B('Family / guest', 'परिवार / मेहमान') + '</label><input class="input" id="al_fam" list="alnames" value="' + esc(a.family) + '" />' + dlist('alnames', names) +
-    '<label class="l">' + B('Mobile number (WhatsApp)', 'मोबाइल नंबर (WhatsApp)') + '</label><input class="input" id="al_ph" type="tel" inputmode="tel" value="' + esc(g ? g.phone : '') + '" placeholder="' + esc(L('10-digit number', '10 अंकों का नंबर')) + '" />' +
-    '<div class="rem">' + L('Saved in the Guest List too. No need to save it in your phone: “Send stay details” opens their WhatsApp chat directly.', 'मेहमान सूची में भी सेव होगा। फ़ोन में सेव करने की ज़रूरत नहीं: “जानकारी भेजें” सीधे उनकी WhatsApp चैट खोलेगा।') + '</div>' +
+    '<label class="l">' + B('Mobile numbers (WhatsApp)', 'मोबाइल नंबर (WhatsApp)') + '</label>' + phoneRows('al_phs', g ? g.phone : '', L('Add another family member', 'परिवार का और सदस्य जोड़ें')) +
+    '<div class="rem">' + L('Add one or more family members. The first number is the main one. Saved in the Guest List too, and no need to save them in your phone.', 'एक या ज़्यादा सदस्य जोड़ें। पहला नंबर मुख्य है। मेहमान सूची में भी सेव होगा, फ़ोन में सेव करने की ज़रूरत नहीं।') + '</div>' +
     '<div class="two"><div><label class="l">' + B('People', 'लोग') + '</label><input class="input" id="al_ppl" inputmode="numeric" value="' + esc(a.people) + '" /></div><div><label class="l">' + B('Room', 'कमरा') + '</label><input class="input" id="al_room" value="' + esc(a.room) + '" placeholder="' + esc(L('e.g. Room 4, GH 2', 'जैसे: Room 4, GH 2')) + '" /></div></div>' +
-    '<label class="l">' + B('Where?', 'कहाँ?') + '</label><select class="input" id="al_stay"><option value="">' + esc(L('— not decided yet —', '— अभी तय नहीं —')) + '</option>' + S.stays.map(function (s) { return '<option value="' + esc(s.name) + '" ' + (nkey(s.name) === nkey(a.stay) ? 'selected' : '') + '>' + esc(s.name) + (s.side ? ' · ' + esc(s.side) : '') + '</option>'; }).join('') + '</select>' +
+    '<label class="l">' + B('Where?', 'कहाँ?') + '</label><select class="input" id="al_stay"><option value="">' + esc(L('— not decided yet —', '— अभी तय नहीं —')) + '</option>' + places().map(function (s) { return '<option value="' + esc(s.name) + '" ' + (nkey(s.name) === nkey(a.stay) ? 'selected' : '') + '>' + esc(s.name) + (s.side ? ' · ' + esc(s.side) : '') + '</option>'; }).join('') + '</select>' +
     '<div class="two"><div><label class="l">' + B('First night', 'पहली रात') + '</label><input class="input" type="date" id="al_from" value="' + esc(a.from) + '" /></div><div><label class="l">' + B('Last night', 'आख़िरी रात') + '</label><input class="input" type="date" id="al_to" value="' + esc(a.to) + '" /></div></div>' +
     '<div class="rem">' + L('Check-out is the morning after the last night.', 'चेक-आउट आख़िरी रात के अगली सुबह।') + '</div>' +
     '<label class="l">' + B('Extra mattress?', 'अतिरिक्त गद्दा?') + '</label>' + segOf('al_mat', [['', 'Auto (3+ people)', 'अपने आप (3+ लोग)'], ['Yes', 'Yes', 'हाँ'], ['No', 'No', 'नहीं']], yes(a.mattress) ? 'Yes' : /^n/i.test(a.mattress || '') ? 'No' : '') +
@@ -777,9 +825,32 @@ function openAlloc(id, pre) {
     '<label class="l">' + B('Side', 'ओर') + '</label>' + segOf('al_side', [['Shrijeet', 'Shrijeet', 'श्रीजीत'], ['Shivangi', 'Shivangi', 'शिवांगी']], a.side || 'Shrijeet') +
     '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="al_note" value="' + esc(a.note) + '" />' +
     (id && segs.length ? '<div class="card" style="padding:.7rem .9rem;margin-top:1rem"><b>' + B('All stays of this family', 'इस परिवार की पूरी व्यवस्था') + '</b>' + segs.map(function (x) { return '<div class="rem" style="margin-top:.3rem">' + (x.id === id ? '▸ ' : '') + esc(x.stay) + (x.room ? ' ' + esc(x.room) : '') + ' · ' + nightsText(x.from, x.to) + '</div>'; }).join('') +
-      '<div class="acts"><a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g ? g.phone : '', stayText(a.family))) + '">💬 ' + B('Send stay details', 'ठहरने की जानकारी भेजें') + '</a><button class="call" data-act="nextalloc" data-id="' + esc(id) + '">＋ ' + B('Next stay', 'अगली जगह') + '</button></div>' +
-      (g && g.phone ? '' : '<div class="rem">' + L('Type the mobile number above and save. Then WhatsApp opens straight in their chat.', 'ऊपर मोबाइल नंबर लिखकर सेव करें। फिर WhatsApp सीधे उनकी चैट में खुलेगा।') + '</div>') + '</div>' : '') +
+      '<div class="acts" style="display:flex;flex-wrap:wrap;gap:.4rem">' + (famPhones(a.family).length ? waBtns(a.family, L('Send stay details', 'ठहरने की जानकारी भेजें')) : '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink('', stayText(a.family))) + '">💬 ' + B('Send (pick contact)', 'भेजें (संपर्क चुनें)') + '</a>') + '<button class="call" data-act="nextalloc" data-id="' + esc(id) + '">＋ ' + B('Next stay', 'अगली जगह') + '</button></div>' +
+      '<details style="margin-top:.5rem"><summary class="rem" style="cursor:pointer">' + L('See the message', 'संदेश देखें') + '</summary><div class="rem" style="white-space:pre-wrap;margin-top:.3rem">' + esc(stayText(a.family)) + '</div></details></div>' : '') +
     saveBar('savealloc', id) + (id ? '<button class="delbtn" data-act="delalloc" data-id="' + esc(id) + '">🗑 ' + B('Remove from the room plan', 'योजना से हटाएँ') + '</button>' : ''));
+}
+function openHelp() {
+  var hp = helpRow(); S.sheet = { help: 1 };
+  showSheet('<h3>📞 ' + B('Our numbers in the stay message', 'संदेश में हमारे नंबर') + '</h3><p class="rem">' + L('Guests see these at the end of every stay message, to call you if anything goes wrong.', 'हर संदेश के आख़िर में ये नंबर जाएँगे, ताकि कोई परेशानी हो तो मेहमान आपको कॉल कर सकें।') + '</p>' +
+    phoneRows('hp_phs', hp ? hp.contact : '', L('Add another number', 'और नंबर जोड़ें')) + saveBar('savehelp', hp ? hp.id : ''));
+}
+function stayItems(place) {   // everyone to message (one line per number), and families without a number
+  var fams = [], seen = {};
+  S.alloc.forEach(function (a) { if (!a.stay || !stayOf(a.stay)) return; if (place && nkey(a.stay) !== nkey(place)) return; var k = nkey(a.family); if (!seen[k]) { seen[k] = 1; fams.push(a.family); } });
+  var items = [], none = [];
+  fams.forEach(function (f) { var ps = famPhones(f); if (!ps.length) none.push(f); ps.forEach(function (p) { items.push({ name: f + (p.name ? ' · ' + p.name : ''), phone: p.num, text: stayText(f), fam: f }); }); });
+  return { items: items, none: none, fams: fams.length };
+}
+function openStayAll(place) {
+  var x = stayItems(place), sent = staySent(), left = x.items.filter(function (i) { return !sent[last10(i.phone)]; });
+  S.sheet = { stayall: 1 }; S.stayPlace = place || '';
+  showSheet('<h3>📨 ' + (place ? esc(L('Send stay details · ' + place, 'जानकारी भेजें · ' + place)) : B('Send stay details to all', 'सबको जानकारी भेजें')) + '</h3>' +
+    '<p>' + L(x.fams + ' families · ' + x.items.length + ' mobile numbers. WhatsApp opens for one number at a time with that family’s own message. Tap Send in WhatsApp, come back, and the next one is ready.', x.fams + ' परिवार · ' + x.items.length + ' नंबर। हर नंबर के लिए WhatsApp उसी परिवार के संदेश के साथ खुलेगा। WhatsApp में भेजें, वापस आएँ, अगला तैयार रहेगा।') + '</p>' +
+    (x.none.length ? '<div class="card" style="padding:.7rem .9rem;border-color:var(--warn)"><b>' + L(x.none.length + ' families have no number yet', x.none.length + ' परिवारों का नंबर नहीं है') + '</b><div class="rem">' + esc(x.none.join(', ')) + '</div><div class="rem">' + L('Tap a family in the room plan to add their numbers.', 'नंबर जोड़ने के लिए योजना में परिवार पर दबाएँ।') + '</div></div>' : '') +
+    (helpRow() ? '' : '<p class="rem" style="color:#8a5a00">' + L('Tip: add your own numbers first (“Edit numbers”), so guests know whom to call.', 'सुझाव: पहले अपने नंबर जोड़ें (“नंबर बदलें”), ताकि मेहमान जानें किसे कॉल करना है।') + '</p>') +
+    (left.length ? '<button class="btn block" style="width:100%;margin-top:.8rem" data-act="staygo" data-v="left">' + B('Send to those not sent yet', 'जिन्हें नहीं भेजा उन्हें भेजें') + ' (' + left.length + ')</button>' : '<p class="rem">✓ ' + L('Everyone here has been sent the details from this phone.', 'इस फ़ोन से सबको भेज दिया गया है।') + '</p>') +
+    (x.items.length ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="staygo" data-v="all">' + B('Send to everyone again', 'सबको फिर से भेजें') + ' (' + x.items.length + ')</button><p class="rem">' + L('Use this after you change the plan.', 'योजना बदलने के बाद इसका उपयोग करें।') + '</p>' : '') +
+    '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="closesheet">' + B('Close', 'बंद करें') + '</button>');
 }
 function openStay(id) {
   var s = id ? S.stays.filter(function (x) { return x.id === id; })[0] : { name: '', side: 'Shrijeet', kind: 'Booked', rooms: '', from: '', to: '', beds: '', map: '', cost: '', total: '', contact: '', notes: '' };
@@ -1078,13 +1149,13 @@ function defRemMsg(hi) {
 function remMsg(hi) { return LS.get(hi ? 'pl_rm_hi' : 'pl_rm_en') || defRemMsg(hi); }
 function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_TOKEN).join(rsvpUrl(g.invLink)); }
 
-function guestByPhone(phone) { var p = last10(phone); return p ? S.guests.filter(function (g) { return last10(g.phone) === p || last10(g.rsvp) === p; })[0] : null; }
+function guestByPhone(phone) { var p = last10(phone); return p ? S.guests.filter(function (g) { return hasPhone(g.phone, p) || last10(g.rsvp) === p; })[0] : null; }
 function guestByName(name) { var k = nkey(name); return k ? S.guests.filter(function (g) { return nkey(g.name) === k; })[0] : null; }
 function isRecReply(r) { return /reception/i.test(String(r.invite || '')); }
 function rsvpWed() { return rsvpList().filter(function (r) { return !isRecReply(r); }); }   // wedding replies only (the reception has its own)
 function replyOf(g) {
   var rec = invInfo(g.invLink).rec, R = rsvpList().filter(function (x) { return isRecReply(x) === rec; }), p = last10(g.phone), rp = last10(g.rsvp);
-  var r = R.filter(function (x) { var q = last10(x.phone); return q && (q === p || q === rp); })[0];
+  var r = R.filter(function (x) { var q = last10(x.phone); return q && (hasPhone(g.phone, q) || q === rp); })[0];
   if (!r && g.name) { var k = nkey(g.name); r = R.filter(function (x) { return k && nkey(x.name) === k; })[0]; }
   return r || null;
 }
@@ -1255,6 +1326,7 @@ function runDone(sent) {
     r.sent++;
     if (r.kind === 'inv') markInvited(it, r.code);
     else if (r.kind === 'rem') { var g = S.guests.filter(function (x) { return x.id === it.gid; })[0]; if (g) rowSave('guests', g.id, { remAt: today(), remN: num(g.remN) + 1 }); }
+    else if (r.kind === 'stay') markStaySent(it.phone);
     else if (r.kind === 'day') { var key = 'pl_ds_' + r.date, m = {}; try { m = JSON.parse(LS.get(key) || '{}'); } catch (e) {} m[last10(it.phone)] = 1; LS.set(key, JSON.stringify(m)); }
   } else r.skipped++;
   r.i++;
@@ -1540,6 +1612,7 @@ function openGuest(id, pre) {
   showSheet('<h3>' + (id ? esc(g.name) : B('Add a guest / family', 'मेहमान जोड़ें')) + '</h3>' + (g.rsvp ? '<div class="rem">' + L('From the website RSVP', 'वेबसाइट के जवाब से') + '</div>' : '') +
     '<label class="l">' + B('Name (or family)', 'नाम (या परिवार)') + '</label><input class="input" id="g_name" value="' + esc(g.name) + '" placeholder="' + esc(L('e.g. Ruby Mishra & family', 'जैसे: रूबी मिश्रा एवं परिवार')) + '" />' +
     '<label class="l">' + B('Mobile number', 'मोबाइल नंबर') + '</label><input class="input" id="g_phone" inputmode="tel" value="' + esc(g.phone) + '" />' +
+    '<div class="rem">' + L('More family members? Separate with commas: Sudhir ji 98200 12345, Bhabhi 97000 11111. The first number is the main one.', 'और सदस्य? कॉमा से अलग करें: सुधीर जी 98200 12345, भाभी 97000 11111। पहला नंबर मुख्य है।') + '</div>' +
     '<label class="l">' + B('Whose side?', 'किसकी ओर से?') + '</label>' + segOf('g_side', [['Shrijeet', 'Shrijeet', 'श्रीजीत'], ['Shivangi', 'Shivangi', 'शिवांगी'], ['Both', 'Both', 'दोनों']], g.side) +
     '<div class="two"><div><label class="l">' + B('Adults', 'बड़े') + '</label><input class="input" id="g_ad" inputmode="numeric" value="' + esc(g.adults) + '" /></div><div><label class="l">' + B('Children', 'बच्चे') + '</label><input class="input" id="g_ch" inputmode="numeric" value="' + esc(g.children) + '" /></div></div>' +
     '<label class="l">' + B('Family / group', 'परिवार / समूह') + '</label><input class="input" id="g_group" value="' + esc(g.group) + '" placeholder="' + esc(L('e.g. Mama ji family, Navy friends', 'जैसे: मामा जी का परिवार')) + '" />' +
@@ -1640,7 +1713,19 @@ document.addEventListener('click', function (e) {
     case 'fd': S.fDate = S.fDate === 'none' ? 'all' : 'none'; render(); return;
     case 'fday': S.fday = v; render(); return;
     case 'stype': S.stype = v; render(); return;
-    case 'walink': e.stopPropagation(); return;
+    case 'walink': e.stopPropagation(); if (v) setTimeout(function () { markStaySent(v); render(); }, 600); return;
+    case 'addphrow': var pbox = document.getElementById(v); if (pbox) { pbox.insertAdjacentHTML('beforeend', phoneRowHtml('', '')); var ins = pbox.querySelectorAll('.ph_n'); ins[ins.length - 1].focus(); } return;
+    case 'edithelp': openHelp(); return;
+    case 'savehelp':
+      var hps = readPhoneRows('hp_phs'); if (hps.bad) { toast(L('A mobile number looks short. Please check it.', 'एक मोबाइल नंबर छोटा लग रहा है, देख लें।'), true); return; }
+      closeSheet(true); S.sheet = null;
+      if (id) rowSave('stays', id, { contact: hps.str }, L('Saved ✓', 'सेव हुआ ✓'));
+      else rowSave('stays', '', { name: 'Family helpline', kind: 'Helpline', side: 'Both', contact: hps.str, notes: 'Numbers shown at the end of every stay message' }, L('Saved ✓', 'सेव हुआ ✓'));
+      return;
+    case 'stayall': e.stopPropagation(); openStayAll(v || ''); return;
+    case 'staygo':
+      var sx = stayItems(S.stayPlace), sm = staySent(), sl = v === 'left' ? sx.items.filter(function (i) { return !sm[last10(i.phone)]; }) : sx.items;
+      startRun({ kind: 'stay', title: L('Stay details', 'ठहरने की जानकारी') + (S.stayPlace ? ' · ' + S.stayPlace : ''), items: sl, i: 0, sent: 0, skipped: 0 }); return;
     case 'refresh': e.preventDefault(); toast(L('Refreshing…', 'ताज़ा हो रहा है…')); load(false, true, true); if (S.tab === 'guests') loadRsvp(true); return;
     case 'recheck': e.preventDefault(); S.ver = ''; LS.set('pl_cache', ''); toast(L('Checking the script…', 'स्क्रिप्ट देख रहे हैं…')); load(false, true, true).then(function () { toast(S.v5 === false ? L('Still the old script', 'अभी भी पुरानी स्क्रिप्ट') : L('Connected to the new script ✓', 'नई स्क्रिप्ट से जुड़ गया ✓'), S.v5 === false); }); return;
     case 'rsvprefresh': e.preventDefault(); toast(L('Checking…', 'देख रहे हैं…')); loadRsvp(true); return;
@@ -1836,10 +1921,12 @@ document.addEventListener('click', function (e) {
       if (!af.family) { toast(L('Please type the family name', 'कृपया परिवार का नाम लिखें'), true); return; }
       if (af.from && !af.to) af.to = af.from;
       if (af.from && af.to < af.from) { toast(L('The last night is before the first night', 'आख़िरी रात पहली रात से पहले है'), true); return; }
-      var aph = val('al_ph').trim();
-      if (aph && digits(aph).length < 10) { toast(L('The mobile number looks short. Please check it.', 'मोबाइल नंबर छोटा लग रहा है, देख लें।'), true); return; }
+      var aps = readPhoneRows('al_phs'), aph = aps.str;
+      if (aps.bad) { toast(L('A mobile number looks short. Please check it.', 'एक मोबाइल नंबर छोटा लग रहा है, देख लें।'), true); return; }
       closeSheet(true); S.sheet = null;
-      if (aph) { var ag = guestByName(af.family); if (ag) { if (digits(ag.phone) !== digits(aph)) rowQuiet('guests', ag.id, { phone: aph }); } else rowQuiet('guests', '', { name: af.family, phone: aph, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room }); }
+      var ag = guestByName(af.family);
+      if (ag) { if (String(ag.phone || '').trim() !== aph && (aph || phonesOf(ag.phone).length)) rowQuiet('guests', ag.id, { phone: aph }); }
+      else if (aph) rowQuiet('guests', '', { name: af.family, phone: aph, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room });
       rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
     case 'delalloc': var da = S.alloc.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Remove from the room plan?', 'योजना से हटाना है?'), da ? da.family + (da.stay ? ' · ' + da.stay : '') : '', '', 'confirmdela', id); return;
     case 'confirmdela': closeSheet(true); S.sheet = null; rowDel('alloc', id, L('Removed', 'हटा दिया')); return;
