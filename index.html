@@ -1007,7 +1007,7 @@ function planActions() {
   var na = {}; guestsF.forEach(function (f) { if (!(f.g && (f.g.arrTime || f.g.arrMode)) && f.arr) (na[f.arr] = na[f.arr] || []).push(f); });
   var nak = Object.keys(na).sort();
   if (nak.length) add('P0', 'Guests, Travel & Transport', L('Get train / flight and arrival times for ' + nak.reduce(function (s, k) { return s + na[k].length; }, 0) + ' families', nak.reduce(function (s, k) { return s + na[k].length; }, 0) + ' परिवारों के आने का समय / ट्रेन पता करें'),
-    nak.map(function (k) { return niceDate(k) + ': ' + na[k].length + ' ' + L(na[k].length === 1 ? 'family' : 'families', 'परिवार') + ' (' + pplOf(na[k]) + ' ' + L('people', 'लोग') + ')'; }).join(' · ') + '. ' + L('Needed to plan pickups. Fill them in each family’s “Arrival & departure”.', 'लेने जाने के लिए ज़रूरी। हर परिवार के “आना-जाना” में भरें।'));
+    nak.map(function (k) { return niceDate(k) + ': ' + na[k].length + ' ' + L(na[k].length === 1 ? 'family' : 'families', 'परिवार') + ' (' + nPeople(na[k].reduce(function (s, f) { return s + f.firstP; }, 0)) + ')'; }).join(' · ') + '. ' + L('Needed to plan pickups. Fill them in each family’s “Arrival & departure”.', 'लेने जाने के लिए ज़रूरी। हर परिवार के “आना-जाना” में भरें।'));
   var np = guestsF.filter(function (f) { return f.g && yes(f.g.vehicle) && !f.g.pickupBy; });
   if (np.length) add('P0', 'Guests, Travel & Transport', L('Assign who picks up ' + np.length + ' families', np.length + ' परिवारों को लेने कौन जाएगा, तय करें'), np.map(function (f) { return f.name + ' (' + niceDate(f.arr) + (f.g.arrTime ? ' ' + niceTime(f.g.arrTime) : '') + ')'; }).join(', '));
   // moving days
@@ -1022,18 +1022,39 @@ function planActions() {
   var dp = {}; guestsF.forEach(function (f) { if (f.dep) (dp[f.dep] = dp[f.dep] || []).push(f); });
   Object.keys(dp).sort().forEach(function (d) {
     var l = dp[d], p = l.reduce(function (s, f) { return s + f.lastP; }, 0); if (p < 10) return;
-    var at = {}; l.forEach(function (f) { f.rows.filter(function (a) { return a.from && (a.to || a.from) === f.last; }).forEach(function (r) { at[r.stay || '?'] = (at[r.stay || '?'] || 0) + num(r.people); }); });
+    var at = {}; l.forEach(function (f) { f.rows.filter(function (a) { return a.from && (a.to || a.from) === f.last; }).forEach(function (r) { var kk = r.stay || L('no place yet', 'जगह तय नहीं'); at[kk] = (at[kk] || 0) + num(r.people); }); });
     var afterW = S.flow.some(function (x) { return x.fn === CATER.bigFn && x.date === dayStr(dayNum(d) - 1); });
     add('P0', 'Guests, Travel & Transport', L(niceDate(d) + ': ' + p + ' people check out and leave', niceDate(d) + ': ' + p + ' लोग चेक-आउट करके जाएँगे'),
       Object.keys(at).map(function (k) { return k + ' ' + at[k]; }).join(' · ') + '. ' + L((afterW ? 'Ask for late check-out after the wedding night. ' : 'Confirm the check-out time. ') + 'Collect departure times for station / airport drops' + (d <= CATER.to ? ', and tell ' + CATER.who + ' how many packed meals' : '') + '.', (afterW ? 'शादी की रात के बाद देर से चेक-आउट पूछें। ' : 'चेक-आउट का समय पक्का करें। ') + 'स्टेशन / एयरपोर्ट छोड़ने के लिए जाने का समय लें' + (d <= CATER.to ? ', और ' + CATER.who + ' को पैक्ड खाने की गिनती दें' : '') + '।'));
   });
+  // arriving long before check-in / leaving long after check-out
+  var early = {}, late = {};
+  guestsF.forEach(function (f) {
+    var g = f.g || {};
+    if (g.arrTime && f.arr) { var ah = +g.arrTime.split(':')[0], r0 = f.rows.filter(function (a) { return a.from && f.arr >= a.from && f.arr <= (a.to || a.from); })[0], s0 = r0 && stayOf(r0.stay), pt = placeTimes(s0);
+      if (r0 && !isHomePlace(r0.stay) && ((pt.inH != null && ah < pt.inH - 1) || (pt.inH == null && ah < 8))) (early[f.arr] = early[f.arr] || []).push({ f: f, h: ah, place: r0.stay || L('no place yet', 'जगह तय नहीं'), inH: pt.inH }); }
+    var dh = depHourOf(g.route); if (dh != null && f.dep) { var rl = f.rows.filter(function (a) { return a.from && (a.to || a.from) === f.last; })[0], sl = rl && stayOf(rl.stay), pl = placeTimes(sl), out = pl.outH != null ? pl.outH : 11;
+      if (rl && !isHomePlace(rl.stay) && dh - out >= 4) (late[f.dep] = late[f.dep] || []).push({ f: f, h: dh, place: rl.stay || L('no place yet', 'जगह तय नहीं'), outH: pl.outH }); }
+  });
+  Object.keys(early).sort().forEach(function (d) {
+    var l = early[d], p = l.reduce(function (s, x) { return s + x.f.firstP; }, 0), by = {};
+    l.forEach(function (x) { var k = x.place + (x.inH != null ? L(' (check-in ' + niceTime(pad(x.inH) + ':00') + ')', ' (चेक-इन ' + niceTime(pad(x.inH) + ':00') + ')') : L(' (check-in time not known)', ' (चेक-इन समय पता नहीं)')); (by[k] = by[k] || []).push(x.f.name + ' ' + niceTime(pad(x.h) + ':00')); });
+    add('P0', 'Venue & Accommodation', L(niceDate(d) + ': ' + nPeople(p) + (p === 1 ? ' arrives' : ' arrive') + ' before check-in', niceDate(d) + ': ' + p + ' लोग चेक-इन से पहले पहुँचेंगे'),
+      Object.keys(by).map(function (k) { return '• ' + k + ': ' + by[k].join(', '); }).join('\n') + '\n' + L('Ask for early check-in, or plan where they freshen up and rest' + (d <= CATER.from ? ', and their breakfast (' + CATER.who + ' starts at lunch on ' + niceDate(CATER.from) + ')' : '') + '.', 'जल्दी चेक-इन पूछें, या नहाने-आराम की जगह तय करें' + (d <= CATER.from ? ', और नाश्ता (' + CATER.who + ' ' + niceDate(CATER.from) + ' दोपहर से)' : '') + '।'));
+  });
+  Object.keys(late).sort().forEach(function (d) {
+    var l = late[d], p = l.reduce(function (s, x) { return s + x.f.lastP; }, 0), by = {}, eve = l.filter(function (x) { return x.h >= 18; }).reduce(function (s, x) { return s + x.f.lastP; }, 0);
+    l.forEach(function (x) { var k = x.place + (x.outH != null ? L(' (check-out ' + niceTime(pad(x.outH) + ':00') + ')', ' (चेक-आउट ' + niceTime(pad(x.outH) + ':00') + ')') : L(' (check-out time not known)', ' (चेक-आउट समय पता नहीं)')); (by[k] = by[k] || []).push(x.f.name + ' ' + niceTime(pad(x.h) + ':00')); });
+    add('P0', 'Venue & Accommodation', L(niceDate(d) + ': ' + nPeople(p) + (p === 1 ? ' waits' : ' wait') + ' hours between check-out and their train', niceDate(d) + ': ' + p + ' लोग चेक-आउट के बाद घंटों ट्रेन का इंतज़ार करेंगे'),
+      Object.keys(by).map(function (k) { return '• ' + k + ': ' + by[k].join(', '); }).join('\n') + '\n' + L('Ask for late check-out or keep one or two rooms for rest and luggage until evening.' + (eve ? ' Packed dinner for ' + nPeople(eve) + ' on evening trains' + (d <= CATER.to ? ' (tell ' + CATER.who + ').' : ' (not arranged yet).') : ''), 'देर से चेक-आउट पूछें या शाम तक आराम और सामान के लिए एक-दो कमरे रखें।' + (eve ? ' शाम की ट्रेन वाले ' + eve + ' लोगों के लिए पैक्ड खाना' + (d <= CATER.to ? ' (' + CATER.who + ' को बताएँ)।' : ' (अभी तय नहीं)।') : '')));
+  });
   // meals outside the caterer's days
-  var pre = {}; allNights().forEach(function (n) { if (n >= CATER.from) return; var by = {}; nightRows(n).forEach(function (a) { if (isHomePlace(a.stay)) return; var k = a.stay || '?'; by[k] = (by[k] || 0) + num(a.people); }); Object.keys(by).forEach(function (k) { pre[k] = Math.max(pre[k] || 0, by[k]); }); });
+  var pre = {}; allNights().forEach(function (n) { if (n >= CATER.from) return; var by = {}; nightRows(n).forEach(function (a) { if (isHomePlace(a.stay)) return; var k = a.stay || L('no place yet', 'जगह तय नहीं'); by[k] = (by[k] || 0) + num(a.people); }); Object.keys(by).forEach(function (k) { pre[k] = Math.max(pre[k] || 0, by[k]); }); });
   var preP = Object.keys(pre);
   if (preP.length) add('P1', 'Food & Catering', L('Book meals before ' + CATER.who + ' starts (' + niceDate(CATER.from) + ' lunch)', CATER.who + ' से पहले का खाना बुक करें'), preP.map(function (k) { return k + ' ' + pre[k]; }).join(' · ') + '. ' + esc(MEALS_BEFORE) + '. ' + L('Include breakfast on ' + niceDate(CATER.from) + '.', niceDate(CATER.from) + ' का नाश्ता भी।'));
   var aft = [], aftMax = 0; allNights().forEach(function (n) {
     var d = nextDay(n); if (d <= CATER.to) return;
-    var by = {}; nightRows(n).forEach(function (a) { if (isHomePlace(a.stay)) return; by[a.stay || '?'] = (by[a.stay || '?'] || 0) + num(a.people); });
+    var by = {}; nightRows(n).forEach(function (a) { if (isHomePlace(a.stay)) return; var kk = a.stay || L('no place yet', 'जगह तय नहीं'); by[kk] = (by[kk] || 0) + num(a.people); });
     var p = Object.keys(by).reduce(function (s, k) { return s + by[k]; }, 0);
     if (p) { aft.push(niceDate(d) + ': ' + p + ' (' + Object.keys(by).map(function (k) { return k + ' ' + by[k]; }).join(', ') + ')'); aftMax = Math.max(aftMax, p); }
   });
@@ -1048,7 +1069,7 @@ function planActions() {
   // numbers and contacts
   var noNum = guestsF.filter(function (f) { return !famPhones(f.name).length && !/vendor|photograph|artist/i.test(f.name); });
   if (noNum.length) add('P1', 'Invitations & Communication', L('Add mobile numbers for ' + noNum.length + ' families', noNum.length + ' परिवारों के मोबाइल नंबर जोड़ें'), noNum.map(function (f) { return f.name; }).join(' · ') + '. ' + L('Needed to send them their stay details.', 'स्टे की जानकारी भेजने के लिए ज़रूरी।'));
-  var noCon = places().filter(function (s) { return isBooked(s) && s.side !== 'Shivangi' && !String(s.contact || '').trim(); });
+  var noCon = places().filter(function (s) { return isBooked(s) && s.side !== 'Shivangi' && !String(s.contact || '').trim() && S.alloc.some(function (a) { return nkey(a.stay) === nkey(s.name); }); });
   if (noCon.length) add('P1', 'Invitations & Communication', L('Add contact numbers for ' + noCon.length + ' places', noCon.length + ' जगहों के संपर्क नंबर जोड़ें'), noCon.map(function (s) { return s.name; }).join(', ') + '. ' + L('They go in the guests’ stay message.', 'ये मेहमानों के संदेश में जाते हैं।'));
   if (!helpRow() || !phonesOf(helpRow().contact).length) add('P1', 'Invitations & Communication', L('Add our numbers for the stay message', 'संदेश के लिए अपने नंबर जोड़ें'), L('Rooms → “Our numbers in the stay message”.', 'कमरे → “संदेश में हमारे नंबर”।'));
   // hotel room numbers are ours, not the hotel's
@@ -1081,6 +1102,16 @@ function viewActions() {
     (inT ? '<p class="rem">' + L(inT + ' more are already in your Tasks.', inT + ' और आपके काम की सूची में हैं।') + '</p>' : '');
 }
 /* vehicles: every trip worked out from the plan (pickups, moves between places, drops), sized with luggage in mind */
+function nPeople(n) { return n + ' ' + L(n === 1 ? 'person' : 'people', 'लोग'); }
+function hourOf(s) { var m = /(\d{1,2})[:.](\d{2})\s*(am|pm)?/i.exec(String(s || '')); if (!m) return null; var h = +m[1]; if (/pm/i.test(m[3] || '') && h < 12) h += 12; if (/am/i.test(m[3] || '') && h === 12) h = 0; return h; }
+function depHourOf(s) {   // the time after "leaves" / "departure" in the travel note, else the first time written
+  var m = /(?:leav\w*|depart\w*|dep\b)[^0-9]*(?:\d{1,2}\s+[A-Za-z]{3}\s+)?(\d{1,2})[:.](\d{2})\s*(am|pm)?/i.exec(String(s || ''));
+  if (!m) return hourOf(s); var h = +m[1]; if (/pm/i.test(m[3] || '') && h < 12) h += 12; if (/am/i.test(m[3] || '') && h === 12) h = 0; return h;
+}
+function placeTimes(s) {   // check-in / check-out hour written in the place's notes, e.g. "Check-in 12 PM, check-out 11 AM"
+  var n = String((s && s.notes) || ''), hh = function (m) { if (!m) return null; var h = +m[1]; if (/pm/i.test(m[3]) && h < 12) h += 12; if (/am/i.test(m[3]) && h === 12) h = 0; return h; };
+  return { inH: hh(/check-?in[^0-9]*(?:\d{1,2}\s+[A-Za-z]{3}\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(n)), outH: hh(/check-?out[^0-9]*(?:\d{1,2}\s+[A-Za-z]{3}\s+)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)/i.exec(n)) };
+}
 function vehFor(p) {   // seats with luggage: car 3, SUV 5, 12-seat traveller 10, 17-seat traveller 14
   if (p <= 0) return '';
   if (p <= 3) return L('1 car', '1 कार'); if (p <= 5) return L('1 SUV (Innova / Ertiga)', '1 SUV (इनोवा / अर्टिगा)');
@@ -1090,14 +1121,14 @@ function vehFor(p) {   // seats with luggage: car 3, SUV 5, 12-seat traveller 10
 function tripRows() {
   var fams = famList(), rows = [], dates = {};
   var noCar = function (f) { return f.g && (/^n/i.test(f.g.vehicle || '') || /car/i.test(f.g.arrMode || '')); };
-  var hrOf = function (s) { var m = /(\d{1,2})[:.](\d{2})\s*(am|pm)?/i.exec(String(s || '')); if (!m) return null; var h = +m[1]; if (/pm/i.test(m[3] || '') && h < 12) h += 12; if (/am/i.test(m[3] || '') && h === 12) h = 0; return h; };
+  var hrOf = depHourOf;
   var where = function (mode) { return /flight/i.test(mode || '') ? L('airport', 'एयरपोर्ट') : /bus/i.test(mode || '') ? L('bus stand', 'बस स्टैंड') : /train/i.test(mode || '') ? L('station', 'स्टेशन') : L('station / airport', 'स्टेशन / एयरपोर्ट'); };
   var group = function (list, kind, d) {   // list of {f, p, h, mode}
     var timed = {}, open = [];
-    list.forEach(function (x) { if (x.h == null) open.push(x); else { var k = where(x.mode) + '|' + (Math.floor(x.h / 2) * 2); (timed[k] = timed[k] || []).push(x); } });
+    list.forEach(function (x) { if (x.h == null) open.push(x); else { var k = where(x.mode) + '|' + x.h; (timed[k] = timed[k] || []).push(x); } });
     Object.keys(timed).sort(function (a, b) { return +a.split('|')[1] - +b.split('|')[1]; }).forEach(function (k) {
       var l = timed[k], h = +k.split('|')[1], p = l.reduce(function (s, x) { return s + x.p; }, 0);
-      rows.push({ d: d, what: (kind === 'arr' ? L('Pickup from ', 'लाना: ') : L('Drop to ', 'छोड़ना: ')) + k.split('|')[0] + ' · ' + niceTime(pad(h) + ':00') + '–' + niceTime(pad(h + 2) + ':00'), who: l.map(function (x) { return x.f.name; }).join(' · '), p: p, v: vehFor(p) });
+      rows.push({ d: d, what: (kind === 'arr' ? L('Pickup from ', 'लाना: ') : L('Drop to ', 'छोड़ना: ')) + k.split('|')[0] + ' · ' + niceTime(pad(h) + ':00'), who: l.map(function (x) { return x.f.name; }).join(' · '), p: p, v: vehFor(p) });
     });
     if (open.length) {
       var p = open.reduce(function (s, x) { return s + x.p; }, 0), car = 0, suv = 0, tt = 0;
