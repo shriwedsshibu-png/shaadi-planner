@@ -1315,7 +1315,8 @@ function hhmm(h) { var m = Math.round((h - Math.floor(h)) * 60); var H = Math.fl
 function upDown(a) { var st = stayOf(a.stay); return !!st && /up and down/i.test(st.kind || '') && !/no car needed/i.test((st.notes || '') + ' ' + noteOnly(a.note)); }
 function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode: own / bal / few (see CAR_MODES)
   mode = mode || S.carMode || 'bal';
-  var fams = famList().filter(function (f) { return (f.side === 'Shivangi') === (side === 'Shivangi'); }), rows = [], byD = {};
+  var ours = function (f) { return f.side !== 'Shivangi' || !!(f.g && /^y/i.test(f.g.vehicle || '')); };   // Shivangi-side guests marked 'pickup needed' ride with our cars
+  var fams = famList().filter(function (f) { return ours(f) === (side !== 'Shivangi'); }), rows = [], byD = {};
   var where = function (mode) { return /flight/i.test(mode || '') ? L('airport', 'एयरपोर्ट') : /bus/i.test(mode || '') ? L('bus stand', 'बस स्टैंड') : /train/i.test(mode || '') ? L('station', 'स्टेशन') : L('station / airport', 'स्टेशन / एयरपोर्ट'); };
   var E = function (d) { return byD[d] = byD[d] || { arr: [], dep: [], mv: {} }; };
   var group = function (list, kind, d) {
@@ -1354,7 +1355,7 @@ function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode
     });
     // up and down on days without a function
     var fd = {}; fnList().forEach(function (fn) { fd[fn.date] = 1; });
-    fams.forEach(function (f) { if (f.maybe) return; f.rows.forEach(function (a) { if (!upDown(a) || !a.from) return; var ds = nightsOf(a.from, a.to).filter(function (n) { return !fd[n] && n >= WALK.from; }); if (!ds.length) return; var c = carPick(ds[0], 12, num(a.people), false); rows.push({ d: ds[0], d2: ds[ds.length - 1], h: null, kind: 'ud', what: L('Up and down with us from ' + a.stay + ' (as needed)', a.stay + ' से हमारे साथ आना-जाना (ज़रूरत पर)'), who: f.name + ' (' + num(a.people) + ')', p: num(a.people), v: c.v, own: c.own, cost: c.cost }); }); });
+    fams.forEach(function (f) { if (f.maybe) return; f.rows.forEach(function (a) { var sk = stayOf(a.stay); if (!upDown(a) || !a.from || (sk && /own stay/i.test(sk.kind || ''))) return; var ds = nightsOf(a.from, a.to).filter(function (n) { return !fd[n] && n >= WALK.from; }); if (!ds.length) return; var c = carPick(ds[0], 12, num(a.people), false); rows.push({ d: ds[0], d2: ds[ds.length - 1], h: null, kind: 'ud', what: L('Up and down with us from ' + a.stay + ' (as needed)', a.stay + ' से हमारे साथ आना-जाना (ज़रूरत पर)'), who: f.name + ' (' + num(a.people) + ')', p: num(a.people), v: c.v, own: c.own, cost: c.cost }); }); });
     var sb = CARS.filter(function (c) { return c.sb; });
     rows.push({ d: WALK.from, d2: WALK.to, h: null, kind: 'sb', what: L('2 standby cars for elders, emergencies and errands', '2 गाड़ियाँ हमेशा तैयार: बड़ों, ज़रूरत और कामों के लिए'), who: L('Parked at the venue with a driver. They also do the function runs. Places are within 1.2 km walking', 'ड्राइवर के साथ वेन्यू पर खड़ी रहें, कार्यक्रम वाले चक्कर भी यही करें। सब जगह 1.2 km पैदल'), p: '', v: sb.length ? sb.map(carName).join(' + ') : L('1–2 cars', '1–2 कार'), own: sb.length ? 1 : 0 });
   }
@@ -1371,7 +1372,12 @@ function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode
       var lim = x.kind === 'mv' ? 2.5 : x.kind === 'arr' ? 0.5 : x.kind === 'dep' ? 0.25 : 0;
       for (var t = start + 0.25; t <= start + lim + 0.001; t += 0.25) { var av2 = freeOk(t), c2 = carPick(x.d, t, x.p, lug, x.busy, av2, mode); if (c2.eff == null) c2.eff = 0; if (c2.cost < c.cost && (mode === 'own' || x.kind === 'mv' || c.cost - c2.cost >= 1500)) { x.wait = Math.round((t - start) * 60); x.note = x.kind === 'mv' ? L('After the family car’s earlier run (~' + hhmm(t) + ')', 'पहले चक्कर के बाद हमारी गाड़ी (~' + hhmm(t) + ')') : L('Waits ~' + x.wait + ' min for the cars to come back', 'गाड़ियों के लौटने तक ~' + x.wait + ' मिनट इंतज़ार'); start = t; if (x.kind === 'mv') x.h = Math.floor(t); av = av2; c = c2; if (!c2.cost) break; } }
     }
+    if (c.cost && x.kind === 'dep' && x.h != null) {   // a small group can ride along with an earlier drop that has empty seats (they wait a little at the station)
+      var ride = rows.filter(function (y) { return y !== x && y.kind === 'dep' && y.d === x.d && y.h != null && y.h < x.h && x.h - y.h <= 1.5 && (y.spare || 0) >= x.p; }).pop();
+      if (ride) { ride.spare -= x.p; x.v = L('With the ' + slotTime(ride) + ' drop (' + ride.v + ')', slotTime(ride) + ' वाले चक्कर के साथ (' + ride.v + ')'); x.own = ride.own; x.cost = 0; x.used = []; x.note = L('Leaves with the earlier group; waits about ' + Math.round((x.h - ride.h) * 60) + ' min more at the station', 'पहले वाले समूह के साथ; स्टेशन पर ~' + Math.round((x.h - ride.h) * 60) + ' मिनट ज़्यादा इंतज़ार'); x.early = 0; return; }
+    }
     x.v = c.v; x.own = c.own; x.cost = c.cost; x.used = (c.used || []).map(function (k) { return k.n; }); x.early = start != null && start < 6 ? x.used.length : 0;
+    x.spare = (c.used || []).reduce(function (t, k) { return t + (lug ? k.s : k.s2); }, 0) + (c.u || []).reduce(function (t, k) { return t + (lug ? RATES[k].s : RATES[k].s2); }, 0) - x.p;
     if (start != null && c.used) c.used.forEach(function (k) { freeAt[x.d + k.n] = start + dur; });
   });
   return rows;
@@ -2538,10 +2544,19 @@ document.addEventListener('click', function (e) {
       if (aps.bad) { toast(L('A mobile number looks short. Please check it.', 'एक मोबाइल नंबर छोटा लग रहा है, देख लें।'), true); return; }
       closeSheet(true); S.sheet = null;
       var ag = guestByName(af.family), gf = {};
-      if (ag ? (String(ag.phone || '').trim() !== aph && (aph || phonesOf(ag.phone).length)) : aph) gf.phone = aph;
-      if (tvv) Object.keys(tvv).forEach(function (k) { if (String(tvv[k] || '') !== String((ag && ag[k]) || '')) gf[k] = tvv[k]; });
-      if (ag) { if (Object.keys(gf).length) rowQuiet('guests', ag.id, gf); }
+      // renamed stay: the phone and travel boxes still show the OLD family's details — never copy them to the new name unless they were changed
+      var renamed = aold && nkey(af.family) !== nkey(aold.family), og = renamed ? guestByName(aold.family) : null;
+      var otherOld = renamed ? S.alloc.filter(function (x) { return x.id !== id && nkey(x.family) === nkey(aold.family); }).length : 0;
+      if (renamed && og && !ag && !otherOld) { var rf = { name: af.family }; if (String(og.phone || '').trim() !== aph) rf.phone = aph; if (tvv) Object.keys(tvv).forEach(function (k) { if (String(tvv[k] || '') !== String(og[k] || '')) rf[k] = tvv[k]; }); rowQuiet('guests', og.id, rf); ag = 'done'; }   // the whole family was renamed: rename its guest entry too
+      else {
+        var base = renamed ? og : ag;
+        if (base ? (String(base.phone || '').trim() !== aph && (aph || phonesOf(base.phone).length)) : aph) gf.phone = aph;
+        if (tvv) Object.keys(tvv).forEach(function (k) { if (String(tvv[k] || '') !== String((base && base[k]) || '')) gf[k] = tvv[k]; });
+      }
+      if (ag === 'done') {}
+      else if (ag) { if (Object.keys(gf).length) rowQuiet('guests', ag.id, gf); }
       else if (Object.keys(gf).some(function (k) { return gf[k]; })) rowQuiet('guests', '', Object.assign({ name: af.family, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room }, gf));
+      if (renamed && otherOld) toast(L('Saved. ' + aold.family + '’s other stays are unchanged.', 'सेव हुआ। ' + aold.family + ' की बाकी जगहें वैसी ही हैं।'));
       if (nx && aold) S.alloc.forEach(function (x) { if (x.id === id || nkey(x.family) !== nkey(aold.family) || num(x.people) !== num(aold.people)) return; var xx = mwkOf(x); if (xx && xx.m === nx.m && xx.w === nx.w && xx.k === nx.k && !!xx.guess === !!nx.guess) return; rowQuiet('alloc', x.id, { people: af.people, note: withMwk(x.note, nx) }); });
       if (id && aold) { af = onlyChanged(af, aold); if (!Object.keys(af).length) { toast(L('No changes', 'कोई बदलाव नहीं')); return; } }
       rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
@@ -2587,7 +2602,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b32';
+var BUILD = 'b33';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
