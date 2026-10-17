@@ -607,7 +607,7 @@ function viewGuests() {
   return h;
 }
 /* Arrivals: only people we know are coming — the room plan (Papa's list, Shivangi's side) and website "yes" replies. Invite-only contacts are not listed. */
-function noCarFam(f) { return !!(f.g && (/^n/i.test(f.g.vehicle || '') || /car/i.test(f.g.arrMode || ''))) || (f.rows.length > 0 && f.rows.every(function (a) { var st = stayOf(a.stay); return /no car needed/i.test(noteOnly(a.note) + ' ' + ((st && st.notes) || '')); })); }
+function noCarFam(f) { return !!(f.g && (/^n/i.test(f.g.vehicle || '') || /car/i.test(f.g.arrMode || ''))) || (f.rows.length > 0 && f.rows.every(function (a) { var st = stayOf(a.stay); return /no car needed|station: on their own/i.test(noteOnly(a.note) + ' ' + ((st && st.notes) || '')); })); }
 function arrivalItems() {
   var out = [], ph = {};
   famList().forEach(function (f) {
