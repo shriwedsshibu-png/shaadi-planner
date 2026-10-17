@@ -2584,7 +2584,15 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b29';
+var BUILD = 'b30';
+/* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
+function freshPull() {
+  if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
+  var last = +LS.get('pl_fresh') || 0; if (Date.now() - last < 10 * 60000) return;
+  var tr0 = helpRow() || places().filter(function (s) { return s.id && !/^tmp/.test(s.id); })[0];
+  if (!tr0) return; LS.set('pl_fresh', String(Date.now())); rowQuiet('stays', tr0.id, {}); pump();
+}
+setTimeout(freshPull, 5000); document.addEventListener('visibilitychange', function () { if (!document.hidden) setTimeout(freshPull, 1500); });
 function checkBuild() {
   if (!/^https?:/.test(location.protocol) || !window.fetch) return;
   fetch('/index.html?b=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
