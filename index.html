@@ -1055,6 +1055,11 @@ function everyoneTable() {
   if (S._mwkU) notes.push(L('“?” = men / women / kids not filled yet.', '“?” = पुरुष / महिला / बच्चे अभी नहीं भरे।'));
   if (allG) notes.push(L('Up to ' + allG + ' are split by a guess from the names (e.g. “Sudhir Kumar (2)” = couple). Tap the family in Rooms to correct.', allG + ' तक का बँटवारा नाम से अंदाज़ा है (जैसे “सुधीर कुमार (2)” = दंपति)। कमरों में परिवार दबाकर ठीक करें।'));
   if (nd) notes.push(L(nd + ' with dates not known yet are counted at every function.', nd + ' की तारीख़ अभी नहीं पता, हर कार्यक्रम में गिने गए।'));
+  var why = [];   // who is missing from some functions, and why (arrives later / leaves earlier)
+  famList().forEach(function (f) { if (f.maybe || isVendor(f.name)) return; var miss = cs.filter(function (x) { return !famRowsAt(f, x.f).length; }); if (!miss.length || miss.length === cs.length) return;
+    var g = f.g || {}, arrT = g.arrDate ? niceDate(g.arrDate) + (g.arrTime ? ' ' + niceTime(g.arrTime) : '') : (f.first ? niceDate(f.first) : '');
+    why.push(esc(f.name) + ' (' + f.people + '): ' + L('not at ', 'नहीं: ') + miss.map(function (x) { return esc(L(x.f.fn, fnHi(x.f.fn))); }).join(', ') + ' — ' + (miss[0].f.date < (f.first || '') || (g.arrDate && miss[0].f.date <= g.arrDate) ? L('arrives ', 'आगमन ') + arrT : L('leaves ', 'जाना ') + (f.dep ? niceDate(f.dep) : ''))); });
+  if (why.length) notes.push('<b>' + L('Why the totals differ:', 'गिनती अलग क्यों:') + '</b> ' + why.join(' · '));
   if (maybe) notes.push(L('+' + maybe + ' more if they come (not confirmed): not in the totals.', '+' + maybe + ' अगर आए (पक्का नहीं): कुल में नहीं।'));
   if (vend) notes.push(L('+' + vend + ' vendor team (photographers, makeup) need meals: not in the guest totals.', '+' + vend + ' वेंडर टीम को खाना चाहिए: मेहमानों में नहीं गिने।'));
   var h = '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Everyone coming — each function', 'सभी मेहमान — हर कार्यक्रम') + '</div><div class="tbl-note">' + L('Everyone in the room plan (Papa’s list, Shivangi’s side, family at home) counts for every function while they are in Vizag, whether or not they fill the RSVP. Website “yes” replies from people not in the room plan are added.', 'कमरों की योजना के सभी (पापा की सूची, शिवांगी की ओर, घर का परिवार) विज़ाग में रहते हुए हर कार्यक्रम में गिने गए, RSVP भरें या नहीं। योजना से बाहर के वेबसाइट “हाँ” जवाब जोड़े गए।') + '</div>' +
@@ -1118,6 +1123,10 @@ function planActions() {
   var pplOf = function (l) { return l.reduce(function (s, f) { return s + f.people; }, 0); };
   // double bookings and rooms over the booking
   roomIssues().filter(function (x) { return x.kind === 'bad'; }).forEach(function (x) { add('P0', 'Venue & Accommodation', x.text, L('Fix this in the room plan before sending stay details.', 'स्टे की जानकारी भेजने से पहले योजना में ठीक करें।')); });
+  // the same family booked in two different places on the same night (counts them twice)
+  fams.forEach(function (f) { var by = {}; f.rows.forEach(function (a) { nightsOf(a.from, a.to).forEach(function (n) { (by[n] = by[n] || {})[a.stay || '?'] = 1; }); });
+    var bad = Object.keys(by).filter(function (n) { return Object.keys(by[n]).length > 1; }).sort();
+    if (bad.length) add('P0', 'Venue & Accommodation', L(f.name + ' is in two places on ' + bad.map(niceDate).join(', '), f.name + ' एक ही रात दो जगह: ' + bad.map(niceDate).join(', ')), Object.keys(by[bad[0]]).join(' + ') + '. ' + L('They are counted twice. Fix the nights in the room plan.', 'दो बार गिने जा रहे हैं। कमरों की योजना में रातें ठीक करें।')); });
   // booked rooms that stay empty
   places().forEach(function (s) {
     if (!isBooked(s) || !s.from || s.side === 'Shivangi') return;
@@ -2575,7 +2584,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b28';
+var BUILD = 'b29';
 function checkBuild() {
   if (!/^https?:/.test(location.protocol) || !window.fetch) return;
   fetch('/index.html?b=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
