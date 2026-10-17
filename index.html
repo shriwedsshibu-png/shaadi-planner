@@ -1193,7 +1193,7 @@ function planActions() {
   if (preP.length) add('P1', 'Food & Catering', L('Book meals before ' + CATER.who + ' starts (' + niceDate(CATER.from) + ' lunch)', CATER.who + ' से पहले का खाना बुक करें'), preP.map(function (k) { return k + ' ' + pre[k]; }).join(' · ') + '. ' + esc(MEALS_BEFORE) + '. ' + L('Include breakfast on ' + niceDate(CATER.from) + '.', niceDate(CATER.from) + ' का नाश्ता भी।'));
   var aft = [], aftMax = 0; allNights().forEach(function (n) {
     var d = nextDay(n); if (d <= CATER.to) return;
-    var by = {}; nightRows(n).forEach(function (a) { if (isHomePlace(a.stay)) return; var kk = a.stay || L('no place yet', 'जगह तय नहीं'); by[kk] = (by[kk] || 0) + num(a.people); });
+    var by = {}; nightRows(n).forEach(function (a) { var st0 = stayOf(a.stay); if (isHomePlace(a.stay) || (st0 && /own stay|family house/i.test(st0.kind || ''))) return; var kk = a.stay || L('no place yet', 'जगह तय नहीं'); by[kk] = (by[kk] || 0) + num(a.people); });
     var p = Object.keys(by).reduce(function (s, k) { return s + by[k]; }, 0);
     if (p) { aft.push(niceDate(d) + ': ' + p + ' (' + Object.keys(by).map(function (k) { return k + ' ' + by[k]; }).join(', ') + ')'); aftMax = Math.max(aftMax, p); }
   });
@@ -2587,7 +2587,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b31';
+var BUILD = 'b32';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
