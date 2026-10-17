@@ -616,7 +616,7 @@ function arrivalItems() {
     var g = f.g || {}, r0 = f.rows.filter(function (a) { return a.from === f.first; })[0] || f.rows[0];
     out.push({ f: f, name: f.name, p: f.firstP || f.people, d: f.arr || '', t: g.arrTime || '', mode: g.arrMode || '', stay: r0 ? r0.stay : '', room: r0 ? r0.room : '', noCar: noCarFam(f), pickBy: g.pickupBy || '', maybe: f.maybe, side: f.side, id: r0 ? r0.id : '', phone: g.phone || '', vend: isVendor(f.name) });
   });
-  rsvpWed().forEach(function (r) { if (!yes(r.attending) || ph[last10(r.phone)] || famList().some(function (f) { return nkey(f.name) === nkey(r.name); })) return; out.push({ rsvp: 1, name: r.name, p: num(r.total), d: r.arrDate || '', t: '', mode: '', stay: '', noCar: false, pickBy: '', phone: r.phone, side: '' }); });
+  rsvpWed().forEach(function (r) { if (!yes(r.attending)) return; var fm = rsvpFam(r); if (fm) { out.forEach(function (x) { if (x.f === fm) x.rsvpOk = 1; }); return; } out.push({ rsvp: 1, name: r.name, p: num(r.total), d: r.arrDate || '', t: '', mode: '', stay: '', noCar: false, pickBy: '', phone: r.phone, side: '' }); });
   return out;
 }
 function viewArrivals() {
@@ -637,7 +637,7 @@ function viewArrivals() {
       var bits = [x.p + ' ' + L(x.p === 1 ? 'person' : 'people', 'लोग'), x.t ? mode + niceTime(x.t) : (x.d ? L('time not known', 'समय पता नहीं') : ''), x.stay ? '🏨 ' + esc(x.stay) + (x.room ? ' · ' + esc(x.room) : '') : ''].filter(Boolean).join(' · ');
       var tag = x.side === 'Shivangi' ? ' <span class="badge b-info">' + L('Shivangi’s side', 'शिवांगी की ओर') + '</span>' : '';
       tag += x.maybe ? ' <span class="badge b-warn">' + L('Not confirmed', 'पक्का नहीं') + '</span>' : '';
-      tag += x.rsvp ? ' <span class="badge b-ok">RSVP ✓</span>' : '';
+      tag += x.rsvp || x.rsvpOk ? ' <span class="badge b-ok">RSVP ✓</span>' : '';
       return '<div class="task" ' + (x.id ? 'data-act="editalloc" data-id="' + esc(x.id) + '"' : 'style="cursor:default"') + '><div class="t">' + esc(x.name) + tag + '</div><div class="meta">' + bits + '</div>' + (x.vend || x.side === 'Shivangi' && !x.pickBy ? '' : '<div class="meta" style="margin-top:.25rem">' + pick + '</div>') + (x.phone ? '<div class="acts">' + callBtns(x.phone, L('Namaste ', 'नमस्ते ') + x.name + ' ji 🙏') + '</div>' : '') + '</div>';
     }).join('') + '</div>';
   });
@@ -979,11 +979,23 @@ function famMwk(f) {   // the family at its biggest night
   Object.keys(nn).forEach(function (n) { var p = nn[n].reduce(function (s, a) { return s + num(a.people); }, 0); if (p > bp) { bp = p; best = nn[n]; } });
   var t = mwk0(); (best || []).forEach(function (a) { mwkAdd(t, a); }); return t;
 }
-function rsvpMore(fn) {   // website "yes" replies not already in the room plan (matched by mobile number); fn empty = all of them
-  var ph = {}, t = mwk0(); t.n = 0; if (!S.rsvp) return null;
-  famList().forEach(function (f) { famPhones(f.name).forEach(function (p) { ph[p.d.slice(-10)] = 1; }); });
+function nameToks(s) { return String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\b(ji|family|parivar|couple|kids?|mr|mrs|smt|shri|dr)\b/g, ' ').split(/[^a-zऀ-ॿ]+/).filter(function (w) { return w.length > 1; }); }
+function rsvpFam(r) {   // the room-plan family this website reply belongs to (same mobile number, or the same first and last name), so nobody is counted or listed twice
+  var p = last10(r.phone), rt = nameToks(r.name), hit = null;
+  famList().some(function (f) {
+    if (p && famPhones(f.name).some(function (x) { return x.d.slice(-10) === p; })) { hit = f; return true; }
+    var g = f.g, gp = g ? [last10(g.rsvp)].concat(phonesOf(g.phone).map(function (x) { return x.d.slice(-10); })) : [];
+    if (p && gp.indexOf(p) >= 0) { hit = f; return true; }
+    var ft = nameToks(f.name); if (rt.length >= 2 && ft.length >= 2 && rt[0] === ft[0] && ft.indexOf(rt[rt.length - 1]) >= 0) { hit = f; return true; }
+    if (rt.length && nkey(rt.join('')) && nkey(rt.join('')) === nkey(ft.join(''))) { hit = f; return true; }
+    return false;
+  });
+  return hit;
+}
+function rsvpMore(fn) {   // website "yes" replies not already in the room plan (matched by mobile number or name); fn empty = all of them
+  var t = mwk0(); t.n = 0; if (!S.rsvp) return null;
   rsvpWed().forEach(function (r) {
-    if (!yes(r.attending) || ph[last10(r.phone)]) return; var fs = String(r.functions || '');
+    if (!yes(r.attending) || rsvpFam(r)) return; var fs = String(r.functions || '');
     if (fn && !(fs ? fs.indexOf(fn) >= 0 : fn === CATER.bigFn)) return;
     var m = num(r.men), w = num(r.women), k = num(r.children), p = num(r.total) || m + w + k;
     t.m += m; t.w += w; t.k += k; t.u += Math.max(0, p - m - w - k); t.p += p; t.n++;
@@ -1006,13 +1018,7 @@ function fnCount(fn) {   // everyone at one function: room plan (both sides, fam
 }
 function fnList() { var seen = {}; return S.flow.filter(function (f) { return f.date && f.fn; }).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || flowMin(a) - flowMin(b); }).filter(function (f) { if (seen[f.fn]) return false; seen[f.fn] = 1; return true; }); }
 function fnRows(f) { return nightRows(fnMorning(f) ? dayStr(dayNum(f.date) - 1) : f.date); }   // morning: who slept here the night before; evening: who sleeps here that night
-function rsvpExtra(fn) {   // website replies not already in the room plan (matched by mobile number)
-  if (!S.rsvp) return null; var ph = {};
-  famList().forEach(function (f) { famPhones(f.name).forEach(function (p) { ph[p.d.slice(-10)] = 1; }); });
-  var t = 0, n = 0;
-  rsvpWed().forEach(function (r) { if (!yes(r.attending) || ph[last10(r.phone)]) return; var fs = String(r.functions || ''); if (fs ? fs.indexOf(fn) >= 0 : fn === CATER.bigFn) { t += num(r.total); n++; } });
-  return { p: t, n: n };
-}
+function rsvpExtra(fn) { var x = rsvpMore(fn); return x ? { p: x.p, n: x.n } : null; }   // website replies not already in the room plan
 function caterFor(d, meal, fn) { if (d < CATER.from || d > CATER.to || (d === CATER.from && meal === 'breakfast')) return 0; return fn === CATER.bigFn ? CATER.big : CATER.per; }
 function headTable() {
   var list = fnList(); if (!list.length) return '';
@@ -2548,6 +2554,21 @@ document.addEventListener('change', function (e) {
   if (e.target.id === 'fown') { S.fOwner = e.target.value; render(); }
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
+/* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
+var BUILD = 'b27';
+function checkBuild() {
+  if (!/^https?:/.test(location.protocol) || !window.fetch) return;
+  fetch('/index.html?b=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : ''; }).then(function (t) {
+    var m = /var BUILD = '([^']+)'/.exec(t || ''); if (!m || m[1] === BUILD || document.getElementById('newver')) return;
+    var d = document.createElement('button'); d.id = 'newver';
+    d.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(5.2rem + env(safe-area-inset-bottom,0px));z-index:60;background:#1e2f52;color:#fff;border:0;border-radius:999px;padding:.7rem 1.2rem;font:inherit;font-weight:700;box-shadow:0 6px 20px rgba(0,0,0,.25)';
+    d.textContent = '⟳ ' + L('New version of the planner — tap to update', 'प्लानर का नया रूप — अपडेट के लिए दबाएँ');
+    d.onclick = function () { try { if (navigator.serviceWorker) navigator.serviceWorker.getRegistrations().then(function (rs) { rs.forEach(function (x) { x.update(); }); }); caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }).then(function () { location.reload(); }); } catch (e) { location.reload(); } };
+    document.body.appendChild(d);
+  }).catch(function () {});
+}
+setTimeout(checkBuild, 4000); setInterval(function () { if (!document.hidden) checkBuild(); }, 300000);
+document.addEventListener('visibilitychange', function () { if (!document.hidden) checkBuild(); });
 document.addEventListener('visibilitychange', function () { if (!document.hidden && S.loaded && S.pin && S.me) { pump(); if (!S.sheet) load(true); } });
 
 /* ---------- start: show the last saved plan at once, then check for changes ---------- */
