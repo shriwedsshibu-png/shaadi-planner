@@ -667,7 +667,7 @@ function roomIssues() {
   });
   // same room, same night, two families
   var seen = {};
-  S.alloc.forEach(function (a) { if (!a.stay || !a.room) return; allocNights(a).forEach(function (n) { var k = nkey(a.stay) + '|' + nkey(a.room) + '|' + n; (seen[k] = seen[k] || []).push(a); }); });
+  S.alloc.forEach(function (a) { if (!a.stay || !a.room || /shared/i.test(a.room)) return; allocNights(a).forEach(function (n) { var k = nkey(a.stay) + '|' + nkey(a.room) + '|' + n; (seen[k] = seen[k] || []).push(a); }); });
   var told = {};
   Object.keys(seen).forEach(function (k) { var l = seen[k], fam = l.map(function (a) { return a.family; }).filter(function (x, i, z) { return z.indexOf(x) === i; }); if (fam.length < 2) return; var key = k.split('|').slice(0, 2).join('|') + fam.join(); if (told[key]) return; told[key] = 1; out.push({ kind: 'bad', id: l[1].id, text: L(l[0].stay + ' ' + l[0].room + ' has two families on the same night: ' + fam.join(' + '), l[0].stay + ' ' + l[0].room + ' में एक ही रात दो परिवार: ' + fam.join(' + ')) }); });
   // more rooms used than booked
@@ -1062,7 +1062,7 @@ function planActions() {
   // catering numbers
   var peak = 0; allNights().forEach(function (n) { if (n >= CATER.from && n <= CATER.to) peak = Math.max(peak, headOf(nightRows(n)).all); });
   var shiv = 0; allNights().forEach(function (n) { shiv = Math.max(shiv, headOf(nightRows(n)).Shivangi); });
-  if (peak) add('P1', 'Food & Catering', L('Check ' + CATER.per + ' plates per meal is enough', CATER.per + ' प्लेट हर खाने में काफ़ी है, जाँचें'), L('Our side needs up to ' + peak + ' (room plan + family at home), leaving ' + Math.max(0, CATER.per - peak - shiv) + ' for ' + (shiv ? 'local guests' : 'Shivangi’s side and local guests') + '.' + (shiv ? '' : ' Get Shivangi’s side’s numbers for each function.'), 'हमारी ओर से ' + peak + ' तक, बाकी ' + Math.max(0, CATER.per - peak - shiv) + (shiv ? ' स्थानीय मेहमानों के लिए।' : ' शिवांगी की ओर और स्थानीय मेहमानों के लिए। शिवांगी की ओर की गिनती लें।')));
+  if (peak) add('P1', 'Food & Catering', L('Check ' + CATER.per + ' plates per meal is enough', CATER.per + ' प्लेट हर खाने में काफ़ी है, जाँचें'), L('The room plan needs up to ' + peak + ' (' + (peak - shiv) + ' our side incl. family at home' + (shiv ? ', ' + shiv + ' Shivangi’s side' : '') + '), leaving ' + Math.max(0, CATER.per - peak) + ' for local guests and walk-ins.' + (shiv ? '' : ' Get Shivangi’s side’s numbers for each function.'), 'योजना में ' + peak + ' तक लोग, बाकी ' + Math.max(0, CATER.per - peak) + ' स्थानीय मेहमानों के लिए।'));
   add('P0', 'Food & Catering', L('Wedding dinner: ask ' + CATER.who + ' for a buffer over ' + CATER.big + ' plates', 'शादी की रात: ' + CATER.big + ' से ज़्यादा प्लेट की व्यवस्था पूछें'), L('You expect ' + CATER.expect + '. Agree the price per extra plate and how quickly they can add more.', CATER.expect + ' की उम्मीद। अतिरिक्त प्लेट का दाम और कितनी जल्दी बढ़ा सकते हैं, तय करें।'));
   var vend = fams.filter(function (f) { return /vendor|photograph|artist/i.test(f.name); });
   if (vend.length) add('P2', 'Food & Catering', L('Tell ' + CATER.who + ' about the ' + pplOf(vend) + '-person vendor team', CATER.who + ' को ' + pplOf(vend) + ' लोगों की वेंडर टीम बताएँ'), L(vend.map(function (f) { return f.name; }).join(', ') + ' stay with us. Decide if they eat from the ' + CATER.per + ' plates.', 'ये हमारे साथ रुकेंगे। क्या ये ' + CATER.per + ' प्लेट में खाएँगे, तय करें।'));
