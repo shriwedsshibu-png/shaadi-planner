@@ -588,6 +588,7 @@ function viewGuests() {
   var noRoom = G.filter(function (g) { return yes(g.roomReq) && !g.stay; }), noPick = G.filter(function (g) { return yes(g.vehicle) && !g.pickupBy; });
   var notIn = ry.filter(function (r) { return !rsvpInGuests(r); });
   h += comingHero();
+  h += everyoneTable();
   h += '<div class="tiles">' +
     '<button class="tile ' + (noRoom.length ? 'warn' : '') + '" data-act="gt" data-v="rooms"><b>' + noRoom.length + '</b><span>' + L('need a room — not given yet', 'को कमरा चाहिए — अभी नहीं मिला') + '</span></button>' +
     '<button class="tile ' + (noPick.length ? 'warn' : '') + '" data-act="gopick"><b>' + noPick.length + '</b><span>' + L('need pickup — no one assigned', 'को लेने कोई तय नहीं') + '</span></button>' +
@@ -599,11 +600,9 @@ function viewGuests() {
   if (S.rsvp) h += rsvpTables(R);
   var RR = rsvpList().filter(isRecReply), rry = RR.filter(function (r) { return yes(r.attending); });
   if (RR.length) h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Reception (8 Dec, Mishra Niwas)', 'आशीर्वाद समारोह (8 दिसंबर)') + '</div><div class="tbl-wrap"><table class="tbl">' + tblHead(L('Reception', 'समारोह')) + '<tbody>' + sumRow(B2('Coming', 'आएँगे'), rry, 'sum') + '</tbody></table></div><div class="tbl-note">' + L((RR.length - rry.length) + ' cannot come', (RR.length - rry.length) + ' नहीं आ पाएँगे') + '</div></div>';
-  if (G.length) h += guestTable(G);
-  if (G.length) {
-    var stays = {}; G.forEach(function (g) { if (g.stay) { stays[g.stay] = stays[g.stay] || []; stays[g.stay].push(g); } });
-    if (Object.keys(stays).length) h += '<h2 class="sec">' + B('Who stays where', 'कौन कहाँ ठहरेगा') + '</h2><div class="card">' + Object.keys(stays).sort().map(function (s) { return '<div class="task" data-act="gt" data-v="rooms" style="display:flex;justify-content:space-between;gap:.6rem;align-items:center"><span><b>🏨 ' + esc(s) + '</b><div class="rem">' + stays[s].length + ' ' + L('families', 'परिवार') + '</div></span><span class="amt">' + people(stays[s]) + '</span></div>'; }).join('') + '</div>';
-  }
+  var pl = {}; S.alloc.forEach(function (x) { if (!x.stay || isVendor(x.family)) return; var o = pl[x.stay] = pl[x.stay] || { f: {}, n: {} }; o.f[nkey(x.family)] = 1; nightsOf(x.from, x.to).forEach(function (n) { o.n[n] = (o.n[n] || 0) + num(x.people); }); });
+  var pk = Object.keys(pl).map(function (k) { var o = pl[k], mx = 0; Object.keys(o.n).forEach(function (n) { mx = Math.max(mx, o.n[n]); }); return { k: k, f: Object.keys(o.f).length, p: mx }; }).sort(function (a, b) { return b.p - a.p; });
+  if (pk.length) h += '<h2 class="sec">' + B('Who stays where', 'कौन कहाँ ठहरेगा') + '</h2><div class="card">' + pk.map(function (x) { return '<div class="task" data-act="gt" data-v="rooms" style="display:flex;justify-content:space-between;gap:.6rem;align-items:center"><span><b>🏨 ' + esc(x.k) + '</b><div class="rem">' + x.f + ' ' + L('families · most on one night', 'परिवार · एक रात में सबसे ज़्यादा') + '</div></span><span class="amt">' + x.p + '</span></div>'; }).join('') + '</div>';
   return h;
 }
 function viewArrivals() {
@@ -697,7 +696,8 @@ function allocRow(a, opts) {
     '<div class="meta">' + num(a.people) + ' ' + L('people', 'लोग') + ' · ' + nightsText(a.from, a.to) + (opts.place && a.stay ? ' · ' + esc(a.stay) + (a.room ? ' ' + esc(a.room) : '') : '') + '</div>' +
     (m ? '<div style="margin-top:.25rem"><span class="badge" style="background:#ffe9c2;color:#8a4b00">🛏 ' + L('extra mattress — ' + m + ' on mattress', 'अतिरिक्त गद्दा — ' + m + ' लोग गद्दे पर') + '</span></div>' : '') +
     (o.length ? '<div style="margin-top:.25rem"><span class="badge b-no">⚠ ' + L('room not booked for the night of ' + rangeText(o), rangeText(o) + ' की रात का कमरा बुक नहीं') + '</span></div>' : '') +
-    (a.note ? '<div class="rem">' + esc(a.note) + '</div>' : '') +
+    (function () { var x = mwkOf(a); return x ? '<div class="rem" style="margin-top:.2rem">' + L(x.m + ' men · ' + x.w + ' women · ' + x.k + ' kids', x.m + ' पुरुष · ' + x.w + ' महिलाएँ · ' + x.k + ' बच्चे') + (x.guess ? ' <span class="badge b-warn">' + L('guess', 'अंदाज़ा') + '</span>' : '') + '</div>' : ''; })() +
+    (noteOnly(a.note) ? '<div class="rem">' + esc(noteOnly(a.note)) + '</div>' : '') +
     famWa(a.family) + '</div></div>';
 }
 function viewRooms() {
@@ -817,13 +817,14 @@ function openAlloc(id, pre) {
     '<label class="l">' + B('Mobile numbers (WhatsApp)', 'मोबाइल नंबर (WhatsApp)') + '</label>' + phoneRows('al_phs', g ? g.phone : '', L('Add another family member', 'परिवार का और सदस्य जोड़ें')) +
     '<div class="rem">' + L('Add one or more family members. The first number is the main one. Saved in the Guest List too, and no need to save them in your phone.', 'एक या ज़्यादा सदस्य जोड़ें। पहला नंबर मुख्य है। मेहमान सूची में भी सेव होगा, फ़ोन में सेव करने की ज़रूरत नहीं।') + '</div>' +
     '<div class="two"><div><label class="l">' + B('People', 'लोग') + '</label><input class="input" id="al_ppl" inputmode="numeric" value="' + esc(a.people) + '" /></div><div><label class="l">' + B('Room', 'कमरा') + '</label><input class="input" id="al_room" value="' + esc(a.room) + '" placeholder="' + esc(L('e.g. Room 4, GH 2', 'जैसे: Room 4, GH 2')) + '" /></div></div>' +
+    (function () { var x = mwkOf(a) || {}; return '<label class="l">' + B('Men · Women · Kids', 'पुरुष · महिला · बच्चे') + (x.guess ? ' <span class="badge b-warn">' + L('guess: please check', 'अंदाज़ा: जाँच लें') + '</span>' : '') + '</label><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem">' + [['al_m', 'Men', 'पुरुष', x.m], ['al_w', 'Women', 'महिला', x.w], ['al_k', 'Kids', 'बच्चे', x.k]].map(function (q) { return '<div><div class="rem" style="margin:0 0 .15rem">' + esc(L(q[1], q[2])) + '</div><input class="input" id="' + q[0] + '" inputmode="numeric" placeholder="' + esc(L(q[1], q[2])) + '" value="' + (q[3] != null ? q[3] : '') + '" aria-label="' + esc(L(q[1], q[2])) + '" /></div>'; }).join('') + '</div><div class="rem">' + L('People becomes men + women + kids. Saved for this family’s other stays too.', 'लोग = पुरुष + महिला + बच्चे। इस परिवार की बाकी जगहों में भी सेव होगा।') + '</div>'; })() +
     '<label class="l">' + B('Where?', 'कहाँ?') + '</label><select class="input" id="al_stay"><option value="">' + esc(L('— not decided yet —', '— अभी तय नहीं —')) + '</option>' + places().map(function (s) { return '<option value="' + esc(s.name) + '" ' + (nkey(s.name) === nkey(a.stay) ? 'selected' : '') + '>' + esc(s.name) + (s.side ? ' · ' + esc(s.side) : '') + '</option>'; }).join('') + '</select>' +
     '<div class="two"><div><label class="l">' + B('First night', 'पहली रात') + '</label><input class="input" type="date" id="al_from" value="' + esc(a.from) + '" /></div><div><label class="l">' + B('Last night', 'आख़िरी रात') + '</label><input class="input" type="date" id="al_to" value="' + esc(a.to) + '" /></div></div>' +
     '<div class="rem">' + L('Check-out is the morning after the last night.', 'चेक-आउट आख़िरी रात के अगली सुबह।') + '</div>' +
     '<label class="l">' + B('Extra mattress?', 'अतिरिक्त गद्दा?') + '</label>' + segOf('al_mat', [['', 'Auto (3+ people)', 'अपने आप (3+ लोग)'], ['Yes', 'Yes', 'हाँ'], ['No', 'No', 'नहीं']], yes(a.mattress) ? 'Yes' : /^n/i.test(a.mattress || '') ? 'No' : '') +
     '<label class="l">' + B('Status', 'स्थिति') + '</label>' + segOf('al_st', [['Draft', 'Draft', 'कच्चा'], ['Final', 'Final', 'पक्का'], ['Not confirmed', 'Not confirmed', 'पक्का नहीं']], a.status || 'Draft') +
     '<label class="l">' + B('Side', 'ओर') + '</label>' + segOf('al_side', [['Shrijeet', 'Shrijeet', 'श्रीजीत'], ['Shivangi', 'Shivangi', 'शिवांगी']], a.side || 'Shrijeet') +
-    '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="al_note" value="' + esc(a.note) + '" />' +
+    '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="al_note" value="' + esc(noteOnly(a.note)) + '" />' +
     (function () { var tg = g || {}, has = tg.arrTime || tg.arrMode || tg.depDate || tg.route || tg.pickupBy;
       return '<details id="tv_box" style="margin-top:1rem;border:1.5px solid #eadfcb;border-radius:1rem;padding:.6rem .9rem"' + (has ? ' open' : '') + '><summary style="font-weight:700;cursor:pointer">🧳 ' + B('Arrival & departure', 'आना-जाना') + (has ? '' : ' <span class="rem" style="margin:0">(' + L('not filled', 'खाली') + ')</span>') + '</summary>' +
         '<div class="two"><div><label class="l">' + B('Arrival date', 'आने की तारीख़') + '</label><input class="input" type="date" id="tv_ad" value="' + esc(tg.arrDate || '') + '" /></div><div><label class="l">' + B('Time', 'समय') + '</label><input class="input" type="time" id="tv_at" value="' + esc(tg.arrTime || '') + '" /></div></div>' +
@@ -880,6 +881,7 @@ function openStay(id) {
 /* ---------- DAY BY DAY: arrivals, moves, who sleeps where, functions, meals, cars, departures ----------
    Everything comes from the room plan (+ travel details in the Guest List + website RSVPs), so the numbers stay linked. */
 var CATER = { who: 'Laddu Gopal', from: '2026-11-30', to: '2026-12-03', per: 150, big: 450, bigFn: 'Varmala & Shaadi', expect: '450–500' };
+var LOCAL = { n: 400, who: 'Papa', whoHi: 'पापा' };   // wedding-night-only guest list (local, no room). Change the number when the list is final
 var MEALS_BEFORE = 'NOI: order basis · HSL: order · Command Mess: mess meal · Home: chef';
 var WALK = { from: '2026-11-30', to: '2026-12-02', text: '1–2 standby cars. Hotels, bungalows and Aarif are within 1.2 km walking.' };
 function isHomePlace(name) { var s = stayOf(name); return !!s && /home/i.test(String(s.kind || '')); }
@@ -918,6 +920,58 @@ function headOf(rows) {   // people by side for one night (a family in two rooms
   o.all = o.Shrijeet + o.Shivangi; return o;
 }
 function fnMorning(f) { return flowMin(f) < 12 * 60; }
+/* men / women / kids of a room-plan row: kept at the start of its Note as [Men 1 · Women 1 · Kids 2] (· guess = not checked yet) */
+var MWK_RE = /\s*\[\s*men\s*(\d+)\s*·?\s*women\s*(\d+)\s*(?:·?\s*kids\s*(\d+))?\s*(·?\s*guess)?\s*\]\s*/i;
+function mwkOf(a) { var m = MWK_RE.exec(String(a.note || '')); return m ? { m: +m[1], w: +m[2], k: +(m[3] || 0), guess: !!m[4] } : null; }
+function noteOnly(s) { return String(s || '').replace(MWK_RE, ' ').trim(); }
+function mwkTag(o) { return '[Men ' + o.m + ' · Women ' + o.w + ' · Kids ' + o.k + (o.guess ? ' · guess' : '') + ']'; }
+function withMwk(note, o) { var n = noteOnly(note); return o ? mwkTag(o) + (n ? ' ' + n : '') : n; }
+function isVendor(name) { return /vendor|photograph|makeup|artist/i.test(String(name || '')); }
+function mwkAdd(t, a) {   // add one row's people into a men/women/kids/unknown total
+  var p = num(a.people), x = mwkOf(a);
+  if (x && x.m + x.w + x.k > 0) { t.m += x.m; t.w += x.w; t.k += x.k; t.u += Math.max(0, p - x.m - x.w - x.k); if (x.guess) t.g += p; } else t.u += p;
+  t.p += Math.max(p, x ? x.m + x.w + x.k : 0); return t;
+}
+function mwk0() { return { m: 0, w: 0, k: 0, u: 0, g: 0, p: 0 }; }
+function famRowsAt(f, fn) {   // the rows that put this family at a function: they are here that day (everyone in the room plan attends every function while here)
+  var d = fn.date, pv = dayStr(dayNum(d) - 1), on = function (n) { return f.rows.filter(function (a) { return a.from && n >= a.from && n <= (a.to || a.from); }); };
+  if (!f.first) return f.rows.length ? [f.rows.reduce(function (b, a) { return num(a.people) > num(b.people) ? a : b; })] : [];   // dates not known yet: counted at every function
+  var late = function (l) { var g = f.g, t = g && g.arrDate === d && /^\d{1,2}:\d{2}/.test(g.arrTime || '') ? +g.arrTime.split(':')[0] * 60 + +g.arrTime.split(':')[1] : -1; return t > flowMin(fn) ? [] : l; };   // arrives after it starts
+  if (fnMorning(fn)) { var y = on(pv); return y.length ? y : late(on(d)); }
+  var t = on(d); return f.first === d ? late(t) : t;
+}
+function famMwk(f) {   // the family at its biggest night
+  var nn = {}, best = null, bp = -1;
+  f.rows.forEach(function (a) { (a.from ? nightsOf(a.from, a.to) : ['']).forEach(function (n) { (nn[n] = nn[n] || []).push(a); }); });
+  Object.keys(nn).forEach(function (n) { var p = nn[n].reduce(function (s, a) { return s + num(a.people); }, 0); if (p > bp) { bp = p; best = nn[n]; } });
+  var t = mwk0(); (best || []).forEach(function (a) { mwkAdd(t, a); }); return t;
+}
+function rsvpMore(fn) {   // website "yes" replies not already in the room plan (matched by mobile number); fn empty = all of them
+  var ph = {}, t = mwk0(); t.n = 0; if (!S.rsvp) return null;
+  famList().forEach(function (f) { famPhones(f.name).forEach(function (p) { ph[p.d.slice(-10)] = 1; }); });
+  rsvpWed().forEach(function (r) {
+    if (!yes(r.attending) || ph[last10(r.phone)]) return; var fs = String(r.functions || '');
+    if (fn && !(fs ? fs.indexOf(fn) >= 0 : fn === CATER.bigFn)) return;
+    var m = num(r.men), w = num(r.women), k = num(r.children), p = num(r.total) || m + w + k;
+    t.m += m; t.w += w; t.k += k; t.u += Math.max(0, p - m - w - k); t.p += p; t.n++;
+  });
+  return t;
+}
+function fnCount(fn) {   // everyone at one function: room plan (both sides, family at home) + website replies; vendor team and "not confirmed" kept apart
+  var o = { ours: mwk0(), shiv: mwk0(), all: mwk0(), maybe: 0, vend: 0, noDate: 0 };
+  famList().forEach(function (f) {
+    var rows = famRowsAt(f, fn); if (!rows.length) return;
+    var p = rows.reduce(function (s, a) { return s + num(a.people); }, 0);
+    if (isVendor(f.name)) { o.vend += p; return; }
+    if (f.maybe) { o.maybe += p; return; }
+    if (!f.first) o.noDate += p;
+    rows.forEach(function (a) { mwkAdd(f.side === 'Shivangi' ? o.shiv : o.ours, a); mwkAdd(o.all, a); });
+  });
+  o.rsvp = rsvpMore(fn.fn);
+  if (o.rsvp) ['m', 'w', 'k', 'u', 'p'].forEach(function (k) { o.all[k] += o.rsvp[k]; });
+  o.total = o.all.p; return o;
+}
+function fnList() { var seen = {}; return S.flow.filter(function (f) { return f.date && f.fn; }).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || flowMin(a) - flowMin(b); }).filter(function (f) { if (seen[f.fn]) return false; seen[f.fn] = 1; return true; }); }
 function fnRows(f) { return nightRows(fnMorning(f) ? dayStr(dayNum(f.date) - 1) : f.date); }   // morning: who slept here the night before; evening: who sleeps here that night
 function rsvpExtra(fn) {   // website replies not already in the room plan (matched by mobile number)
   if (!S.rsvp) return null; var ph = {};
@@ -928,15 +982,40 @@ function rsvpExtra(fn) {   // website replies not already in the room plan (matc
 }
 function caterFor(d, meal, fn) { if (d < CATER.from || d > CATER.to || (d === CATER.from && meal === 'breakfast')) return 0; return fn === CATER.bigFn ? CATER.big : CATER.per; }
 function headTable() {
-  var seen = {}, list = S.flow.filter(function (f) { return f.date && f.fn; }).slice().sort(function (a, b) { return a.date.localeCompare(b.date) || flowMin(a) - flowMin(b); }).filter(function (f) { if (seen[f.fn]) return false; seen[f.fn] = 1; return true; });
-  if (!list.length) return '';
+  var list = fnList(); if (!list.length) return '';
   var rows = list.map(function (f) {
-    var h = headOf(fnRows(f)), x = rsvpExtra(f.fn), tot = h.all + (x ? x.p : 0), cat = caterFor(f.date, fnMorning(f) ? 'lunch' : 'dinner', f.fn);
-    return '<tr><td><b>' + esc(L(f.fn, fnHi(f.fn))) + '</b><div class="rem" style="margin:0">' + niceDate(f.date) + (f.start ? ' · ' + niceTime(f.start) : '') + '</div></td><td>' + h.Shrijeet + (h.maybe ? '<div class="rem" style="margin:0">+' + h.maybe + '?</div>' : '') + '</td><td>' + (h.Shivangi || '—') + '</td><td>' + (x ? x.p : '…') + '</td><td class="tot"><b>' + tot + '</b></td><td style="' + (cat && tot > cat ? 'color:var(--bad);font-weight:700' : '') + '">' + (cat || '—') + '</td></tr>';
+    var c = fnCount(f), cat = caterFor(f.date, fnMorning(f) ? 'lunch' : 'dinner', f.fn), tot = c.total + c.vend;
+    return '<tr><td><b>' + esc(L(f.fn, fnHi(f.fn))) + '</b><div class="rem" style="margin:0">' + niceDate(f.date) + (f.start ? ' · ' + niceTime(f.start) : '') + '</div></td><td>' + c.ours.p + (c.maybe ? '<div class="rem" style="margin:0">+' + c.maybe + '?</div>' : '') + '</td><td>' + (c.shiv.p || '—') + '</td><td>' + (c.rsvp ? c.rsvp.p : '…') + '</td><td>' + (c.vend || '—') + '</td><td class="tot"><b>' + tot + '</b></td><td style="' + (cat && tot > cat ? 'color:var(--bad);font-weight:700' : '') + '">' + (cat || '—') + '</td></tr>';
   }).join('');
-  return '<div class="card" style="margin-top:1rem"><div class="tbl-title">' + B('Guests at each function', 'हर कार्यक्रम में मेहमान') + '</div><div class="tbl-note">' + L('From the room plan (including family at home) + website replies not already in the room plan. Morning functions count who slept here the night before.', 'कमरों की योजना (घर का परिवार भी) + वेबसाइट के जवाब। सुबह के कार्यक्रम में पिछली रात रुके लोग गिने गए।') + '</div>' +
-    '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(L('Function', 'कार्यक्रम')) + '</th><th>' + esc(L('Ours', 'हमारे')) + '</th><th>' + esc(L('Shivangi', 'शिवांगी')) + '</th><th>RSVP</th><th class="tot">' + esc(L('Total', 'कुल')) + '</th><th>' + esc(L('Caterer', 'कैटरर')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-    '<div class="rem" style="padding:0 .9rem .7rem">' + L(CATER.who + ' has ' + CATER.per + ' plates per meal from 30 Nov lunch to 3 Dec dinner, and ' + CATER.big + ' for the wedding dinner. You expect ' + CATER.expect + ' at the wedding dinner: wedding-night guests are added here as their RSVPs come in.', CATER.who + ': 30 नवंबर दोपहर से 3 दिसंबर रात तक हर खाने में ' + CATER.per + ' प्लेट, शादी की रात ' + CATER.big + '। शादी की रात ' + CATER.expect + ' की उम्मीद: RSVP आने पर यहाँ जुड़ते जाएँगे।') + '</div></div>';
+  return '<div class="card" style="margin-top:1rem"><div class="tbl-title">' + B('Plates at each function', 'हर कार्यक्रम में खाना') + '</div><div class="tbl-note">' + L('Everyone in the room plan (including family at home) eats at every function while in Vizag, plus website replies not in the room plan and the vendor team.', 'कमरों की योजना के सभी लोग (घर का परिवार भी) विज़ाग में रहते हुए हर कार्यक्रम में, साथ में वेबसाइट के जवाब और वेंडर टीम।') + '</div>' +
+    '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(L('Function', 'कार्यक्रम')) + '</th><th>' + esc(L('Ours', 'हमारे')) + '</th><th>' + esc(L('Shivangi', 'शिवांगी')) + '</th><th>RSVP</th><th>' + esc(L('Vendors', 'वेंडर')) + '</th><th class="tot">' + esc(L('Plates', 'प्लेट')) + '</th><th>' + esc(L('Caterer', 'कैटरर')) + '</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
+    '<div class="rem" style="padding:0 .9rem .7rem">' + L(CATER.who + ' has ' + CATER.per + ' plates per meal from 30 Nov lunch to 3 Dec dinner, and ' + CATER.big + ' for the wedding dinner. Wedding dinner also gets ' + LOCAL.who + '’s list of ' + LOCAL.n + ' local guests: see Guests → Summary.', CATER.who + ': 30 नवंबर दोपहर से 3 दिसंबर रात तक हर खाने में ' + CATER.per + ' प्लेट, शादी की रात ' + CATER.big + '। शादी की रात ' + LOCAL.whoHi + ' की ' + LOCAL.n + ' स्थानीय मेहमानों की सूची भी: मेहमान → सारांश देखें।') + '</div></div>';
+}
+/* Guests → Summary: everyone coming at each function, men / women / kids */
+function mwkCells(t) { return '<td>' + t.m + '</td><td>' + t.w + '</td><td>' + t.k + '</td>' + (S._mwkU ? '<td>' + (t.u || '—') + '</td>' : ''); }
+function everyoneTable() {
+  var list = fnList(); if (!list.length) return '';
+  var cs = list.map(function (f) { return { f: f, c: fnCount(f) }; }), allG = 0, maybe = 0, vend = 0, nd = 0;
+  S._mwkU = cs.some(function (x) { return x.c.all.u; });
+  cs.forEach(function (x) { allG = Math.max(allG, x.c.all.g); maybe = Math.max(maybe, x.c.maybe); vend = Math.max(vend, x.c.vend); nd = Math.max(nd, x.c.noDate); });
+  var wed = cs.filter(function (x) { return x.f.fn === CATER.bigFn; })[0];
+  var rows = cs.map(function (x) { var c = x.c; return '<tr><td><b>' + esc(L(x.f.fn, fnHi(x.f.fn))) + '</b><div class="rem" style="margin:0">' + niceDate(x.f.date) + ' · ' + L('ours ', 'हमारे ') + c.ours.p + ' · ' + L('Shivangi ', 'शिवांगी ') + c.shiv.p + (c.rsvp && c.rsvp.p ? ' · RSVP ' + c.rsvp.p : '') + '</div></td>' + mwkCells(c.all) + '<td class="tot"><b>' + c.total + '</b></td></tr>'; }).join('');
+  var th = '<thead><tr><th>' + esc(L('Function', 'कार्यक्रम')) + '</th><th>' + esc(L('Men', 'पुरुष')) + '</th><th>' + esc(L('Women', 'महिला')) + '</th><th>' + esc(L('Kids', 'बच्चे')) + '</th>' + (S._mwkU ? '<th>?</th>' : '') + '<th class="tot">' + esc(L('Total', 'कुल')) + '</th></tr></thead>';
+  var notes = [];
+  if (S._mwkU) notes.push(L('“?” = men / women / kids not filled yet.', '“?” = पुरुष / महिला / बच्चे अभी नहीं भरे।'));
+  if (allG) notes.push(L('Up to ' + allG + ' are split by a guess from the names (e.g. “Sudhir Kumar (2)” = couple). Tap the family in Rooms to correct.', allG + ' तक का बँटवारा नाम से अंदाज़ा है (जैसे “सुधीर कुमार (2)” = दंपति)। कमरों में परिवार दबाकर ठीक करें।'));
+  if (nd) notes.push(L(nd + ' with dates not known yet are counted at every function.', nd + ' की तारीख़ अभी नहीं पता, हर कार्यक्रम में गिने गए।'));
+  if (maybe) notes.push(L('+' + maybe + ' more if they come (not confirmed): not in the totals.', '+' + maybe + ' अगर आए (पक्का नहीं): कुल में नहीं।'));
+  if (vend) notes.push(L('+' + vend + ' vendor team (photographers, makeup) need meals: not in the guest totals.', '+' + vend + ' वेंडर टीम को खाना चाहिए: मेहमानों में नहीं गिने।'));
+  var h = '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Everyone coming — each function', 'सभी मेहमान — हर कार्यक्रम') + '</div><div class="tbl-note">' + L('Everyone in the room plan (Papa’s list, Shivangi’s side, family at home) counts for every function while they are in Vizag, whether or not they fill the RSVP. Website “yes” replies from people not in the room plan are added.', 'कमरों की योजना के सभी (पापा की सूची, शिवांगी की ओर, घर का परिवार) विज़ाग में रहते हुए हर कार्यक्रम में गिने गए, RSVP भरें या नहीं। योजना से बाहर के वेबसाइट “हाँ” जवाब जोड़े गए।') + '</div>' +
+    '<div class="tbl-wrap"><table class="tbl">' + th + '<tbody>' + rows + '</tbody></table></div>' + (notes.length ? '<div class="rem" style="padding:0 .9rem .5rem">' + notes.join('<br>') + '</div>' : '') + '</div>';
+  if (wed) {
+    var st = wed.c.total + wed.c.vend, sc = [50, 75, 100].map(function (pc) { var t = st + Math.round(LOCAL.n * pc / 100); return '<tr><td>' + L(pc === 100 ? 'All ' + LOCAL.n + ' come' : pc + '% come (' + Math.round(LOCAL.n * pc / 100) + ')', pc === 100 ? 'सभी ' + LOCAL.n + ' आए' : pc + '% आए (' + Math.round(LOCAL.n * pc / 100) + ')') + '</td><td class="tot" style="' + (t > CATER.big ? 'color:var(--bad)' : '') + '"><b>' + t + '</b></td></tr>'; }).join('');
+    h += '<div class="card" style="margin-top:.9rem"><div class="tbl-title">' + B('Wedding dinner — plates', 'शादी की रात — प्लेट') + '</div><div class="tbl-note">' + L(st + ' staying guests and vendors (above) + ' + LOCAL.who + '’s list of ' + LOCAL.n + ' local guests for the wedding night. ' + CATER.who + ' has ' + CATER.big + ' plates.', st + ' रुकने वाले मेहमान और वेंडर + ' + LOCAL.whoHi + ' की ' + LOCAL.n + ' स्थानीय मेहमानों की सूची। ' + CATER.who + ': ' + CATER.big + ' प्लेट।') + '</div>' +
+      '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>' + esc(L('If of ' + LOCAL.who + '’s ' + LOCAL.n + '…', LOCAL.whoHi + ' के ' + LOCAL.n + ' में से…')) + '</th><th class="tot">' + esc(L('Plates', 'प्लेट')) + '</th></tr></thead><tbody>' + sc + '</tbody></table></div>' +
+      '<div class="rem" style="padding:0 .9rem .7rem">' + L('Break-even: ' + CATER.big + ' plates cover ' + Math.max(0, CATER.big - st) + ' of the ' + LOCAL.n + ' local guests (' + Math.round(Math.max(0, CATER.big - st) * 100 / LOCAL.n) + '%). Ask ' + CATER.who + ' the price and notice for each extra plate.', CATER.big + ' प्लेट में ' + LOCAL.n + ' में से ' + Math.max(0, CATER.big - st) + ' स्थानीय मेहमान (' + Math.round(Math.max(0, CATER.big - st) * 100 / LOCAL.n) + '%)। हर अतिरिक्त प्लेट का दाम और समय ' + CATER.who + ' से पूछें।') + '</div></div>';
+  }
+  return h;
 }
 function travelBit(f, which) {
   var g = f.g; if (!g) return '';
@@ -954,7 +1033,7 @@ function dayCard(d, fams) {
   var sp = function (l) { return l.reduce(function (s, f) { return s + (f.nowP != null ? f.nowP : f.people); }, 0); };
   var nm = function (f) { return esc(f.name) + ' <span class="rem" style="margin:0">(' + (f.nowP != null ? f.nowP : f.people) + (f.maybe ? '?' : '') + ')</span>'; };
   var h = '';
-  if (fns.length) h += dLine('🎉', fns.map(function (x) { var c = headOf(fnRows(x)), e = rsvpExtra(x.fn); return '<b>' + esc(L(x.fn || x.what, x.fn ? fnHi(x.fn) : x.what)) + '</b> ' + (x.start ? niceTime(x.start) : '') + ' · ~' + (c.all + (e ? e.p : 0)) + ' ' + L('guests', 'मेहमान'); }).join('<br>'));
+  if (fns.length) h += dLine('🎉', fns.map(function (x) { var c = x.fn ? fnCount(x) : null; return '<b>' + esc(L(x.fn || x.what, x.fn ? fnHi(x.fn) : x.what)) + '</b> ' + (x.start ? niceTime(x.start) : '') + (c ? ' · ~' + c.total + ' ' + L('guests', 'मेहमान') + ' (' + L(c.all.m + ' men, ' + c.all.w + ' women, ' + c.all.k + ' kids', c.all.m + ' पुरुष, ' + c.all.w + ' महिलाएँ, ' + c.all.k + ' बच्चे') + (c.all.u ? ', ' + c.all.u + ' ?' : '') + ')' + (x.fn === CATER.bigFn ? ' + ' + L(LOCAL.who + '’s ' + LOCAL.n + ' local', LOCAL.whoHi + ' के ' + LOCAL.n + ' स्थानीय') : '') : ''); }).join('<br>'));
   if (arr.length) h += dLine('🧳', '<b>' + L('Arriving', 'आगमन') + ': ' + sp(arr) + '</b><br>' + arr.map(function (f) { var t = travelBit(f, 'arr'); return '• ' + nm(f) + (t ? ' · ' + esc(t) : ''); }).join('<br>'));
   if (moves.length) h += dLine('🔁', '<b>' + L('Changing place (check-out → check-in)', 'जगह बदलेंगे') + ': ' + moves.reduce(function (s, m) { return s + m.p; }, 0) + '</b><br>' + moves.map(function (m) { return '• ' + esc(m.f.name) + ': ' + esc(m.from.join(', ')) + ' → ' + esc(m.to.join(', ')); }).join('<br>'));
   if (dep.length) h += dLine('👋', '<b>' + L('Leaving (check-out)', 'जा रहे (चेक-आउट)') + ': ' + sp(dep) + '</b><br>' + dep.map(function (f) { var t = travelBit(f, 'dep'); return '• ' + nm(f) + (t ? ' · ' + esc(t) : ''); }).join('<br>'));
@@ -963,7 +1042,7 @@ function dayCard(d, fams) {
   // meals
   var bf = hb.all, dn = ht.all, ex = fns.some(function (x) { return x.fn === CATER.bigFn; }) ? rsvpExtra(CATER.bigFn) : null, dnAll = dn + (ex ? ex.p : 0);
   if (bf || dn) {
-    var m = L('Breakfast ~', 'नाश्ता ~') + bf + ' · ' + L('Dinner ~', 'रात का खाना ~') + dnAll;
+    var m = L('Breakfast ~', 'नाश्ता ~') + bf + ' · ' + L('Dinner ~', 'रात का खाना ~') + dnAll + (ex ? ' + ' + L(LOCAL.who + '’s ' + LOCAL.n + ' local guests', LOCAL.whoHi + ' के ' + LOCAL.n + ' स्थानीय मेहमान') : '');
     if (d >= CATER.from && d <= CATER.to) { var cap = caterFor(d, 'dinner', ex ? CATER.bigFn : ''); m += '<br>' + esc(CATER.who) + ': ' + (d === CATER.from ? L('from lunch, ', 'दोपहर से, ') : '') + (ex ? CATER.per + ' ' + L('plates per meal, ', 'प्लेट हर खाने में, ') + cap + ' ' + L('for the wedding dinner', 'शादी के खाने में') : cap + ' ' + L('plates per meal', 'प्लेट हर खाने में')) + (d === CATER.to ? L(' (dinner + packed meals)', ' (रात का खाना + पैक्ड)') : '') + (dnAll > cap ? ' <b style="color:var(--bad)">⚠ ' + L('more guests than plates', 'प्लेट से ज़्यादा मेहमान') + '</b>' : ''); if (ex) m += '<br>' + L('You expect ' + CATER.expect + ' at the wedding dinner: ask for a small buffer.', 'शादी की रात ' + CATER.expect + ' की उम्मीद: थोड़ी अतिरिक्त व्यवस्था रखें।'); if (d === CATER.from) m += '<br>' + L('Breakfast: ', 'नाश्ता: ') + esc(MEALS_BEFORE); }
     else if (d < CATER.from) m += '<br><span class="rem" style="margin:0">' + esc(MEALS_BEFORE) + '</span>';
     else m += '<br><b style="color:var(--bad)">⚠ ' + L('Meals not arranged yet', 'खाने की व्यवस्था अभी नहीं') + '</b>';
@@ -1079,7 +1158,7 @@ function planActions() {
   // not confirmed / to confirm
   var mb = fams.filter(function (f) { return f.maybe; });
   if (mb.length) add('P1', 'Guests, Travel & Transport', L('Confirm if ' + mb.map(function (f) { return f.name; }).join(', ') + ' are coming', mb.map(function (f) { return f.name; }).join(', ') + ' आएँगे या नहीं, पक्का करें'), pplOf(mb) + ' ' + L('people', 'लोग') + ' · ' + mb.map(function (f) { return (f.rows[0].stay || L('no place', 'जगह नहीं')) + ' ' + nightsText(f.rows[0].from, f.rows[0].to); }).filter(function (x, i, z) { return z.indexOf(x) === i; }).join(' · '));
-  var tcm = {}; S.alloc.filter(function (a) { return /to confirm|not decided|deciding|to be confirmed/i.test(a.note || ''); }).forEach(function (a) { var l = tcm[a.family] = tcm[a.family] || []; if (l.indexOf(a.note) < 0) l.push(a.note); });
+  var tcm = {}; S.alloc.filter(function (a) { return /to confirm|not decided|deciding|to be confirmed/i.test(noteOnly(a.note)); }).forEach(function (a) { var l = tcm[a.family] = tcm[a.family] || [], nt = noteOnly(a.note); if (l.indexOf(nt) < 0) l.push(nt); });
   var tc = Object.keys(tcm).map(function (k) { return k + ': ' + tcm[k].join('; '); });
   if (tc.length) add('P1', 'Guests, Travel & Transport', L(tc.length + ' families still marked “to confirm” in the room plan', 'योजना में ' + tc.length + ' परिवार “पक्का करना है”'), tc.map(function (x) { return '• ' + x; }).join('\n'));
   var tr = tripRows().filter(function (x) { return x.p !== ''; }), trD = {}; tr.forEach(function (x) { (trD[x.d] = trD[x.d] || []).push(x); });
@@ -1167,21 +1246,24 @@ function tripTable() {
 }
 /* who is coming: only the room plan (families confirmed by the family) and website RSVPs that said yes. Invited people who have not replied are NOT counted. */
 function comingNow() {
-  var fams = famList().filter(function (f) { return !f.maybe; }), maybe = famList().filter(function (f) { return f.maybe; });
-  var ph = {}; famList().forEach(function (f) { famPhones(f.name).forEach(function (p) { ph[p.d.slice(-10)] = 1; }); });
+  var all = famList().filter(function (f) { return !isVendor(f.name); }), fams = all.filter(function (f) { return !f.maybe; }), maybe = all.filter(function (f) { return f.maybe; });
+  var vend = famList().filter(function (f) { return isVendor(f.name); }).reduce(function (t, f) { return t + f.people; }, 0);
   var R = rsvpWed(), yesR = R.filter(function (r) { return yes(r.attending); }), noR = R.filter(function (r) { return !yes(r.attending); });
-  var extra = yesR.filter(function (r) { return !ph[last10(r.phone)]; });
-  var side = function (s) { return fams.filter(function (f) { return (f.side === 'Shivangi') === (s === 'Shivangi'); }).reduce(function (t, f) { return t + f.people; }, 0); };
-  var plan = fams.reduce(function (t, f) { return t + f.people; }, 0), ex = extra.reduce(function (t, r) { return t + num(r.total); }, 0);
-  return { total: plan + ex, plan: plan, planF: fams.length, ex: ex, exN: extra.length, yesN: yesR.length, yesP: yesR.reduce(function (t, r) { return t + num(r.total); }, 0), noN: noR.length, maybeP: maybe.reduce(function (t, f) { return t + f.people; }, 0), ours: side('Shrijeet'), shiv: side('Shivangi'), wait: S.rsvp ? S.guests.filter(function (g) { return invState(g) === 'wait'; }).length : null };
+  var x = rsvpMore('') || mwk0(); x.n = x.n || 0;
+  var sp = { ours: mwk0(), shiv: mwk0() }; fams.forEach(function (f) { var t = famMwk(f), o = sp[f.side === 'Shivangi' ? 'shiv' : 'ours']; ['m', 'w', 'k', 'u', 'g', 'p'].forEach(function (k) { o[k] += t[k]; }); });
+  var tot = mwk0(); [sp.ours, sp.shiv, x].forEach(function (o) { ['m', 'w', 'k', 'u', 'g'].forEach(function (k) { tot[k] += o[k] || 0; }); });
+  var plan = fams.reduce(function (t, f) { return t + f.people; }, 0);
+  return { total: plan + x.p, plan: plan, planF: fams.length, ex: x.p, exN: x.n, yesN: yesR.length, yesP: yesR.reduce(function (t, r) { return t + num(r.total); }, 0), noN: noR.length, maybeP: maybe.reduce(function (t, f) { return t + f.people; }, 0), ours: sp.ours.p, shiv: sp.shiv.p, sp: sp, mwk: tot, vend: vend, wait: S.rsvp ? S.guests.filter(function (g) { return invState(g) === 'wait'; }).length : null };
 }
 function comingHero() {
-  var c = comingNow();
+  var c = comingNow(), t = c.mwk;
   return '<div class="hero"><div class="sub">' + B('Coming', 'आ रहे हैं') + '</div><div style="display:flex;gap:1.2rem;align-items:flex-end;flex-wrap:wrap"><div><div class="big">' + c.total + '</div><div class="sub">' + L('people coming', 'लोग आ रहे हैं') + '</div></div>' +
     '<div><div class="big" style="font-size:2.2rem">' + c.plan + '</div><div class="sub">' + L('room plan · ' + c.planF + ' families', 'कमरों की योजना · ' + c.planF + ' परिवार') + '</div></div>' +
     '<div><div class="big" style="font-size:2.2rem">' + (S.rsvp ? c.ex : '…') + '</div><div class="sub">' + L('more from RSVP “yes”', 'RSVP “हाँ” से और') + '</div></div></div>' +
-    '<div class="stats"><div class="stat"><b>' + c.ours + '</b> ' + L('Shrijeet side (room plan)', 'श्रीजीत की ओर') + '</div><div class="stat"><b>' + c.shiv + '</b> ' + L('Shivangi side (room plan)', 'शिवांगी की ओर') + '</div>' + (c.maybeP ? '<div class="stat"><b>+' + c.maybeP + '</b> ' + L('not confirmed', 'पक्का नहीं') + '</div>' : '') + '</div>' +
-    '<div class="sub" style="margin-top:.5rem">' + (S.rsvp ? L('RSVP: ' + c.yesN + ' said yes (' + c.yesP + ' people) · ' + c.noN + ' said no · ' + (c.wait || 0) + ' invited, no reply yet (not counted)', 'RSVP: ' + c.yesN + ' हाँ (' + c.yesP + ' लोग) · ' + c.noN + ' नहीं · ' + (c.wait || 0) + ' का जवाब बाकी (गिने नहीं)') : L('Loading RSVP replies…', 'जवाब आ रहे हैं…')) + '</div></div>';
+    '<div class="stats"><div class="stat"><b>' + t.m + '</b> ' + L('men', 'पुरुष') + '</div><div class="stat"><b>' + t.w + '</b> ' + L('women', 'महिलाएँ') + '</div><div class="stat"><b>' + t.k + '</b> ' + L('kids', 'बच्चे') + '</div>' + (t.u ? '<div class="stat"><b>' + t.u + '</b> ' + L('not split yet', 'बँटवारा बाकी') + '</div>' : '') + '</div>' +
+    '<div class="stats"><div class="stat"><b>' + c.ours + '</b> ' + L('Shrijeet side', 'श्रीजीत की ओर') + '</div><div class="stat"><b>' + c.shiv + '</b> ' + L('Shivangi side', 'शिवांगी की ओर') + '</div>' + (c.maybeP ? '<div class="stat"><b>+' + c.maybeP + '</b> ' + L('not confirmed', 'पक्का नहीं') + '</div>' : '') + (c.vend ? '<div class="stat"><b>+' + c.vend + '</b> ' + L('vendor team', 'वेंडर टीम') + '</div>' : '') + '</div>' +
+    '<div class="sub" style="margin-top:.5rem">' + L('Wedding night only: + ' + LOCAL.who + '’s list of ' + LOCAL.n + ' local guests (not in these numbers).', 'सिर्फ़ शादी की रात: + ' + LOCAL.whoHi + ' की ' + LOCAL.n + ' स्थानीय मेहमानों की सूची (इन गिनती में नहीं)।') + '</div>' +
+    '<div class="sub" style="margin-top:.35rem">' + (S.rsvp ? L('RSVP: ' + c.yesN + ' said yes (' + c.yesP + ' people) · ' + c.noN + ' said no · ' + (c.wait || 0) + ' invited, no reply yet (not counted). Room-plan families count even without an RSVP.', 'RSVP: ' + c.yesN + ' हाँ (' + c.yesP + ' लोग) · ' + c.noN + ' नहीं · ' + (c.wait || 0) + ' का जवाब बाकी (गिने नहीं)। योजना वाले परिवार बिना RSVP के भी गिने गए।') : L('Loading RSVP replies…', 'जवाब आ रहे हैं…')) + '</div></div>';
 }
 function viewDays() {
   if (!S.rsvp && (!S.rsvpAt || Date.now() - S.rsvpAt > 30000)) loadRsvp();
@@ -2265,6 +2347,9 @@ document.addEventListener('click', function (e) {
     case 'nextalloc': var na = S.alloc.filter(function (x) { return x.id === id; })[0]; if (!na) return; closeSheet(true); openAlloc('', { family: na.family, people: na.people, side: na.side, from: na.to ? nextDay(na.to) : '', to: na.to ? nextDay(na.to) : '' }); return;
     case 'savealloc':
       var af = { family: val('al_fam'), people: num(val('al_ppl')) || '', stay: document.getElementById('al_stay').value, room: val('al_room'), from: document.getElementById('al_from').value, to: document.getElementById('al_to').value, mattress: segVal('al_mat'), status: segVal('al_st') || 'Draft', side: segVal('al_side') || 'Shrijeet', note: val('al_note') };
+      var amw = ['al_m', 'al_w', 'al_k'].map(function (k) { return val(k); }), aold = id ? S.alloc.filter(function (x) { return x.id === id; })[0] : null, nx = null;   // saving the form = the split has been checked (no longer a guess)
+      if (amw.some(function (v) { return v !== ''; })) { nx = { m: num(amw[0]), w: num(amw[1]), k: num(amw[2]) }; if (nx.m + nx.w + nx.k > 0) af.people = nx.m + nx.w + nx.k; else nx = null; }
+      af.note = withMwk(af.note, nx);
       if (!af.family) { toast(L('Please type the family name', 'कृपया परिवार का नाम लिखें'), true); return; }
       if (af.from && !af.to) af.to = af.from;
       if (af.from && af.to < af.from) { toast(L('The last night is before the first night', 'आख़िरी रात पहली रात से पहले है'), true); return; }
@@ -2277,6 +2362,7 @@ document.addEventListener('click', function (e) {
       if (tvv) Object.keys(tvv).forEach(function (k) { if (String(tvv[k] || '') !== String((ag && ag[k]) || '')) gf[k] = tvv[k]; });
       if (ag) { if (Object.keys(gf).length) rowQuiet('guests', ag.id, gf); }
       else if (Object.keys(gf).some(function (k) { return gf[k]; })) rowQuiet('guests', '', Object.assign({ name: af.family, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room }, gf));
+      if (nx && aold) S.alloc.forEach(function (x) { if (x.id === id || nkey(x.family) !== nkey(aold.family) || num(x.people) !== num(aold.people)) return; var xx = mwkOf(x); if (xx && xx.m === nx.m && xx.w === nx.w && xx.k === nx.k && !!xx.guess === !!nx.guess) return; rowQuiet('alloc', x.id, { people: af.people, note: withMwk(x.note, nx) }); });
       rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
     case 'delalloc': var da = S.alloc.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Remove from the room plan?', 'योजना से हटाना है?'), da ? da.family + (da.stay ? ' · ' + da.stay : '') : '', '', 'confirmdela', id); return;
     case 'confirmdela': closeSheet(true); S.sheet = null; rowDel('alloc', id, L('Removed', 'हटा दिया')); return;
