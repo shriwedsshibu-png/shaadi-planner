@@ -377,6 +377,7 @@ function saveFields(id, fields, okMsg, undoId) {
 }
 function mact(payload, apply, ok, tmp) { apply(); enqueue(payload, tmp); if (ok) toast(ok); render(); }
 function tableArr(t) { return t === 'guests' ? S.guests : t === 'shagun' ? S.shagun : t === 'stays' ? S.stays : t === 'alloc' ? S.alloc : S.flow; }
+function onlyChanged(fields, orig) { if (!orig) return fields; var o = {}; Object.keys(fields).forEach(function (k) { if (String(fields[k] == null ? '' : fields[k]) !== String(orig[k] == null ? '' : orig[k])) o[k] = fields[k]; }); return o; }
 function rowSave(table, id, fields, ok) {
   var arr = tableArr(table);
   if (id) { var x = arr.filter(function (r) { return r.id === id; })[0]; if (x) Object.assign(x, fields, { by: S.me }); enqueue({ action: 'rowUpdate', table: table, id: id, fields: fields }); }
@@ -2420,7 +2421,8 @@ document.addEventListener('click', function (e) {
       var gf = { name: val('g_name'), phone: val('g_phone'), side: segVal('g_side'), adults: val('g_ad'), children: val('g_ch'), group: val('g_group'), arrDate: document.getElementById('g_ad8').value, arrTime: document.getElementById('g_at').value, arrMode: segVal('g_mode'), depDate: document.getElementById('g_dep').value, roomReq: segVal('g_rr'), stay: val('g_stay'), room: val('g_room'), vehicle: segVal('g_veh'), pickupBy: val('g_pick'), remarks: val('g_rem') };
       if (!gf.name) { toast(L('Please type the name', 'कृपया नाम लिखें'), true); return; }
       if (!id && S.sheet.rsvp) gf.rsvp = S.sheet.rsvp;
-      closeSheet(true); S.sheet = null; rowSave('guests', id, gf, id ? L('Saved ✓', 'सेव हुआ ✓') : L('Guest added ✓', 'मेहमान जुड़ गए ✓')); return;
+      if (id) { var gold = S.guests.filter(function (x) { return x.id === id; })[0]; gf = onlyChanged(gf, gold); }
+      closeSheet(true); S.sheet = null; if (id && !Object.keys(gf).length) { toast(L('No changes', 'कोई बदलाव नहीं')); return; } rowSave('guests', id, gf, id ? L('Saved ✓', 'सेव हुआ ✓') : L('Guest added ✓', 'मेहमान जुड़ गए ✓')); return;
     case 'delguest': var dg = S.guests.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Delete this guest?', 'क्या यह मेहमान हटाना है?'), dg ? dg.name : '', '', 'confirmdelg', id); return;
     case 'confirmdelg': closeSheet(true); S.sheet = null; rowDel('guests', id, L('Deleted', 'हटा दिया')); return;
     /* shagun */
@@ -2541,6 +2543,7 @@ document.addEventListener('click', function (e) {
       if (ag) { if (Object.keys(gf).length) rowQuiet('guests', ag.id, gf); }
       else if (Object.keys(gf).some(function (k) { return gf[k]; })) rowQuiet('guests', '', Object.assign({ name: af.family, side: af.side, adults: af.people, roomReq: 'Yes', stay: af.stay, room: af.room }, gf));
       if (nx && aold) S.alloc.forEach(function (x) { if (x.id === id || nkey(x.family) !== nkey(aold.family) || num(x.people) !== num(aold.people)) return; var xx = mwkOf(x); if (xx && xx.m === nx.m && xx.w === nx.w && xx.k === nx.k && !!xx.guess === !!nx.guess) return; rowQuiet('alloc', x.id, { people: af.people, note: withMwk(x.note, nx) }); });
+      if (id && aold) { af = onlyChanged(af, aold); if (!Object.keys(af).length) { toast(L('No changes', 'कोई बदलाव नहीं')); return; } }
       rowSave('alloc', id, af, L('Saved ✓', 'सेव हुआ ✓')); return;
     case 'delalloc': var da = S.alloc.filter(function (x) { return x.id === id; })[0]; S.sheet = { confirm: 1 }; confirmBox(B('Remove from the room plan?', 'योजना से हटाना है?'), da ? da.family + (da.stay ? ' · ' + da.stay : '') : '', '', 'confirmdela', id); return;
     case 'confirmdela': closeSheet(true); S.sheet = null; rowDel('alloc', id, L('Removed', 'हटा दिया')); return;
@@ -2584,7 +2587,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b30';
+var BUILD = 'b31';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
