@@ -220,7 +220,7 @@ var WHO_HI = { Shrijeet: 'श्रीजीत', Shivangi: 'शिवांग�
 var $app = document.getElementById('app');
 var LS = { get: function (k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 var S = { role: LS.get('pl_role') || '', names: [], dq: '', gq: '', tasks: [], vendors: [], payments: [], guests: [], shagun: [], flow: [], stays: [], alloc: [], rsvp: null, rsvpAt: 0, ver: '', tab: LS.get('pl_tab') || 'today',
-  ttab: 'list', vtab: 'list', gtab: 'sum', stype: 'Received', sq: '', fday: 'all', gpick: false,
+  ttab: 'list', vtab: 'list', gtab: 'sum', carMode: LS.get('pl_carmode') || 'bal', stype: 'Received', sq: '', fday: 'all', gpick: false,
   loaded: false, error: '', pin: LS.get('pl_pin'), me: LS.get('pl_me'), lang: LS.get('pl_lang') || 'both',
   fStatus: 'open', fPrio: 'all', fCat: 'all', fOwner: 'all', fDate: 'all', sheet: null, toast: null, lastSync: 0, needPin: false, offline: false };
 
@@ -911,7 +911,12 @@ var LOCAL = { n: 400, who: 'Papa', whoHi: 'पापा' };   // wedding-night-o
 var MEALS_BEFORE = 'NOI: order basis · HSL: order · Command Mess: mess meal · Home: chef';
 var WALK = { from: '2026-11-30', to: '2026-12-02', text: 'Standby: our car and Alok bhaiya’s car. Hotels, bungalows and Aarif are within 1.2 km walking.' };
 // our own cars (no hire): who, and from / until when they are free for family trips
-var CARS = [{ n: 'Our car', hi: 'हमारी कार', from: '', to: '' }, { n: 'Alok bhaiya’s car', hi: 'आलोक भैया की कार', fam: 'Alok', from: '2026-11-28', fromH: 19, to: '2026-12-04', toH: 10 }];   // fam: busy when that family itself is moving
+var CARS = [   // our sure cars (no hire). s = seats with luggage, s2 = without; kind friend = a favour, used only when it really helps
+  { n: 'Our car', hi: 'हमारी कार', s: 3, s2: 4, sb: 1 },
+  { n: 'Mama ji’s car', hi: 'मामा जी की कार', s: 3, s2: 4, sb: 1 },
+  { n: 'Alok bhaiya’s XUV', hi: 'आलोक भैया की XUV', s: 5, s2: 6, fam: 'Alok', from: '2026-11-28', fromH: 19, to: '2026-12-04', toH: 10 },
+  { n: 'Friend’s SUV', hi: 'दोस्त की SUV', s: 5, s2: 6, kind: 'friend', from: '2026-11-28', to: '2026-12-04' }];
+var CAR_MODES = { own: { n: 'Our 4 cars only', hi: 'सिर्फ़ हमारी 4 गाड़ियाँ' }, bal: { n: 'Our 4 cars + 2 hired travellers', hi: 'हमारी 4 गाड़ियाँ + 2 किराये की ट्रैवलर' }, few: { n: 'Without the friend’s SUV', hi: 'दोस्त की SUV के बिना' } };
 function isHomePlace(name) { var s = stayOf(name); return !!s && /home/i.test(String(s.kind || '')); }
 function famList() {   // one entry per family in the room plan
   var by = {}, out = [];
@@ -1189,10 +1194,9 @@ function planActions() {
   var tcm = {}; S.alloc.filter(function (a) { return /to confirm|not decided|deciding|to be confirmed/i.test(noteOnly(a.note)); }).forEach(function (a) { var l = tcm[a.family] = tcm[a.family] || [], nt = noteOnly(a.note); if (l.indexOf(nt) < 0) l.push(nt); });
   var tc = Object.keys(tcm).map(function (k) { return k + ': ' + tcm[k].join('; '); });
   if (tc.length) add('P1', 'Guests, Travel & Transport', L(tc.length + ' families still marked “to confirm” in the room plan', 'योजना में ' + tc.length + ' परिवार “पक्का करना है”'), tc.map(function (x) { return '• ' + x; }).join('\n'));
-  var tr = tripPlan('Shrijeet').filter(function (x) { return x.p !== '' && x.kind !== 'sb'; }), hr = tr.filter(function (x) { return !x.own && !x.open; }), trD = {}; hr.forEach(function (x) { (trD[x.d] = trD[x.d] || []).push(x); });
-  var opn = tr.filter(function (x) { return x.open; });
-  if (hr.length) add('P1', 'Guests, Travel & Transport', L('Book ' + hr.length + ' hired vehicle trips (our cars cover ' + tr.filter(function (x) { return x.own; }).length + ' more)', hr.length + ' चक्कर के लिए गाड़ी बुक करें'),
-    Object.keys(trD).sort().map(function (d) { return niceDate(d) + ': ' + trD[d].map(function (x) { return slotTime(x) + ' ' + x.p + ' → ' + x.v; }).join(', '); }).join('\n') + (opn.length ? '\n' + L('Times not known yet: ', 'समय पता नहीं: ') + opn.map(function (x) { return niceDate(x.d) + ' ' + x.p; }).join(', ') : '') + '\n' + L('Full plan: Guests → Cars.', 'पूरी योजना: मेहमान → गाड़ियाँ।'));
+  var co = carOption('bal'), tr = co.rows.filter(function (x) { return x.p !== '' && x.kind !== 'sb'; }), hr = tr.filter(function (x) { return x.cost > 0; }), opn = tr.filter(function (x) { return x.open; });
+  if (hr.length) add('P1', 'Guests, Travel & Transport', L('Book ' + hr.length + ' hired vehicle' + (hr.length > 1 ? 's' : '') + ' (' + rs(co.hire) + '); our 4 cars do the rest', hr.length + ' किराये की गाड़ी बुक करें (' + rs(co.hire) + '); बाकी हमारी 4 गाड़ियाँ'),
+    hr.map(function (x) { return niceDate(x.d) + ' ' + slotTime(x) + ': ' + x.p + ' → ' + x.v; }).join('\n') + (opn.length ? '\n' + L('Times not known yet: ', 'समय पता नहीं: ') + opn.map(function (x) { return niceDate(x.d) + ' ' + x.p; }).join(', ') : '') + '\n' + L('Full plan and the other two ways: Guests → Cars.', 'पूरी योजना और बाकी दो तरीके: मेहमान → गाड़ियाँ।'));
   // RSVPs still pending
   if (S.rsvp) { var w = S.guests.filter(function (g) { return invState(g) === 'wait'; }).length; if (w) add('P1', 'Invitations & Communication', L('Send RSVP reminders to ' + w + ' invited guests', w + ' मेहमानों को RSVP याद दिलाएँ'), L('Guests → Invites → Remind. The wedding-night count depends on these replies.', 'मेहमान → निमंत्रण → याद दिलाएँ। शादी की रात की गिनती इन्हीं जवाबों पर है।')); }
   return out;
@@ -1236,23 +1240,28 @@ var RATES = { car: { n: 'car', hi: 'कार', s: 3, s2: 4, slot: 1000, day: 20
 var TRIP_H = 1.25, OWN_EFFORT = 600;   // one station / place run, there and back (Sagar Nagar ↔ station about 12 km, 35 min)
 function rs(n) { return '₹' + Math.round(n).toLocaleString('en-IN'); }
 function hireText(u) { var c = {}; u.forEach(function (k) { c[k] = (c[k] || 0) + 1; }); return Object.keys(c).map(function (k) { return c[k] + ' × ' + L(RATES[k].n, RATES[k].hi); }).join(' + '); }
-function bestMix(p, luggage, ownN) {   // cheapest hire mix that, with our free cars, seats everyone
-  var best = null, K = ['car', 'suv', 'tt12', 'tt17'], per = luggage ? 3 : 4;
-  for (var a = 0; a <= ownN; a++) for (var c = 0; c < 4; c++) for (var b = 0; b < 3; b++) for (var x = 0; x < 3; x++) for (var y = 0; y < 4; y++) {
-    var n = [c, b, x, y], cap = a * per, cost = 0, u = [];
-    K.forEach(function (k, i) { cap += n[i] * (luggage ? RATES[k].s : RATES[k].s2); cost += n[i] * (RATES[k].slot + RATES[k].bata); for (var j = 0; j < n[i]; j++) u.push(k); });
-    if (cap < p) continue; var nv = a + u.length;
-    var eff = cost + a * OWN_EFFORT;   // our cars are free but need a driver and fuel: use them when they really save
-    if (!best || eff < best.eff || (eff === best.eff && nv < best.nv)) best = { cost: cost, u: u, own: a, nv: nv, eff: eff };
+function carPen(c, h, mode) { if (mode === 'own') return 1; return (c.kind === 'friend' ? 800 : c.fam ? 500 : 400) + (h != null && h < 6 ? 600 : 0); }   // driver, fuel, an early wake-up or a favour
+function bestMix(p, luggage, cars, h, mode) {   // cheapest mix of our free cars and hired vehicles that seats everyone
+  var best = null, K = ['car', 'suv', 'tt12', 'tt17'], n = cars.length;
+  for (var m = 0; m < (1 << n); m++) {
+    var oc = 0, pen = 0, used = [];
+    for (var i = 0; i < n; i++) if (m & (1 << i)) { oc += luggage ? cars[i].s : cars[i].s2; pen += carPen(cars[i], h, mode); used.push(cars[i]); }
+    for (var c = 0; c < 4; c++) for (var b = 0; b < 3; b++) for (var x = 0; x < 3; x++) for (var y = 0; y < 4; y++) {
+      var k4 = [c, b, x, y], cap = oc, cost = 0, u = [];
+      K.forEach(function (k, j) { cap += k4[j] * (luggage ? RATES[k].s : RATES[k].s2); cost += k4[j] * (RATES[k].slot + RATES[k].bata); for (var q = 0; q < k4[j]; q++) u.push(k); });
+      if (cap < p) continue; var nv = used.length + u.length, eff = cost + pen + (mode === 'own' ? 0 : Math.max(0, nv - 2) * 500);   // a long convoy is hard on elders with luggage
+      if (!best || eff < best.eff || (eff === best.eff && nv < best.nv)) best = { cost: cost, u: u, used: used, nv: nv, eff: eff };
+    }
   }
   return best;
 }
-function carPick(d, h, p, luggage, busy, avail) {   // our own cars first, then the cheapest hire
-  var own = (avail || carsAt(d, h)).filter(function (c) { return !(busy && c.fam && busy.some(function (n) { return nkey(n).indexOf(nkey(c.fam)) === 0; })); });
-  var m = bestMix(p, luggage, own.length); if (!m) return { own: 0, v: luggage ? vehFor(p) : vehSeat(p), cost: 0, u: [] };
-  var ownTxt = own.slice(0, m.own).map(carName).join(' + ');
-  if (!m.u.length) return { own: 1, v: ownTxt, cost: 0, u: [], ownN: m.own };
-  return { own: 0, v: hireText(m.u) + (m.own ? ' + ' + ownTxt : ''), cost: m.cost, u: m.u, ownN: m.own, ownL: own.slice(0, m.own) };
+function carPick(d, h, p, luggage, busy, avail, mode) {   // our own cars first, then the cheapest hire
+  mode = mode || 'bal';
+  var own = (avail || carsAt(d, h)).filter(function (c) { return !(busy && c.fam && busy.some(function (n) { return nkey(n).indexOf(nkey(c.fam)) === 0; })) && !(mode === 'few' && c.kind === 'friend'); });
+  var m = bestMix(p, luggage, own, h, mode); if (!m) return { own: 0, v: luggage ? vehFor(p) : vehSeat(p), cost: 0, u: [], used: [] };
+  var ownTxt = m.used.map(carName).join(' + ');
+  if (!m.u.length) return { own: 1, v: ownTxt, cost: 0, u: [], used: m.used, ownN: m.used.length };
+  return { own: 0, v: hireText(m.u) + (m.used.length ? ' + ' + ownTxt : ''), cost: m.cost, u: m.u, used: m.used, ownN: m.used.length };
 }
 /* Plan 2: one 17-seat traveller on day hire runs the big trips of the day back to back (when cheaper than booking each trip) */
 function dayHire(rows) {
@@ -1265,7 +1274,7 @@ function dayHire(rows) {
       single += x.cost;
       var start = x.kind === 'dep' ? x.h - TRIP_H : x.h, wait = 0, dur = x.kind === 'mv' ? 1.5 : TRIP_H;
       if (start < free) { if (x.kind === 'arr' && free - start <= 0.5) { wait = free - start; } else { extra += x.cost; steps.push({ x: x, sep: 1 }); return; } }
-      var rest = Math.max(0, x.p - R.s), add = rest ? carPick(d, x.h, rest, true, x.busy) : { cost: 0, v: '' };
+      var rest = Math.max(0, x.p - R.s), add = rest ? carPick(d, x.h, rest, true, x.busy, null, 'few') : { cost: 0, v: '' };
       extra += add.cost; if (first == null) first = start; free = start + wait + dur;
       steps.push({ x: x, wait: wait, rest: rest, restV: add.v });
     });
@@ -1277,7 +1286,8 @@ function dayHire(rows) {
 }
 function hhmm(h) { var m = Math.round((h - Math.floor(h)) * 60); var H = Math.floor(h); if (m === 60) { H++; m = 0; } return niceTime(pad((H + 24) % 24) + ':' + pad(m)); }
 function upDown(a) { var st = stayOf(a.stay); return !!st && /up and down/i.test(st.kind || '') && !/no car needed/i.test((st.notes || '') + ' ' + noteOnly(a.note)); }
-function tripPlan(side) {   // side: 'Shrijeet' (ours) or 'Shivangi'
+function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode: own / bal / few (see CAR_MODES)
+  mode = mode || S.carMode || 'bal';
   var fams = famList().filter(function (f) { return (f.side === 'Shivangi') === (side === 'Shivangi'); }), rows = [], byD = {};
   var where = function (mode) { return /flight/i.test(mode || '') ? L('airport', 'एयरपोर्ट') : /bus/i.test(mode || '') ? L('bus stand', 'बस स्टैंड') : /train/i.test(mode || '') ? L('station', 'स्टेशन') : L('station / airport', 'स्टेशन / एयरपोर्ट'); };
   var E = function (d) { return byD[d] = byD[d] || { arr: [], dep: [], mv: {} }; };
@@ -1318,8 +1328,8 @@ function tripPlan(side) {   // side: 'Shrijeet' (ours) or 'Shivangi'
     // up and down on days without a function
     var fd = {}; fnList().forEach(function (fn) { fd[fn.date] = 1; });
     fams.forEach(function (f) { if (f.maybe) return; f.rows.forEach(function (a) { if (!upDown(a) || !a.from) return; var ds = nightsOf(a.from, a.to).filter(function (n) { return !fd[n] && n >= WALK.from; }); if (!ds.length) return; var c = carPick(ds[0], 12, num(a.people), false); rows.push({ d: ds[0], d2: ds[ds.length - 1], h: null, kind: 'ud', what: L('Up and down with us from ' + a.stay + ' (as needed)', a.stay + ' से हमारे साथ आना-जाना (ज़रूरत पर)'), who: f.name + ' (' + num(a.people) + ')', p: num(a.people), v: c.v, own: c.own, cost: c.cost }); }); });
-    var sb = carsAt(WALK.from, 12);
-    rows.push({ d: WALK.from, d2: WALK.to, h: null, kind: 'sb', what: L('Standby for elders, emergencies and errands', 'बड़ों, ज़रूरत और कामों के लिए'), who: L('Places are within 1.2 km walking', 'सब जगह 1.2 km पैदल'), p: '', v: sb.length ? sb.map(carName).join(' + ') : L('1–2 cars', '1–2 कार'), own: sb.length ? 1 : 0 });
+    var sb = CARS.filter(function (c) { return c.sb; });
+    rows.push({ d: WALK.from, d2: WALK.to, h: null, kind: 'sb', what: L('2 standby cars for elders, emergencies and errands', '2 गाड़ियाँ हमेशा तैयार: बड़ों, ज़रूरत और कामों के लिए'), who: L('Parked at the venue with a driver. They also do the function runs. Places are within 1.2 km walking', 'ड्राइवर के साथ वेन्यू पर खड़ी रहें, कार्यक्रम वाले चक्कर भी यही करें। सब जगह 1.2 km पैदल'), p: '', v: sb.length ? sb.map(carName).join(' + ') : L('1–2 cars', '1–2 कार'), own: sb.length ? 1 : 0 });
   }
   rows.sort(function (a, b) { return a.d.localeCompare(b.d) || (a.h == null ? 99 : a.h) - (b.h == null ? 99 : b.h); });
   // second pass: a family car doing one run is not free for the next run until it is back
@@ -1329,25 +1339,30 @@ function tripPlan(side) {   // side: 'Shrijeet' (ours) or 'Shivangi'
     var lug = /arr|dep|mv/.test(x.kind), start = x.h == null ? null : (x.kind === 'dep' ? x.h - TRIP_H : x.h), dur = x.kind === 'mv' ? 1.5 : x.kind === 'fn' ? 1 : TRIP_H;
     var freeOk = function (t) { if (side === 'Shivangi') return [];   // their family arranges their own cars
       return carsAt(x.d, x.h).filter(function (c) { var f = freeAt[x.d + c.n]; return t == null || f == null || f <= t; }); };
-    var av = freeOk(start), c = carPick(x.d, x.h, x.p, lug, x.busy, av);
-    if (x.kind === 'mv' && c.cost && start != null) {   // a move can wait for a family car to come back instead of hiring
-      for (var t = start + 0.25; t <= start + 2.5; t += 0.25) { var av2 = freeOk(t), c2 = carPick(x.d, t, x.p, lug, x.busy, av2); if (!c2.cost) { x.note = L('Family car after its earlier run (~' + hhmm(t) + ')', 'पहले चक्कर के बाद हमारी गाड़ी (~' + hhmm(t) + ')'); start = t; x.h = Math.floor(t); av = av2; c = c2; break; } }
-    } x.v = c.v; x.own = c.own; x.cost = c.cost;
-    if (start != null && c.ownN) av.filter(function (k) { return !(x.busy && k.fam && x.busy.some(function (n) { return nkey(n).indexOf(nkey(k.fam)) === 0; })); }).slice(0, c.ownN).forEach(function (k) { freeAt[x.d + k.n] = start + dur; });
+    var av = freeOk(start), c = carPick(x.d, x.h, x.p, lug, x.busy, av, mode);
+    if (c.cost && start != null && side !== 'Shivangi') {   // wait a little for a family car to come back instead of hiring: moves up to 2.5 h, station pickups 30 min, drops 15 min
+      var lim = x.kind === 'mv' ? 2.5 : x.kind === 'arr' ? 0.5 : x.kind === 'dep' ? 0.25 : 0;
+      for (var t = start + 0.25; t <= start + lim + 0.001; t += 0.25) { var av2 = freeOk(t), c2 = carPick(x.d, t, x.p, lug, x.busy, av2, mode); if (c2.eff == null) c2.eff = 0; if (c2.cost < c.cost && (mode === 'own' || x.kind === 'mv' || c.cost - c2.cost >= 1500)) { x.wait = Math.round((t - start) * 60); x.note = x.kind === 'mv' ? L('After the family car’s earlier run (~' + hhmm(t) + ')', 'पहले चक्कर के बाद हमारी गाड़ी (~' + hhmm(t) + ')') : L('Waits ~' + x.wait + ' min for the cars to come back', 'गाड़ियों के लौटने तक ~' + x.wait + ' मिनट इंतज़ार'); start = t; if (x.kind === 'mv') x.h = Math.floor(t); av = av2; c = c2; if (!c2.cost) break; } }
+    }
+    x.v = c.v; x.own = c.own; x.cost = c.cost; x.used = (c.used || []).map(function (k) { return k.n; }); x.early = start != null && start < 6 ? x.used.length : 0;
+    if (start != null && c.used) c.used.forEach(function (k) { freeAt[x.d + k.n] = start + dur; });
   });
   return rows;
 }
 function tripRows() { return tripPlan('Shrijeet').concat(tripPlan('Shivangi')).sort(function (a, b) { return a.d.localeCompare(b.d); }); }
 function slotTime(x) { return x.h == null ? (x.kind === 'sb' || x.kind === 'ud' ? L('All day', 'पूरे दिन') : L('Time ?', 'समय ?')) : niceTime(pad(x.h) + ':00'); }
-function plansOf(r) {   // Plan 1: book each trip · Plan 2: a 17-seater on day hire for the busy days
-  var hired = r.filter(function (x) { return x.cost > 0; }), p1 = hired.reduce(function (t, x) { return t + x.cost; }, 0), dh = dayHire(r), p2 = p1, n2 = hired.length;
-  Object.keys(dh).forEach(function (d) { var z = dh[d]; p2 += z.cost - z.single; n2 -= z.steps.length; n2 += 1 + z.steps.filter(function (q) { return q.sep || q.restV && !/हमारी|Our car|Alok|आलोक/.test(q.restV); }).length; });
-  return { p1: p1, n1: hired.length, p2: p2, n2: n2, dh: dh, days: Object.keys(dh).sort() };
+function carOption(mode) {   // one way of running the cars, with what it costs in money, favours and early wake-ups
+  var r = tripPlan('Shrijeet', mode), hired = r.filter(function (x) { return x.cost > 0; }), hire = hired.reduce(function (t, x) { return t + x.cost; }, 0), nb = hired.length, dh = mode === 'few' ? dayHire(r) : {};
+  Object.keys(dh).forEach(function (d) { var z = dh[d]; hire += z.cost - z.single; nb += 1 - z.steps.filter(function (q) { return !q.sep; }).length; });
+  var fr = r.filter(function (x) { return (x.used || []).some(function (n) { return /friend/i.test(n); }); }), frD = {}; fr.forEach(function (x) { frD[x.d] = 1; });
+  return { mode: mode, rows: r, hire: hire, nb: nb, dh: dh, days: Object.keys(dh).sort(), friend: fr.length, friendDays: Object.keys(frD).sort(), early: r.reduce(function (t, x) { return t + (x.early || 0); }, 0), waits: r.filter(function (x) { return x.wait && x.kind !== 'mv'; }) };
 }
+function carOptions() { return ['own', 'bal', 'few'].map(carOption); }
 function dayHireLines(d, z) { return z.steps.map(function (q) { var x = q.x; return (q.sep ? '• ' + slotTime(x) + ' ' + x.what + ' (' + x.p + '): ' + L('book separately', 'अलग से बुक') + ' — ' + x.v : '• ' + slotTime(x) + ' ' + x.what + ' (' + x.p + ')' + (q.wait ? L(' — waits ~' + Math.round(q.wait * 60) + ' min', ' — ~' + Math.round(q.wait * 60) + ' मिनट इंतज़ार') : '') + (q.rest ? L(' — ' + q.rest + ' more in ', ' — ' + q.rest + ' और: ') + q.restV : '')); }); }
-function carsText() {   // WhatsApp text of our side's plan
-  var r = tripPlan('Shrijeet'), P = plansOf(r), t = '🚐 *' + L('Cars plan (our side)', 'गाड़ियों की योजना (हमारी ओर)') + '*\n' + L('Plan 1, book each trip: ', 'योजना 1, हर चक्कर अलग: ') + rs(P.p1) + ' (' + P.n1 + L(' bookings)', ' बुकिंग)') + '\n' + L('Plan 2, one 17-seater for the busy days: ', 'योजना 2, व्यस्त दिनों में एक 17 सीट गाड़ी: ') + rs(P.p2) + ' (' + P.n2 + L(' bookings)', ' बुकिंग)') + '\n' + P.days.map(function (d) { var z = P.dh[d]; return '*' + niceDate(d) + ' ' + hhmm(z.from) + ' – ' + hhmm(z.to) + '*\n' + dayHireLines(d, z).join('\n'); }).join('\n') + '\n\n' + L('Our cars: ', 'हमारी गाड़ियाँ: ') + CARS.map(function (c) { return carName(c) + (c.from ? ' (' + L('from ', '') + niceDate(c.from) + (c.fromH != null ? ' ' + niceTime(pad(c.fromH) + ':00') : '') + (c.to ? ' – ' + niceDate(c.to) : '') + ')' : ''); }).join(', ') + '\n', last = '';
-  r.forEach(function (x) { if (x.d !== last) { t += '\n*' + wdDate(x.d) + (x.d2 && x.d2 !== x.d ? ' – ' + niceDate(x.d2) : '') + '*\n'; last = x.d; } t += '• ' + slotTime(x) + ' · ' + x.what + (x.p !== '' ? ' · ' + x.p + ' ' + L(x.p === 1 ? 'person' : 'people', 'लोग') : '') + '\n   ' + (x.own ? '🚗 ' : '🚐 ') + x.v + (x.who ? '\n   ' + x.who : '') + '\n'; });
+function carsText() {   // WhatsApp text of our side's plan (the option on screen)
+  var o = carOption(S.carMode || 'bal'), r = o.rows, t = '🚐 *' + L('Cars plan (our side)', 'गाड़ियों की योजना (हमारी ओर)') + '*\n' + L(CAR_MODES[o.mode].n, CAR_MODES[o.mode].hi) + ' · ' + L('hire ', 'किराया ') + rs(o.hire) + '\n' + L('Our cars: ', 'हमारी गाड़ियाँ: ') + CARS.map(carName).join(', ') + '\n' + L('Standby 30 Nov – 3 Dec: ', 'तैयार 30 नवंबर – 3 दिसंबर: ') + CARS.filter(function (c) { return c.sb; }).map(carName).join(' + ') + '\n', last = '';
+  o.days.forEach(function (d) { var z = o.dh[d]; t += '\n*' + L('17-seater for the day', '17 सीट गाड़ी पूरे दिन') + ' ' + niceDate(d) + ' ' + hhmm(z.from) + ' – ' + hhmm(z.to) + '*\n' + dayHireLines(d, z).join('\n') + '\n'; });
+  r.forEach(function (x) { if (x.d !== last) { t += '\n*' + wdDate(x.d) + (x.d2 && x.d2 !== x.d ? ' – ' + niceDate(x.d2) : '') + '*\n'; last = x.d; } t += '• ' + slotTime(x) + ' · ' + x.what + (x.p !== '' ? ' · ' + x.p + ' ' + L(x.p === 1 ? 'person' : 'people', 'लोग') : '') + '\n   ' + (x.open ? '⏳ ' : x.own ? '🚗 ' : '🚐 ') + x.v + (x.note ? ' (' + x.note + ')' : '') + (x.who ? '\n   ' + x.who : '') + '\n'; });
   return t;
 }
 function carRow(x) {
@@ -1356,19 +1371,15 @@ function carRow(x) {
 }
 function viewCars() {
   if (!S.rsvp && (!S.rsvpAt || Date.now() - S.rsvpAt > 30000)) loadRsvp();
-  var r = tripPlan('Shrijeet'), sv = tripPlan('Shivangi'), hire = r.filter(function (x) { return !x.own && !x.open && x.p !== ''; }), own = r.filter(function (x) { return x.own; }), open = r.filter(function (x) { return x.open; });
-  var big = {}; hire.forEach(function (x) { var k = x.v; big[k] = (big[k] || 0) + 1; });
-  var h = '<div class="hero"><div class="sub">' + B('Cars plan', 'गाड़ियों की योजना') + '</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem;align-items:end">' +
-    '<div><div class="big" style="font-size:2.2rem">' + hire.length + '</div><div class="sub">' + L('trips to hire for', 'किराये की गाड़ी') + '</div></div><div><div class="big" style="font-size:2.2rem">' + own.length + '</div><div class="sub">' + L('with our cars', 'हमारी गाड़ी से') + '</div></div><div><div class="big" style="font-size:2.2rem">' + open.length + '</div><div class="sub">' + L('times not known', 'समय पता नहीं') + '</div></div></div>' +
-    '<div class="stats">' + CARS.map(function (c) { return '<div class="stat">🚗 ' + esc(carName(c)) + (c.from ? ' · ' + niceDate(c.from) + (c.fromH != null ? ' ' + niceTime(pad(c.fromH) + ':00') : '') + (c.to ? ' – ' + niceDate(c.to) : '') : '') + '</div>'; }).join('') + '</div></div>';
-  h += '<p class="rem" style="margin:.6rem 0">' + L('Worked out from the room plan and each family’s arrival / departure. 🚗 = our own car, 🚐 = hire, ⏳ = fill the time. Seats with luggage: car 3, SUV 5, Tempo Traveller 10 / 14. Not-confirmed families are left out.', 'कमरों की योजना और हर परिवार के आने-जाने से। 🚗 = हमारी गाड़ी, 🚐 = किराये पर, ⏳ = समय भरें। सामान के साथ: कार 3, SUV 5, टेम्पो ट्रैवलर 10 / 14। जो पक्का नहीं, वे शामिल नहीं।') + '</p>';
-  var P = plansOf(r), better = P.p2 < P.p1 ? 2 : 1;
-  var plan = function (n, title, cost, nb, body, pros) { return '<div style="padding:.8rem .95rem;border-top:1px solid #f1e7d6' + (better === n ? ';background:#f3faf4' : '') + '"><div style="display:flex;justify-content:space-between;gap:.6rem;align-items:baseline"><b style="font-size:1.02rem">' + title + '</b><span class="amt" style="flex:none">' + rs(cost) + '</span></div><div class="rem" style="margin:.15rem 0 .3rem">' + nb + ' ' + L('bookings', 'बुकिंग') + (better === n ? ' · <b style="color:#2a6a38">' + L('cheaper by ', 'सस्ता: ') + rs(Math.abs(P.p1 - P.p2)) + '</b>' : '') + '</div>' + body + '<div style="margin-top:.35rem;font-size:.9rem">' + pros + '</div></div>'; };
-  h += '<div class="card" style="margin-top:.4rem"><div class="tbl-title">' + B('Two ways to do it', 'दो तरीके') + '</div><div class="tbl-note">' + L('Both use our car and Alok bhaiya’s car for small trips, function runs and standby. Costs are Vizag local rates (4 hr / 40 km per trip, 8 hr / 80 km per day, driver allowance included). Confirm with the travel agent: early-morning night charge, tolls and parking are extra.', 'दोनों में छोटे चक्कर, कार्यक्रम आना-जाना और ज़रूरत के लिए हमारी कार और आलोक भैया की कार। खर्च विज़ाग के लोकल रेट से (हर चक्कर 4 घंटे / 40 km, पूरा दिन 8 घंटे / 80 km, ड्राइवर भत्ता शामिल)। ट्रैवल एजेंट से पक्का करें: सुबह जल्दी का नाइट चार्ज, टोल और पार्किंग अलग।') + '</div>' +
-    plan(1, L('Plan 1 · Book each trip', 'योजना 1 · हर चक्कर अलग बुक'), P.p1, P.n1, '<div class="rem" style="margin:0">' + L('A vehicle for every big pickup, move and drop, at its own time (list below).', 'हर बड़े पिक-अप, जगह बदलने और छोड़ने के लिए अलग गाड़ी, अपने समय पर (नीचे सूची)।') + '</div>', L('✓ No waiting · ✓ a late train upsets only one booking · ✗ more vehicles and phone calls', '✓ इंतज़ार नहीं · ✓ ट्रेन देर हो तो सिर्फ़ एक बुकिंग पर असर · ✗ ज़्यादा गाड़ियाँ और फ़ोन')) +
-    plan(2, L('Plan 2 · One 17-seater for the busy days', 'योजना 2 · व्यस्त दिनों में एक 17 सीट गाड़ी'), P.p2, P.n2, P.days.map(function (d) { var z = P.dh[d]; return '<div style="margin-top:.25rem"><b>' + wdDate(d) + ' · ' + hhmm(z.from) + ' – ' + hhmm(z.to) + '</b> <span class="rem" style="margin:0">(' + rs(z.cost) + L(' instead of ', ' बनाम ') + rs(z.single) + ')</span><div class="rem" style="margin:.1rem 0 0;white-space:pre-line">' + esc(dayHireLines(d, z).join('\n')) + '</div></div>'; }).join('') + '<div class="rem" style="margin:.3rem 0 0">' + L('Other days as in Plan 1.', 'बाकी दिन योजना 1 की तरह।') + '</div>', L('✓ One driver who knows the whole day · ✓ keeps luggage and lets elders rest between check-out and the train · ✗ some guests wait 15–30 min', '✓ एक ड्राइवर जिसे पूरा दिन पता · ✓ चेक-आउट से ट्रेन तक सामान रखे, बड़े आराम करें · ✗ कुछ मेहमान 15–30 मिनट इंतज़ार')) + '</div>';
+  var O = carOptions(), cur = S.carMode || 'bal', o = O.filter(function (x) { return x.mode === cur; })[0], sv = tripPlan('Shivangi', cur);
+  var h = '<div class="hero"><div class="sub">' + B('Cars plan', 'गाड़ियों की योजना') + '</div><div class="stats" style="margin-top:.5rem">' + CARS.map(function (c) { return '<div class="stat">🚗 ' + esc(carName(c)) + (c.from ? ' · ' + niceDate(c.from) + (c.fromH != null ? ' ' + niceTime(pad(c.fromH) + ':00') : '') + (c.to ? ' – ' + niceDate(c.to) : '') : '') + '</div>'; }).join('') + '</div>' +
+    '<div class="sub" style="margin-top:.5rem">' + L('Standby 30 Nov – 3 Dec: ', 'हमेशा तैयार 30 नवंबर – 3 दिसंबर: ') + CARS.filter(function (c) { return c.sb; }).map(carName).join(' + ') + '</div></div>';
+  h += '<div class="card" style="margin-top:.8rem"><div class="tbl-title">' + B('Three ways to run it', 'तीन तरीके') + '</div><div class="tbl-note">' + L('Hire costs are Vizag local rates (4 hr / 40 km a trip, 8 hr / 80 km a day, driver allowance included); night charge before 6 AM, tolls and parking extra. Tap one to see its plan.', 'किराया विज़ाग के लोकल रेट से (हर चक्कर 4 घंटे / 40 km, पूरा दिन 8 घंटे / 80 km, ड्राइवर भत्ता शामिल); सुबह 6 से पहले नाइट चार्ज, टोल, पार्किंग अलग। योजना देखने के लिए दबाएँ।') + '</div>' +
+    O.map(function (x) { var on = x.mode === cur; return '<button data-act="carmode" data-v="' + x.mode + '" style="display:block;width:100%;text-align:left;font:inherit;color:inherit;border:0;border-top:1px solid #f1e7d6;padding:.75rem .95rem;cursor:pointer;background:' + (on ? '#f3faf4' : 'transparent') + '"><div style="display:flex;justify-content:space-between;gap:.6rem;align-items:baseline"><b>' + (on ? '● ' : '○ ') + esc(L(CAR_MODES[x.mode].n, CAR_MODES[x.mode].hi)) + (x.mode === 'bal' ? ' <span class="badge b-ok">' + L('Suggested', 'सुझाव') + '</span>' : '') + '</b><span class="amt" style="flex:none">' + rs(x.hire) + '</span></div><div class="rem" style="margin:.15rem 0 0">' +
+      [x.nb + ' ' + L('hired bookings', 'किराये की बुकिंग'), L('friend’s SUV ' + (x.friend ? x.friend + ' trips on ' + x.friendDays.length + ' days' : 'not needed'), 'दोस्त की SUV ' + (x.friend ? x.friendDays.length + ' दिन, ' + x.friend + ' चक्कर' : 'ज़रूरत नहीं')), L(x.early + ' family-car runs before 6 AM', '6 बजे से पहले ' + x.early + ' बार हमारी गाड़ी'), x.waits.length ? L(x.waits.length + ' group' + (x.waits.length > 1 ? 's wait' : ' waits') + ' 15–30 min', x.waits.length + ' बार 15–30 मिनट इंतज़ार') : L('no waiting', 'इंतज़ार नहीं')].join(' · ') + '</div></button>'; }).join('') + '</div>';
+  if (o.days.length) h += '<div class="card" style="margin-top:.8rem;padding:.7rem .95rem"><b>' + B('17-seater on day hire', '17 सीट गाड़ी पूरे दिन') + '</b>' + o.days.map(function (d) { var z = o.dh[d]; return '<div style="margin-top:.35rem"><b>' + wdDate(d) + ' · ' + hhmm(z.from) + ' – ' + hhmm(z.to) + '</b> <span class="rem" style="margin:0">' + rs(z.cost) + '</span><div class="rem" style="margin:.1rem 0 0;white-space:pre-line">' + esc(dayHireLines(d, z).join('\n')) + '</div></div>'; }).join('') + '</div>';
   var last = '';
-  r.forEach(function (x) { if (x.d !== last) { h += (last ? '</div>' : '') + '<h2 class="sec">' + wdDate(x.d) + '</h2><div class="card">'; last = x.d; } h += carRow(x); });
+  o.rows.forEach(function (x) { if (x.d !== last) { h += (last ? '</div>' : '') + '<h2 class="sec">' + wdDate(x.d) + '</h2><div class="card">'; last = x.d; } h += carRow(x); });
   if (last) h += '</div>';
   h += '<a class="call wa" style="display:block;text-align:center;margin-top:1rem" target="_blank" rel="noopener" href="' + esc(waLink('', carsText())) + '">💬 ' + K('Send this plan on WhatsApp', 'यह योजना WhatsApp पर भेजें') + '</a>';
   if (sv.length) { var l2 = ''; h += '<details class="card" style="margin-top:1rem;padding:.6rem .9rem"><summary style="font-weight:700;cursor:pointer">' + B('Shivangi’s side (their family arranges)', 'शिवांगी की ओर (उनका परिवार तय करेगा)') + ' · ' + sv.length + '</summary>' + sv.map(function (x) { var hd = x.d !== l2 ? '<div style="font-weight:700;margin-top:.6rem">' + wdDate(x.d) + '</div>' : ''; l2 = x.d; return hd + carRow(x); }).join('') + '</details>'; }
@@ -2250,6 +2261,7 @@ document.addEventListener('click', function (e) {
     case 'vt': S.vtab = v; render(); window.scrollTo(0, 0); return;
     case 'gt': S.tab = 'guests'; S.gtab = v; S.gq = ''; render(); window.scrollTo(0, 0); return;
     case 'gpick': S.gpick = v === '1'; render(); return;
+    case 'carmode': S.carMode = v; LS.set('pl_carmode', v); render(); return;
     case 'gopick': S.tab = 'guests'; S.gtab = 'arr'; S.gpick = true; render(); window.scrollTo(0, 0); return;
     case 'goarr': S.tab = 'guests'; S.gtab = 'arr'; S.gpick = false; render(); window.scrollTo(0, 0); return;
     case 'gocat': S.tab = 'tasks'; S.ttab = 'list'; S.fCat = v; S.fStatus = 'open'; S.fPrio = 'all'; S.fOwner = 'all'; S.gq = ''; document.getElementById('gq').value = ''; render(); window.scrollTo(0, 0); return;
