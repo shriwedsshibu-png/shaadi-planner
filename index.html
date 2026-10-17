@@ -1300,7 +1300,7 @@ function tripPlan(side) {   // side: 'Shrijeet' (ours) or 'Shivangi'
       if (sh.moved && noCarFam(f)) { var kb = sh.from.join(' + '), mb = E(d0).mv[kb] = E(d0).mv[kb] || { p: 0, to: {}, who: [], busy: [] }; (mb.busy = mb.busy || []).push(f.name); }
       else if (sh.moved) { var k = sh.from.join(' + '), m = E(d0).mv[k] = E(d0).mv[k] || { p: 0, to: {}, who: [], busy: [] }; m.p += sh.moved; sh.to.forEach(function (x) { m.to[x] = 1; }); m.who.push(f.name + ' (' + sh.moved + ')'); }
     });
-    if (f.dep && !(f.g && /^n/i.test(f.g.vehicle || ''))) E(f.dep).dep.push({ f: f, p: f.lastP, h: f.g ? depHourOf(f.g.route) : null, mode: f.g && f.g.arrMode });
+    if (f.dep && !noCarFam(f)) E(f.dep).dep.push({ f: f, p: f.lastP, h: f.g ? depHourOf(f.g.route) : null, mode: f.g && f.g.arrMode });
   });
   Object.keys(byD).forEach(function (d) {
     var e = byD[d]; group(e.arr, 'arr', d);
@@ -1327,7 +1327,8 @@ function tripPlan(side) {   // side: 'Shrijeet' (ours) or 'Shivangi'
   rows.forEach(function (x) {
     if (x.open || x.kind === 'sb' || x.p === '' || !x.p) return;
     var lug = /arr|dep|mv/.test(x.kind), start = x.h == null ? null : (x.kind === 'dep' ? x.h - TRIP_H : x.h), dur = x.kind === 'mv' ? 1.5 : x.kind === 'fn' ? 1 : TRIP_H;
-    var freeOk = function (t) { return carsAt(x.d, x.h).filter(function (c) { var f = freeAt[x.d + c.n]; return t == null || f == null || f <= t; }); };
+    var freeOk = function (t) { if (side === 'Shivangi') return [];   // their family arranges their own cars
+      return carsAt(x.d, x.h).filter(function (c) { var f = freeAt[x.d + c.n]; return t == null || f == null || f <= t; }); };
     var av = freeOk(start), c = carPick(x.d, x.h, x.p, lug, x.busy, av);
     if (x.kind === 'mv' && c.cost && start != null) {   // a move can wait for a family car to come back instead of hiring
       for (var t = start + 0.25; t <= start + 2.5; t += 0.25) { var av2 = freeOk(t), c2 = carPick(x.d, t, x.p, lug, x.busy, av2); if (!c2.cost) { x.note = L('Family car after its earlier run (~' + hhmm(t) + ')', 'पहले चक्कर के बाद हमारी गाड़ी (~' + hhmm(t) + ')'); start = t; x.h = Math.floor(t); av = av2; c = c2; break; } }
