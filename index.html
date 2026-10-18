@@ -832,6 +832,8 @@ function stayText(fam) {
     t += '\n🏨 *' + a.stay + '*' + (a.room ? ' — ' + (/^\s*(room\s*)?\d/i.test(a.room) ? (hi ? 'कमरा ' : 'Room ') + a.room.replace(/^\s*room\s*/i, '') : a.room) : '') + '\n📅 ' + (a.from ? (a.to && a.to !== a.from ? niceDate(a.from) + ' → ' + niceDate(a.to) : (hi ? 'रात ' : 'Night of ') + niceDate(a.from)) + (hi ? ' (चेक-आउट ' : ' (check-out ') + niceDate(nextDay(a.to || a.from)) + (hi ? ' सुबह)' : ' morning)') : (hi ? 'तारीख़ जल्द बताएँगे' : 'Dates to follow')) +
       (s.map ? '\n📍 ' + s.map : '') + (String(s.contact || '').trim() ? '\n📞 ' + (hi ? 'वहाँ का संपर्क: ' : 'Contact there: ') + String(s.contact).trim() : '') + (mattressN(a) ? '\n' + (hi ? '🛏 कमरे में अतिरिक्त गद्दा रहेगा' : '🛏 Extra mattress will be in the room') : '') + '\n';
   });
+  var home = S.stays.filter(function (s) { return /own home/i.test(String(s.kind || '')) && String(s.map || '').trim(); })[0];
+  if (home && !segs.every(function (a) { return nkey(a.stay) === nkey(home.name); })) t += '\n🏠 ' + (hi ? 'हमारा घर (श्रीहरिपुरम): ' : 'Our home (Sriharipuram): ') + String(home.map).trim() + '\n';
   return t + helpText(hi) + '\n' + (hi ? 'आपके आगमन की प्रतीक्षा है 🌸' : 'Looking forward to welcoming you 🌸');
 }
 function roomsFor(place) {   // room names to pick from for a place: rooms already used there + rooms written in its details
@@ -927,8 +929,10 @@ var CARS = [   // our sure cars (no hire). s = seats with luggage, s2 = without;
   { n: 'Our car', hi: 'हमारी कार', s: 3, s2: 4, sb: 1 },
   { n: 'Mama ji’s car', hi: 'मामा जी की कार', s: 3, s2: 4, sb: 1 },
   { n: 'Alok bhaiya’s XUV', hi: 'आलोक भैया की XUV', s: 5, s2: 6, fam: 'Alok', from: '2026-11-28', fromH: 19, to: '2026-12-04', toH: 10 },
-  { n: 'Friend’s SUV', hi: 'दोस्त की SUV', s: 5, s2: 6, kind: 'friend', from: '2026-11-28', to: '2026-12-04' }];
-var CAR_MODES = { own: { n: 'Our 4 cars only', hi: 'सिर्फ़ हमारी 4 गाड़ियाँ' }, bal: { n: 'Our 4 cars + 2 hired travellers', hi: 'हमारी 4 गाड़ियाँ + 2 किराये की ट्रैवलर' }, few: { n: 'Without the friend’s SUV', hi: 'दोस्त की SUV के बिना' } };
+  { n: 'Friend’s SUV', hi: 'दोस्त की SUV', s: 5, s2: 6, kind: 'friend', from: '2026-11-28', to: '2026-12-04' },
+  { n: 'Papa’s extra car 1', hi: 'पापा की अतिरिक्त कार 1', s: 3, s2: 4, kind: 'extra' },   // two 5-seaters Papa has arranged (from his transport draft)
+  { n: 'Papa’s extra car 2', hi: 'पापा की अतिरिक्त कार 2', s: 3, s2: 4, kind: 'extra' }];
+var CAR_MODES = { own: { n: 'Our ' + CARS.length + ' cars only', hi: 'सिर्फ़ हमारी ' + CARS.length + ' गाड़ियाँ' }, bal: { n: 'Our ' + CARS.length + ' cars + a hired traveller where needed', hi: 'हमारी ' + CARS.length + ' गाड़ियाँ + ज़रूरत पर किराये की ट्रैवलर' }, few: { n: 'Without the friend’s SUV', hi: 'दोस्त की SUV के बिना' } };
 function isHomePlace(name) { var s = stayOf(name); return !!s && /home/i.test(String(s.kind || '')); }
 function famList() {   // one entry per family in the room plan
   var by = {}, out = [];
@@ -1222,7 +1226,7 @@ function planActions() {
   var tc = Object.keys(tcm).map(function (k) { return k + ': ' + tcm[k].join('; '); });
   if (tc.length) add('P1', 'Guests, Travel & Transport', L(tc.length + ' families still marked “to confirm” in the room plan', 'योजना में ' + tc.length + ' परिवार “पक्का करना है”'), tc.map(function (x) { return '• ' + x; }).join('\n'));
   var co = carOption('bal'), tr = co.rows.filter(function (x) { return x.p !== '' && x.kind !== 'sb'; }), hr = tr.filter(function (x) { return x.cost > 0; }), opn = tr.filter(function (x) { return x.open; });
-  if (hr.length) add('P1', 'Guests, Travel & Transport', L('Book ' + hr.length + ' hired vehicle' + (hr.length > 1 ? 's' : '') + ' (' + rs(co.hire) + '); our 4 cars do the rest', hr.length + ' किराये की गाड़ी बुक करें (' + rs(co.hire) + '); बाकी हमारी 4 गाड़ियाँ'),
+  if (hr.length) add('P1', 'Guests, Travel & Transport', L('Book ' + hr.length + ' hired vehicle' + (hr.length > 1 ? 's' : '') + ' (' + rs(co.hire) + '); our ' + CARS.length + ' cars do the rest', hr.length + ' किराये की गाड़ी बुक करें (' + rs(co.hire) + '); बाकी हमारी ' + CARS.length + ' गाड़ियाँ'),
     hr.map(function (x) { return niceDate(x.d) + ' ' + slotTime(x) + ': ' + x.p + ' → ' + x.v; }).join('\n') + (opn.length ? '\n' + L('Times not known yet: ', 'समय पता नहीं: ') + opn.map(function (x) { return niceDate(x.d) + ' ' + x.p; }).join(', ') : '') + '\n' + L('Full plan and the other two ways: Guests → Cars.', 'पूरी योजना और बाकी दो तरीके: मेहमान → गाड़ियाँ।'));
   // RSVPs still pending
   if (S.rsvp) { var w = S.guests.filter(function (g) { return invState(g) === 'wait'; }).length; if (w) add('P1', 'Invitations & Communication', L('Send RSVP reminders to ' + w + ' invited guests', w + ' मेहमानों को RSVP याद दिलाएँ'), L('Guests → Invites → Remind. The wedding-night count depends on these replies.', 'मेहमान → निमंत्रण → याद दिलाएँ। शादी की रात की गिनती इन्हीं जवाबों पर है।')); }
@@ -2602,7 +2606,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b33';
+var BUILD = 'b34';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
