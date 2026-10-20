@@ -1739,7 +1739,7 @@ function defInvMsg(code) {
   return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith immense joy, we invite you and your family to ' + (i.full ? 'the wedding celebrations of *' + c + '* — 30 November to 2 December 2026.' : 'the wedding of *' + c + '* on Wednesday, 2 December 2026.') + '\n\nYour invitation 👇\n' + invUrl(code) +
     '\n\n*🙏 Kindly fill the RSVP — it takes just 1 minute and helps us plan your stay and welcome you better:*\n👉 ' + rsvpUrl(code);
 }
-(function () { if (LS.get('pl_im_ver') === '7') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah', 'shrijeet/reception', 'shrijeet/reception/hindi', 'shivangi/reception', 'shivangi/reception/hindi'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '7'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
+(function () { if (LS.get('pl_im_ver') === '8') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah', 'shrijeet/reception', 'shrijeet/reception/hindi', 'shivangi/reception', 'shivangi/reception/hindi'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '8'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
 function invMsg(code) { return LS.get('pl_im_' + code) || defInvMsg(code); }
 var RANKS = ['lt cdr', 'lt col', 'wing cdr', 'wing cmdr', 'radm', 'vadm', 'admiral', 'cmde', 'capt', 'cdr', 'slt', 'lt', 'col', 'maj', 'prof', 'dr'];
 var HONS = ['sir', 'ma\'am', 'maam', 'mam', 'madam', 'ji', 'bhabhi', 'bhaiya', 'bhai', 'didi', 'di', 'mama', 'mami', 'mausi', 'chacha', 'chachi', 'uncle', 'aunty', 'fua', 'papa', 'dadi', 'nana', 'nani'];
@@ -1760,13 +1760,13 @@ function greetName(name) {   // "Adwait Sir CO Kirch Ncs" -> "Adwait Sir", "Lt C
 function gnOf(it) { return it.gid && LS.get('pl_gn_' + it.gid) ? LS.get('pl_gn_' + it.gid) : greetName(it.name); }
 function personal(text, nm) {   // put the guest's name in front of the greeting on the first lines
   nm = String(nm || '').trim(); if (!nm) return text; var L0 = String(text || '').split('\n');
-  for (var i = 0; i < Math.min(3, L0.length); i++) { if (/Namaste|नमस्ते/.test(L0[i])) { L0[i] = L0[i].replace(/(Namaste|नमस्ते)/, nm + ', $1'); return L0.join('\n'); } }
+  for (var i = 0; i < Math.min(3, L0.length); i++) { if (/Namaste|नमस्ते|Good (morning|afternoon|evening)/i.test(L0[i])) { L0[i] = L0[i].replace(/(Namaste|नमस्ते|Good (?:morning|afternoon|evening))/i, nm + ', $1'); return L0.join('\n'); } }
   return text;   // no greeting line (e.g. the Shri Ganeshaya Namah messages): leave as it is
 }
 var REM_TOKEN = '{RSVP link}', INV_TOKEN = '{Invite link}';
 function defRemMsg(hi) {
   if (hi) return 'नमस्ते 🙏\nआशा है आपने *श्रीजीत एवं शिवांगी* के विवाह का निमंत्रण देख लिया होगा।\n\n*कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा।* इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:\n👉 ' + REM_TOKEN + '\n\nआपके आगमन की प्रतीक्षा रहेगी 🙏';
-  return 'Namaste 🙏\n\n⚓ *The launch date is set — kindly confirm your berth!*\nIf we are not lucky enough to host you this time, your blessings will still sail with us 💛\n\nTakes less than a minute 👇\n\n✅ RSVP: ' + REM_TOKEN + '\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
+  return 'Namaste 🙏\n\n⚓ *All set to sail — we’d love to know if you’re on board!*\nIf we are not lucky enough to host you this time, your blessings will still sail with us forever 💛\n\nKindly spare a minute to RSVP and share your blessings 👇\n' + REM_TOKEN + '\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
 }
 function remMsg(hi) { return LS.get(hi ? 'pl_rm_hi' : 'pl_rm_en') || defRemMsg(hi); }
 function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_TOKEN).join(rsvpUrl(g.invLink)).split(INV_TOKEN).join(i.ok ? invUrl(g.invLink) : SITE); }
@@ -2635,7 +2635,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b40';
+var BUILD = 'b41';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
