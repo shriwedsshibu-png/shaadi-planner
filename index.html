@@ -1734,17 +1734,39 @@ function defInvMsg(code) {
   if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nअत्यंत हर्ष के साथ आपको सपरिवार *' + c + '* के ' + (i.full ? 'शुभ विवाह समारोह (30 नवंबर से 2 दिसंबर 2026)' : 'शुभ विवाह (बुधवार, 2 दिसंबर 2026)') + ' में सादर आमंत्रित करते हैं।\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
     '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा। इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:*\n👉 ' + rsvpUrl(code);
   if (i.side === 'Shrijeet') return '🙏 Namaste\n\n⚓ Lines Plan drawn and faired, Design and GA approved — my most important launch, to sail through life, is here!\n\nI’m getting married to *Shivangi Priya*, and it would be an honour to have you with us as we set out on this beautiful journey.\n\n' +
-    (i.full ? '🗓️ *30 Nov – 2 Dec 2026*\n📍 *Aarif Seaside Resort, Visakhapatnam*\n\nFaldaan, Mehndi, Sangeet and Haldi, followed by Varmala & Shaadi.\n\n*Mehndi ka rang, Sangeet ki dhun, Haldi ki rasm… bas aapki kami hai!*' : '🗓️ *Wednesday, 2 Dec 2026 · 7:30 PM onwards*\n📍 *Aarif Seaside Resort, Visakhapatnam*\n\nVarmala & Shaadi, followed by dinner.\n\n*Shaadi toh pakki ho gayi… ab aapka aana pakka kijiye!*') +
+    (i.full ? '🗓️ *30 Nov – 2 Dec 2026*\n📍 *Aarif Seaside Resort, Visakhapatnam*\n\nFaldaan, Mehndi, Sangeet and Haldi, followed by Varmala & Shaadi.\n\n*Mehndi ka rang, Sangeet ki dhun, Haldi ki rasm… bas aapki kami hai!*' : '🗓️ *Wednesday, 2 Dec 2026 · 7:30 PM onwards*\n📍 *Aarif Seaside Resort, Visakhapatnam*\n\nVarmala & Shaadi.\n\n*Shaadi toh pakki ho gayi… ab aapka aana pakka kijiye!*') +
     '\n\n👇 *Tap below for the invitation and programme:*\n' + invUrl(code) + '\n\nLooking forward to hosting you and your loved ones for the launch.\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
   return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith immense joy, we invite you and your family to ' + (i.full ? 'the wedding celebrations of *' + c + '* — 30 November to 2 December 2026.' : 'the wedding of *' + c + '* on Wednesday, 2 December 2026.') + '\n\nYour invitation 👇\n' + invUrl(code) +
     '\n\n*🙏 Kindly fill the RSVP — it takes just 1 minute and helps us plan your stay and welcome you better:*\n👉 ' + rsvpUrl(code);
 }
-(function () { if (LS.get('pl_im_ver') === '3') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '3'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
+(function () { if (LS.get('pl_im_ver') === '4') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '4'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
 function invMsg(code) { return LS.get('pl_im_' + code) || defInvMsg(code); }
+var RANKS = ['lt cdr', 'lt col', 'wing cdr', 'wing cmdr', 'radm', 'vadm', 'admiral', 'cmde', 'capt', 'cdr', 'slt', 'lt', 'col', 'maj', 'prof', 'dr'];
+var HONS = ['sir', 'ma\'am', 'maam', 'mam', 'madam', 'ji', 'bhabhi', 'bhaiya', 'bhai', 'didi', 'di', 'mama', 'mami', 'mausi', 'chacha', 'chachi', 'uncle', 'aunty', 'fua', 'papa', 'dadi', 'nana', 'nani'];
+function tcase(w) { return /^[a-z]/.test(w) || (w.length > 2 && w === w.toUpperCase()) ? w.charAt(0).toUpperCase() + w.slice(1).toLowerCase() : w; }
+function greetName(name) {   // "Adwait Sir CO Kirch Ncs" -> "Adwait Sir", "Lt Cdr Nikita" -> "Lt Cdr Nikita", "Abhishek 97" -> "Abhishek"
+  var n = String(name || '').replace(/\(.*?\)/g, ' ').replace(/^(bride's family|ladies|gents)\s*:/i, ' ').replace(/\s+/g, ' ').trim(); if (!n || /^[+\d\s-]+$/.test(n)) return '';
+  n = n.replace(/^ltcdr\b/i, 'Lt Cdr').replace(/,\s*\S{1,4}$/, '');
+  if (/&/.test(n) && n.length <= 28) return n.split(' ').map(function (x) { return x.toLowerCase() === 'ji' ? 'ji' : tcase(x); }).join(' ');
+  var w = n.split(' ').filter(function (x) { return !/^\d/.test(x) && !/^(cdt|ha\d|self)$/i.test(x); }), rank = '';
+  RANKS.some(function (r) { var k = r.split(' ').length; if (w.slice(0, k).join(' ').toLowerCase() === r) { rank = w.slice(0, k).map(function (x) { return x.toLowerCase() === 'radm' ? 'RAdm' : x.toLowerCase() === 'slt' ? 'SLt' : tcase(x.toLowerCase()); }).join(' '); w = w.slice(k); return true; } return false; });
+  if (!w.length) return '';
+  var first = [tcase(w[0])], k = 1; while (first[first.length - 1].length <= 2 && k < w.length && k < 3) { first.push(w[k].length <= 2 ? w[k].toUpperCase() : tcase(w[k])); k++; }
+  if (first[0].length <= 2) first[0] = first[0].toUpperCase();
+  var hw = w[k] ? w[k].toLowerCase() : '', hon = hw && HONS.indexOf(hw) >= 0 ? ' ' + (hw === 'maam' || hw === 'mam' ? 'Ma\'am' : hw === 'ji' ? 'ji' : tcase(hw)) : '';
+  if (hon && rank && hw !== 'sir' && hw !== 'ma\'am' && hw !== 'maam') hon = '';
+  return (rank && !hon ? rank + ' ' : '') + first.join(' ') + hon;
+}
+function gnOf(it) { return it.gid && LS.get('pl_gn_' + it.gid) ? LS.get('pl_gn_' + it.gid) : greetName(it.name); }
+function personal(text, nm) {   // put the guest's name in front of the greeting on the first lines
+  nm = String(nm || '').trim(); if (!nm) return text; var L0 = String(text || '').split('\n');
+  for (var i = 0; i < Math.min(3, L0.length); i++) { if (/Namaste|नमस्ते/.test(L0[i])) { L0[i] = L0[i].replace(/(Namaste|नमस्ते)/, nm + ', $1'); return L0.join('\n'); } }
+  return text;   // no greeting line (e.g. the Shri Ganeshaya Namah messages): leave as it is
+}
 var REM_TOKEN = '{RSVP link}', INV_TOKEN = '{Invite link}';
 function defRemMsg(hi) {
   if (hi) return 'नमस्ते 🙏\nआशा है आपने *श्रीजीत एवं शिवांगी* के विवाह का निमंत्रण देख लिया होगा।\n\n*कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा।* इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:\n👉 ' + REM_TOKEN + '\n\nआपके आगमन की प्रतीक्षा रहेगी 🙏';
-  return 'Namaste 🙏\n\n⚓ *The launch date is set — kindly confirm your berth!*\nTakes less than a minute 👇\n\n✅ RSVP: ' + REM_TOKEN + '\n💌 Invitation & programme: ' + INV_TOKEN + '\n\nIf we are not lucky enough to host you this time, your blessings will still sail with us 💛 Just tap the RSVP link above.\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
+  return 'Namaste 🙏\n\n⚓ *The launch date is set — kindly confirm your berth!*\nIf we are not lucky enough to host you this time, your blessings will still sail with us 💛\n\nTakes less than a minute 👇\n\n✅ RSVP: ' + REM_TOKEN + '\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
 }
 function remMsg(hi) { return LS.get(hi ? 'pl_rm_hi' : 'pl_rm_en') || defRemMsg(hi); }
 function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_TOKEN).join(rsvpUrl(g.invLink)).split(INV_TOKEN).join(i.ok ? invUrl(g.invLink) : SITE); }
@@ -1773,7 +1795,7 @@ function invRow(g) {
   var badge = st === 'replied' ? (r ? (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') : '<span class="badge b-ok">' + L('Told us', 'बता दिया') + '</span>')
     : st === 'wait' ? '<span class="badge b-warn">' + L('Waiting', 'जवाब बाकी') + '</span>' : '<span class="badge b-info">' + L('Not sent', 'नहीं भेजा') + '</span>';
   var acts = '';
-  if (st === 'wait') acts = (ph ? '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, remText(g))) + '" data-act="remone" data-id="' + esc(g.id) + '">🔔 ' + B('Remind', 'याद दिलाएँ') + '</a>' : '<span class="rem">' + L('No number saved', 'नंबर नहीं है') + '</span>') +
+  if (st === 'wait') acts = (ph ? '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, personal(remText(g), gnOf({ gid: g.id, name: g.name })))) + '" data-act="remone" data-id="' + esc(g.id) + '">🔔 ' + B('Remind', 'याद दिलाएँ') + '</a>' : '<span class="rem">' + L('No number saved', 'नंबर नहीं है') + '</span>') +
     '<button class="call" data-act="toldus" data-id="' + esc(g.id) + '">✓ ' + B('They replied', 'जवाब मिल गया') + '</button>';
   else if (st === 'none') acts = '<button class="call" data-act="sendone" data-id="' + esc(g.id) + '">📨 ' + B('Send invite', 'निमंत्रण भेजें') + '</button>';
   return '<div class="task" data-act="editguest" data-id="' + esc(g.id) + '"><div class="t">' + esc(g.name) + ' ' + badge + '</div>' +
@@ -1809,7 +1831,7 @@ function viewInvites() {
         '<div style="display:flex;gap:.5rem"><button class="btn ghost sm" style="flex:1" data-act="grpbc" data-v="' + esc(code) + '">📢 ' + esc(L('Broadcast', 'ब्रॉडकास्ट')) + '</button><button class="btn ghost sm" style="flex:1" data-act="grpadd" data-v="' + esc(code) + '">＋ ' + esc(L('Add more', 'और जोड़ें')) + '</button></div></div>' +
         list.map(function (g) {
           return '<div class="task" style="display:flex;justify-content:space-between;align-items:center;gap:.5rem" data-act="editguest" data-id="' + esc(g.id) + '"><div style="min-width:0"><b>' + esc(g.name) + '</b><div class="rem">' + esc(g.phone || L('no number', 'नंबर नहीं')) + '</div></div>' +
-            '<div style="display:flex;gap:.35rem;flex:none">' + (digits(g.phone).length >= 10 ? '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, invMsg(code))) + '" data-act="sendnow" data-id="' + esc(g.id) + '">💬</a>' : '') + '<button class="call" data-act="unplan" data-id="' + esc(g.id) + '" aria-label="Remove">✕</button></div></div>';
+            '<div style="display:flex;gap:.35rem;flex:none">' + (digits(g.phone).length >= 10 ? '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, personal(invMsg(code), gnOf({ gid: g.id, name: g.name })))) + '" data-act="sendnow" data-id="' + esc(g.id) + '">💬</a>' : '') + '<button class="call" data-act="unplan" data-id="' + esc(g.id) + '" aria-label="Remove">✕</button></div></div>';
         }).join('') + '</div>';
     });
   } else {
@@ -1912,10 +1934,12 @@ function showRun() {
       '<button class="btn block" style="width:100%;margin-top:1rem" data-act="closesheet">' + K('Close', 'बंद करें') + '</button>');
     return;
   }
-  var it = r.items[r.i], ok = digits(it.phone).length >= 10;
+  var it = r.items[r.i], ok = digits(it.phone).length >= 10, pers = r.kind === 'inv' || r.kind === 'rem', gn = pers ? gnOf(it) : '';
+  if (pers) it.ptext = personal(it.text, gn);
   showSheet('<div class="rem">' + esc(r.title) + '</div><h3 style="margin:.2rem 0 0">' + (r.i + 1) + ' / ' + r.items.length + '</h3>' +
     '<div class="card" style="padding:1.1rem;margin:.8rem 0;text-align:center"><div style="font-size:1.35rem;font-weight:700;color:var(--navy)">' + esc(it.name || it.phone) + '</div><div class="rem" style="margin-top:.2rem">' + esc(it.phone || '') + (it.note ? ' · ' + esc(it.note) : '') + '</div></div>' +
-    (ok ? '<a class="btn block" style="display:flex;align-items:center;justify-content:center;width:100%;text-decoration:none;background:linear-gradient(180deg,#2f9e5a,#1f7a43);border-color:#1f7a43" target="_blank" rel="noopener" href="' + esc(waLink(it.phone, it.text)) + '" data-act="runsend">💬 ' + esc(L('Open WhatsApp', 'WhatsApp खोलें')) + '</a><p class="rem" style="text-align:center">' + L('Tap Send in WhatsApp, then come back here — the next one will be ready.', 'WhatsApp में भेजें दबाएँ, फिर यहाँ लौटें — अगला तैयार मिलेगा।') + '</p>'
+    (pers && ok ? '<label class="l" style="margin-top:0">' + B('Name before “Namaste”', '“नमस्ते” से पहले नाम') + '</label><input class="input" id="run_gn" value="' + esc(gn) + '" placeholder="' + esc(L('Leave empty for no name', 'नाम न लगाना हो तो खाली छोड़ें')) + '" style="margin-bottom:.7rem" />' : '') +
+    (ok ? '<a class="btn block" style="display:flex;align-items:center;justify-content:center;width:100%;text-decoration:none;background:linear-gradient(180deg,#2f9e5a,#1f7a43);border-color:#1f7a43" target="_blank" rel="noopener" href="' + esc(waLink(it.phone, pers ? it.ptext : it.text)) + '" id="run_wa" data-act="runsend">💬 ' + esc(L('Open WhatsApp', 'WhatsApp खोलें')) + '</a><p class="rem" style="text-align:center">' + L('Tap Send in WhatsApp, then come back here — the next one will be ready.', 'WhatsApp में भेजें दबाएँ, फिर यहाँ लौटें — अगला तैयार मिलेगा।') + '</p>'
       : '<p style="color:var(--bad);text-align:center">' + L('No mobile number saved for this guest.', 'इस मेहमान का मोबाइल नंबर नहीं है।') + '</p>') +
     '<div style="display:flex;gap:.6rem;margin-top:.8rem"><button class="btn ghost" style="flex:1" data-act="runstop">' + B('Stop', 'रोकें') + '</button><button class="btn ghost" style="flex:1" data-act="runskip">' + B('Skip', 'छोड़ें') + ' →</button></div>' +
     '<p class="rem" style="text-align:center;margin-top:.8rem">' + L(r.sent + ' sent so far', 'अब तक ' + r.sent + ' भेजे') + '</p>');
@@ -2596,6 +2620,7 @@ document.addEventListener('click', function (e) {
 });
 var searchT = 0;
 document.addEventListener('input', function (e) {
+  if (e.target.id === 'run_gn' && S.run && S.run.items[S.run.i]) { var rit = S.run.items[S.run.i]; if (rit.gid) LS.set('pl_gn_' + rit.gid, e.target.value.trim() || ' '); rit.ptext = personal(rit.text, e.target.value); var ra = document.getElementById('run_wa'); if (ra) ra.href = waLink(rit.phone, rit.ptext); }
   if (e.target.id === 'gq') { S.gq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { render(); window.scrollTo(0, 0); }, 120); }
   if (e.target.id === 'inv_msg' && S.sheet && S.sheet.send) LS.set('pl_im_' + sheetCode(), e.target.value);
   if (e.target.id === 'rm_en' || e.target.id === 'rm_hi') LS.set(e.target.id === 'rm_en' ? 'pl_rm_en' : 'pl_rm_hi', e.target.value);
@@ -2610,7 +2635,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b36';
+var BUILD = 'b37';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
