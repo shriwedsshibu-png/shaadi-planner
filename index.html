@@ -617,7 +617,7 @@ function arrivalItems() {
     var g = f.g || {}, r0 = f.rows.filter(function (a) { return a.from === f.first; })[0] || f.rows[0];
     out.push({ f: f, name: f.name, p: f.firstP || f.people, d: f.arr || '', t: g.arrTime || '', mode: g.arrMode || '', stay: r0 ? r0.stay : '', room: r0 ? r0.room : '', noCar: noCarFam(f), pickBy: g.pickupBy || '', maybe: f.maybe, side: f.side, id: r0 ? r0.id : '', phone: g.phone || '', vend: isVendor(f.name) });
   });
-  rsvpWed().forEach(function (r) { if (!yes(r.attending)) return; var fm = rsvpFam(r); if (fm) { out.forEach(function (x) { if (x.f === fm) x.rsvpOk = 1; }); return; } out.push({ rsvp: 1, name: r.name, p: num(r.total), d: r.arrDate || '', t: '', mode: '', stay: '', noCar: false, pickBy: '', phone: r.phone, side: '' }); });
+  rsvpWed().forEach(function (r) { if (!yes(r.attending) || /^From Vizag/i.test(String(r.note || ''))) return; var fm = rsvpFam(r); if (fm) { out.forEach(function (x) { if (x.f === fm) x.rsvpOk = 1; }); return; } out.push({ rsvp: 1, name: r.name, p: num(r.total), d: r.arrDate || '', t: '', mode: '', stay: '', noCar: false, pickBy: '', phone: r.phone, side: '' }); });
   return out;
 }
 function viewArrivals() {
@@ -2635,7 +2635,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b41';
+var BUILD = 'b42';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
