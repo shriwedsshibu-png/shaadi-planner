@@ -1733,14 +1733,18 @@ function defInvMsg(code) {
   }
   if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nअत्यंत हर्ष के साथ आपको सपरिवार *' + c + '* के ' + (i.full ? 'शुभ विवाह समारोह (30 नवंबर से 2 दिसंबर 2026)' : 'शुभ विवाह (बुधवार, 2 दिसंबर 2026)') + ' में सादर आमंत्रित करते हैं।\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
     '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा। इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:*\n👉 ' + rsvpUrl(code);
+  if (i.side === 'Shrijeet') return '🙏 Namaste\n\n⚓ Lines Plan drawn and faired, Design and GA approved — my most important launch, to sail through life, is here!\n\nI’m getting married to *Shivangi Priya*, and it would be an honour to have you with us as we set out on this beautiful journey.\n\n' +
+    (i.full ? '🗓️ *30 Nov – 2 Dec 2026*\n📍 *Aarif Seaside Resort, Visakhapatnam*\n\nFaldaan, Mehndi, Sangeet and Haldi, followed by Varmala & Shaadi.' : '🗓️ *Wednesday, 2 Dec 2026 · 7:30 PM onwards*\n📍 *Aarif Seaside Resort, Visakhapatnam*\n\nVarmala & Shaadi.') +
+    '\n\n*Shaadi toh pakki ho gayi… ab aapka aana pakka kijiye!*\n\n👇 *Tap below for the invitation and programme:*\n' + invUrl(code) + '\n\nLooking forward to hosting you and your loved ones for the launch.\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
   return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith immense joy, we invite you and your family to ' + (i.full ? 'the wedding celebrations of *' + c + '* — 30 November to 2 December 2026.' : 'the wedding of *' + c + '* on Wednesday, 2 December 2026.') + '\n\nYour invitation 👇\n' + invUrl(code) +
     '\n\n*🙏 Kindly fill the RSVP — it takes just 1 minute and helps us plan your stay and welcome you better:*\n👉 ' + rsvpUrl(code);
 }
+(function () { if (LS.get('pl_im_ver') === '2') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '2'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
 function invMsg(code) { return LS.get('pl_im_' + code) || defInvMsg(code); }
 var REM_TOKEN = '{RSVP link}';
 function defRemMsg(hi) {
   if (hi) return 'नमस्ते 🙏\nआशा है आपने *श्रीजीत एवं शिवांगी* के विवाह का निमंत्रण देख लिया होगा।\n\n*कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा।* इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:\n👉 ' + REM_TOKEN + '\n\nआपके आगमन की प्रतीक्षा रहेगी 🙏';
-  return 'Namaste 🙏\nHope you have seen the wedding invitation of *Shrijeet & Shivangi*.\n\n*Kindly fill the RSVP — it takes just 1 minute* and helps us plan your stay and welcome you better:\n👉 ' + REM_TOKEN + '\n\nLooking forward to celebrating with you! ✨';
+  return 'Namaste 🙏\n\nKindly fill the RSVP at the link below. It takes less than a minute and will help us host you better.\n\nEven if you and your family are unable to make it, please do tap the link and choose *“Sorry, we cannot make it”* — you can then send your blessings to Shivangi and me.\n\n👉 ' + REM_TOKEN + '\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
 }
 function remMsg(hi) { return LS.get(hi ? 'pl_rm_hi' : 'pl_rm_en') || defRemMsg(hi); }
 function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_TOKEN).join(rsvpUrl(g.invLink)); }
@@ -2606,7 +2610,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b34';
+var BUILD = 'b35';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
