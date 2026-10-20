@@ -1726,10 +1726,10 @@ function couple(side, hi) { return side === 'Shivangi' ? (hi ? 'शिवां�
 function defInvMsg(code) {
   var i = invInfo(code), c = couple(i.side, i.hi);
   if (i.rec) {
-    if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nईश्वर की कृपा से हमारे सुपुत्र *श्रीजीत* का शुभ विवाह *शिवांगी* के साथ 2 दिसंबर 2026 को संपन्न हुआ है।\n\nनवदंपति को आशीर्वाद देने हेतु *आशीर्वाद समारोह* में आप सपरिवार सादर आमंत्रित हैं:\n📅 *मंगलवार, 8 दिसंबर 2026 · शाम 4:30 बजे से*\n📍 *मिश्रा निवास*, सिलौत रोड, सिलौत वासुदेव, मुज़फ़्फ़रपुर, बिहार 843119\n🗺️ https://maps.app.goo.gl/3GcWmJahuHtE1i8X8\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
-      '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट:*\n👉 ' + rsvpUrl(code);
-    return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith the blessings of the Almighty, our son *Shrijeet* was married to *Shivangi* on 2nd December 2026.\n\nWe warmly invite you and your family to the *Wedding Reception* to bless the newlyweds:\n📅 *Tuesday, 8 December 2026 · 4:30 PM onwards*\n📍 *Mishra Niwas*, Silout Rd, Silout Basudeo, Muzaffarpur, Bihar 843119\n🗺️ https://maps.app.goo.gl/3GcWmJahuHtE1i8X8\n\nYour invitation 👇\n' + invUrl(code) +
-      '\n\n*🙏 Kindly confirm on the RSVP — it takes 1 minute:*\n👉 ' + rsvpUrl(code);
+    if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nईश्वर की कृपा से हमारे सुपुत्र *श्रीजीत* का शुभ विवाह *शिवांगी* के साथ 2 दिसंबर 2026 को सम्पन्न होगा।\n\nनवदंपति को आशीर्वाद देने हेतु *आशीर्वाद समारोह* में आप सपरिवार सादर आमंत्रित हैं:\n📅 *मंगलवार, 8 दिसंबर 2026 · शाम 4:30 बजे से*\n📍 *मिश्रा निवास*, सिलौत वासुदेव, मुज़फ़्फ़रपुर, बिहार 843119\n🗺️ https://maps.app.goo.gl/3GcWmJahuHtE1i8X8\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
+      '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट:*\n👉 ' + rsvpUrl(code) + '\n\n— सुजाता एवं सुशील कुमार मिश्रा\nसमस्त मिश्रा परिवार';
+    return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith the blessings of the Almighty, our son *Shrijeet* will be married to *Shivangi* on 2nd December 2026.\n\nWe warmly invite you and your family to the *Wedding Reception* to bless the newlyweds:\n📅 *Tuesday, 8 December 2026 · 4:30 PM onwards*\n📍 *Mishra Niwas*, Silout Rd, Silout Basudeo, Muzaffarpur, Bihar 843119\n🗺️ https://maps.app.goo.gl/3GcWmJahuHtE1i8X8\n\nYour invitation 👇\n' + invUrl(code) +
+      '\n\n*🙏 Kindly confirm on the RSVP — it takes 1 minute:*\n👉 ' + rsvpUrl(code) + '\n\n— Sujata & Sushil Kumar Mishra\nand the entire Mishra family';
   }
   if (i.hi) return '🙏 *॥ श्री गणेशाय नमः ॥* 🙏\n\nअत्यंत हर्ष के साथ आपको सपरिवार *' + c + '* के ' + (i.full ? 'शुभ विवाह समारोह (30 नवंबर से 2 दिसंबर 2026)' : 'शुभ विवाह (बुधवार, 2 दिसंबर 2026)') + ' में सादर आमंत्रित करते हैं।\n\nआपका निमंत्रण 👇\n' + invUrl(code) +
     '\n\n*🙏 कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा। इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:*\n👉 ' + rsvpUrl(code);
@@ -1739,7 +1739,7 @@ function defInvMsg(code) {
   return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith immense joy, we invite you and your family to ' + (i.full ? 'the wedding celebrations of *' + c + '* — 30 November to 2 December 2026.' : 'the wedding of *' + c + '* on Wednesday, 2 December 2026.') + '\n\nYour invitation 👇\n' + invUrl(code) +
     '\n\n*🙏 Kindly fill the RSVP — it takes just 1 minute and helps us plan your stay and welcome you better:*\n👉 ' + rsvpUrl(code);
 }
-(function () { if (LS.get('pl_im_ver') === '4') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '4'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
+(function () { if (LS.get('pl_im_ver') === '5') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah', 'shrijeet/reception', 'shrijeet/reception/hindi', 'shivangi/reception', 'shivangi/reception/hindi'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '5'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
 function invMsg(code) { return LS.get('pl_im_' + code) || defInvMsg(code); }
 var RANKS = ['lt cdr', 'lt col', 'wing cdr', 'wing cmdr', 'radm', 'vadm', 'admiral', 'cmde', 'capt', 'cdr', 'slt', 'lt', 'col', 'maj', 'prof', 'dr'];
 var HONS = ['sir', 'ma\'am', 'maam', 'mam', 'madam', 'ji', 'bhabhi', 'bhaiya', 'bhai', 'didi', 'di', 'mama', 'mami', 'mausi', 'chacha', 'chachi', 'uncle', 'aunty', 'fua', 'papa', 'dadi', 'nana', 'nani'];
@@ -2635,7 +2635,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b37';
+var BUILD = 'b38';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
