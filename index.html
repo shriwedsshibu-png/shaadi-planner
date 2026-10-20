@@ -555,6 +555,11 @@ function viewChecklist() {
 }
 
 /* ---------- GUESTS & ROOMS ---------- */
+function mwkText(m, w, k) {   // "1 man · 1 woman · 2 children = 4 people"
+  m = num(m); w = num(w); k = num(k); var t = m + w + k;
+  var p = [m && (m + L(m === 1 ? ' man' : ' men', ' पुरुष')), w && (w + L(w === 1 ? ' woman' : ' women', w === 1 ? ' महिला' : ' महिलाएँ')), k && (k + L(k === 1 ? ' child' : ' children', k === 1 ? ' बच्चा' : ' बच्चे'))].filter(Boolean);
+  return (p.join(' · ') || L('0 people', '0 लोग')) + (p.length > 1 ? ' = ' + t + L(' people', ' लोग') : '');
+}
 function gp(g) { var a = num(g.adults), c = num(g.children); return (a || c) ? a + c : 1; }   // people in this entry (1 if not filled)
 function people(arr) { return arr.reduce(function (s, g) { return s + gp(g); }, 0); }
 function yes(v) { return /^(y|yes|haan|ha|true|1)/i.test(String(v || '').trim()); }
@@ -1474,7 +1479,7 @@ function viewRsvp() {
   function row(r) {
     var inG = rsvpInGuests(r);
     return '<div class="task" style="cursor:default"><div class="t">' + esc(r.name) + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : '') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
-      (yes(r.attending) ? '<div class="meta">' + L(r.men + ' men · ' + r.women + ' women · ' + r.children + ' children', r.men + ' पुरुष · ' + r.women + ' महिलाएँ · ' + r.children + ' बच्चे') + (r.arrDate ? ' · ' + L('arrives ', 'आगमन ') + niceDate(r.arrDate) : '') + (yes(r.room) ? ' · <span class="badge b-warn">' + L('needs room', 'कमरा चाहिए') + '</span>' : '') + '</div><div class="rem">' + esc(r.functions.split(' | ').map(function (f) { return L(f, fnHi(f)); }).join(', ')) + '</div>' : '') +
+      (yes(r.attending) ? '<div class="meta">' + esc(mwkText(r.men, r.women, r.children)) + (r.arrDate ? ' · ' + L('arrives ', 'आगमन ') + niceDate(r.arrDate) : '') + (yes(r.room) ? ' · <span class="badge b-warn">' + L('needs room', 'कमरा चाहिए') + '</span>' : '') + '</div><div class="rem">' + esc(r.functions.split(' | ').map(function (f) { return L(f, fnHi(f)); }).join(', ')) + '</div>' : '') +
       (r.note ? '<div class="rem">💬 ' + esc(r.note) + '</div>' : '') +
       '<div class="acts">' + (yes(r.attending) && !inG ? '<button class="btn sm" data-act="rsvpadd" data-v="' + esc(r.phone || r.name) + '">＋ ' + B('Add to guest list', 'सूची में जोड़ें') + '</button>' : '') + callBtns(r.phone, L('Namaste ', 'नमस्ते ') + r.name + ' ji 🙏') + '</div></div>';
   }
@@ -2635,7 +2640,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b42';
+var BUILD = 'b43';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
