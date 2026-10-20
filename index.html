@@ -662,7 +662,7 @@ function nightsText(a, b) {
   return niceDate(a) + ' → ' + niceDate(b) + ' · ' + L('check-out ', 'चेक-आउट ') + niceDate(nextDay(b));
 }
 function isHelp(s) { return /^helpline$/i.test(String(s.kind || '')); }
-function places() { return S.stays.filter(function (s) { return !isHelp(s); }); }
+function places() { return S.stays.filter(function (s) { return !isHelp(s) && !/^(vehicle|cars plan)$/i.test(String(s.kind || '')); }); }
 function helpRow() { return S.stays.filter(isHelp)[0] || null; }
 function stayOf(name) { var k = nkey(name); return k ? places().filter(function (s) { return nkey(s.name) === k; })[0] : null; }
 function isBooked(s) { return !!(s && num(s.rooms) > 0); }
@@ -1332,7 +1332,7 @@ function dayHire(rows) {
 function hhmm(h) { var m = Math.round((h - Math.floor(h)) * 60); var H = Math.floor(h); if (m === 60) { H++; m = 0; } return niceTime(pad((H + 24) % 24) + ':' + pad(m)); }
 function upDown(a) { var st = stayOf(a.stay); return !!st && /up and down/i.test(st.kind || '') && !/no car needed/i.test((st.notes || '') + ' ' + noteOnly(a.note)); }
 function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode: own / bal / few (see CAR_MODES)
-  mode = mode || S.carMode || 'bal';
+  mode = mode || curMode();
   var ours = function (f) { return f.side !== 'Shivangi' || !!(f.g && /^y/i.test(f.g.vehicle || '')); };   // Shivangi-side guests marked 'pickup needed' ride with our cars
   var fams = famList().filter(function (f) { return ours(f) === (side !== 'Shivangi'); }), rows = [], byD = {};
   var where = function (mode) { return /flight/i.test(mode || '') ? L('airport', 'एयरपोर्ट') : /bus/i.test(mode || '') ? L('bus stand', 'बस स्टैंड') : /train/i.test(mode || '') ? L('station', 'स्टेशन') : L('station / airport', 'स्टेशन / एयरपोर्ट'); };
@@ -1403,7 +1403,7 @@ function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode
 function tripRows() { return tripPlan('Shrijeet').concat(tripPlan('Shivangi')).sort(function (a, b) { return a.d.localeCompare(b.d); }); }
 function slotTime(x) { return x.h == null ? (x.kind === 'sb' || x.kind === 'ud' ? L('All day', 'पूरे दिन') : L('Time ?', 'समय ?')) : niceTime(pad(x.h) + ':00'); }
 function carOption(mode) {   // one way of running the cars, with what it costs in money, favours and early wake-ups
-  var r = tripPlan('Shrijeet', mode), hired = r.filter(function (x) { return x.cost > 0; }), hire = hired.reduce(function (t, x) { return t + x.cost; }, 0), nb = hired.length, dh = mode === 'few' ? dayHire(r) : {};
+  var r = applyTripEdits(tripPlan('Shrijeet', mode)), hired = r.filter(function (x) { return x.cost > 0; }), hire = hired.reduce(function (t, x) { return t + x.cost; }, 0), nb = hired.length, dh = mode === 'few' ? dayHire(r) : {};
   Object.keys(dh).forEach(function (d) { var z = dh[d]; hire += z.cost - z.single; nb += 1 - z.steps.filter(function (q) { return !q.sep; }).length; });
   var fr = r.filter(function (x) { return (x.used || []).some(function (n) { return /friend/i.test(n); }); }), frD = {}; fr.forEach(function (x) { frD[x.d] = 1; });
   return { mode: mode, rows: r, hire: hire, nb: nb, dh: dh, days: Object.keys(dh).sort(), friend: fr.length, friendDays: Object.keys(frD).sort(), early: r.reduce(function (t, x) { return t + (x.early || 0); }, 0), waits: r.filter(function (x) { return x.wait && x.kind !== 'mv'; }) };
@@ -1411,23 +1411,120 @@ function carOption(mode) {   // one way of running the cars, with what it costs 
 function carOptions() { return ['own', 'bal', 'few'].map(carOption); }
 function dayHireLines(d, z) { return z.steps.map(function (q) { var x = q.x; return (q.sep ? '• ' + slotTime(x) + ' ' + x.what + ' (' + x.p + '): ' + L('book separately', 'अलग से बुक') + ' — ' + x.v : '• ' + slotTime(x) + ' ' + x.what + ' (' + x.p + ')' + (q.wait ? L(' — waits ~' + Math.round(q.wait * 60) + ' min', ' — ~' + Math.round(q.wait * 60) + ' मिनट इंतज़ार') : '') + (q.rest ? L(' — ' + q.rest + ' more in ', ' — ' + q.rest + ' और: ') + q.restV : '')); }); }
 function carsText() {   // WhatsApp text of our side's plan (the option on screen)
-  var o = carOption(S.carMode || 'bal'), r = o.rows, t = '🚐 *' + L('Cars plan (our side)', 'गाड़ियों की योजना (हमारी ओर)') + '*\n' + L(CAR_MODES[o.mode].n, CAR_MODES[o.mode].hi) + ' · ' + L('hire ', 'किराया ') + rs(o.hire) + '\n' + L('Our cars: ', 'हमारी गाड़ियाँ: ') + CARS.map(carName).join(', ') + '\n' + L('Standby 30 Nov – 3 Dec: ', 'तैयार 30 नवंबर – 3 दिसंबर: ') + CARS.filter(function (c) { return c.sb; }).map(carName).join(' + ') + '\n', last = '';
+  var o = carOption(curMode()), r = o.rows, t = '🚐 *' + L('Cars plan (our side)', 'गाड़ियों की योजना (हमारी ओर)') + '*\n' + L(CAR_MODES[o.mode].n, CAR_MODES[o.mode].hi) + ' · ' + L('hire ', 'किराया ') + rs(o.hire) + '\n' + L('Our cars: ', 'हमारी गाड़ियाँ: ') + CARS.map(carName).join(', ') + '\n' + L('Standby 30 Nov – 3 Dec: ', 'तैयार 30 नवंबर – 3 दिसंबर: ') + CARS.filter(function (c) { return c.sb; }).map(carName).join(' + ') + '\n', last = '';
   o.days.forEach(function (d) { var z = o.dh[d]; t += '\n*' + L('17-seater for the day', '17 सीट गाड़ी पूरे दिन') + ' ' + niceDate(d) + ' ' + hhmm(z.from) + ' – ' + hhmm(z.to) + '*\n' + dayHireLines(d, z).join('\n') + '\n'; });
-  r.forEach(function (x) { if (x.d !== last) { t += '\n*' + wdDate(x.d) + (x.d2 && x.d2 !== x.d ? ' – ' + niceDate(x.d2) : '') + '*\n'; last = x.d; } t += '• ' + slotTime(x) + ' · ' + x.what + (x.p !== '' ? ' · ' + x.p + ' ' + L(x.p === 1 ? 'person' : 'people', 'लोग') : '') + '\n   ' + (x.open ? '⏳ ' : x.own ? '🚗 ' : '🚐 ') + x.v + (x.note ? ' (' + x.note + ')' : '') + (x.who ? '\n   ' + x.who : '') + '\n'; });
+  r.forEach(function (x) { if (x.d !== last) { t += '\n*' + wdDate(x.d) + (x.d2 && x.d2 !== x.d ? ' – ' + niceDate(x.d2) : '') + '*\n'; last = x.d; } t += '• ' + slotTime(x) + ' · ' + x.what + (x.p !== '' ? ' · ' + x.p + ' ' + L(x.p === 1 ? 'person' : 'people', 'लोग') : '') + '\n   ' + (x.open ? '⏳ ' : x.own ? '🚗 ' : '🚐 ') + x.v + (x.note ? ' (' + x.note + ')' : '') + (x.veh ? x.veh.filter(function (v) { return vehLine(v); }).map(function (v) { return '\n   ' + v.label + ': ' + vehLine(v); }).join('') : '') + (x.who ? '\n   ' + x.who : '') + '\n'; });
   return t;
 }
+/* ---- cars: one plan for everyone, our own changes per trip, vehicles with number and driver ----
+   Saved in the Stays sheet: rows of type "Vehicle" (one per car: number plate in "Rooms / Beds Detail", driver in "Contact", seats in "Rooms Booked",
+   cost per trip in "Cost per Room per Night") and one row of type "Cars plan" whose Notes keep the chosen plan and the per-trip changes. */
+function carCfgRow() { return S.stays.filter(function (s) { return /^cars plan$/i.test(String(s.kind || '')); })[0] || null; }
+function carCfg() { var r = carCfgRow(), o = {}; try { o = JSON.parse((r && r.notes) || '{}') || {}; } catch (e) { o = {}; } o.trips = o.trips || {}; return o; }
+function saveCarCfg(o, ok) { var r = carCfgRow(), n = JSON.stringify(o); if (r) rowSave('stays', r.id, { notes: n }, ok); else rowSave('stays', '', { name: 'Cars plan (set in the app)', kind: 'Cars plan', side: 'Both', notes: n }, ok); }
+function curMode() { return carCfg().mode || S.carMode || 'bal'; }
+function vehRows() { return S.stays.filter(function (s) { return /^vehicle$/i.test(String(s.kind || '')); }); }
+function vehicles() {   // our sure cars first (with any number / driver saved for them), then the cabs added in the app
+  var rows = vehRows(), out = CARS.map(function (c) { var r = rows.filter(function (x) { return nkey(x.name) === nkey(c.n); })[0] || {}; return { n: c.n, label: carName(c), seats: c.s, own: true, id: r.id || '', num: r.beds || '', driver: r.contact || '', cost: 0, notes: r.notes || '' }; });
+  rows.forEach(function (r) { if (CARS.some(function (c) { return nkey(c.n) === nkey(r.name); })) return; out.push({ n: r.name, label: r.name, seats: num(r.rooms) || 4, own: false, id: r.id, num: r.beds || '', driver: r.contact || '', cost: num(r.cost), notes: r.notes || '' }); });
+  return out;
+}
+function vehByName(n) { return vehicles().filter(function (v) { return nkey(v.n) === nkey(n); })[0] || null; }
+function vehLine(v) { return (v.num ? v.num : '') + (v.driver ? (v.num ? ' · ' : '') + L('Driver ', 'ड्राइवर ') + v.driver : ''); }
+function tripKey(x) { var w = String(x.who || '').split(' · ')[0].replace(/\s*\(.*$/, ''); return [x.d, x.h == null ? '-' : x.h, x.kind, w || x.kind].join('|'); }
+function applyTripEdits(rows) {
+  var T = carCfg().trips;
+  rows.forEach(function (x) {
+    x.key = tripKey(x); var e = T[x.key]; if (!e) return;
+    if (e.note) x.note = e.note;
+    var vs = (e.v || []).map(vehByName).filter(Boolean); if (!vs.length) return;
+    x.sug = x.v; x.ovr = true; x.veh = vs; x.v = vs.map(function (v) { return v.label; }).join(' + '); x.own = vs.every(function (v) { return v.own; }) ? 1 : 0;
+    x.cost = vs.reduce(function (t, v) { return t + v.cost; }, 0); x.used = vs.filter(function (v) { return v.own; }).map(function (v) { return v.n; });
+  });
+  return rows;
+}
+function tripNames(x) { return String(x.who || '').split(' · ').map(function (w) { return w.replace(/\s*\((\d+|joining|जुड़ेंगे)\)\s*$/i, '').replace(/\s*\(\d+\)\s*$/, '').trim(); }).filter(Boolean); }
+function findTrip(key) { return carOption(curMode()).rows.filter(function (x) { return x.key === key; })[0] || null; }
+function tripMsg(x, hi) {
+  var vs = x.veh || [], t = (hi ? 'नमस्ते 🙏\n' : 'Namaste 🙏\n') + '*' + wdDate(x.d) + (x.h != null ? ' · ' + slotTime(x) : '') + '*\n' + x.what;
+  if (vs.length) vs.forEach(function (v) { t += '\n🚗 *' + v.label + '*' + (v.num ? ' · ' + v.num : '') + (v.driver ? '\n👤 ' + (hi ? 'ड्राइवर: ' : 'Driver: ') + v.driver : ''); });
+  else t += '\n🚗 ' + x.v;
+  if (x.note) t += '\n📝 ' + x.note;
+  return t + helpText(hi);
+}
+function openTrip(key) {
+  var x = findTrip(key); if (!x) { toast(L('This trip changed. Please open it again.', 'यह चक्कर बदल गया। फिर से खोलें।'), true); return; }
+  var e = carCfg().trips[key] || {}, picked = ((e.v && e.v.length ? e.v : x.used) || []).map(nkey), V = vehicles();
+  S.sheet = { trip: key };
+  var names = tripNames(x), withPh = names.filter(function (n) { return famPhones(n).length; });
+  showSheet('<h3>' + esc(wdDate(x.d)) + ' · ' + esc(slotTime(x)) + '</h3><div style="font-weight:600">' + esc(x.what) + '</div>' + (x.who ? '<div class="rem">' + esc(x.who) + (x.p ? ' · ' + x.p + ' 👤' : '') + '</div>' : '') +
+    '<div class="rem" style="margin-top:.4rem">' + L('Suggested: ', 'सुझाव: ') + esc(x.sug || x.v) + '</div>' +
+    '<label class="l">' + B('Which vehicles?', 'कौन सी गाड़ियाँ?') + '</label><div class="card" style="margin:0">' + V.map(function (v) { var on = picked.indexOf(nkey(v.n)) >= 0;
+      return '<label class="task" style="display:flex;gap:.6rem;align-items:center;cursor:pointer"><input type="checkbox" class="tr_v" value="' + esc(v.n) + '"' + (on ? ' checked' : '') + ' style="width:1.3rem;height:1.3rem;flex:none" /><div style="min-width:0"><b>' + esc(v.label) + '</b> <span class="rem">' + v.seats + ' ' + L('seats with luggage', 'सीट सामान के साथ') + (v.cost ? ' · ' + rs(v.cost) : '') + '</span>' + (vehLine(v) ? '<div class="rem" style="margin:0">' + esc(vehLine(v)) + '</div>' : '') + '</div></label>'; }).join('') + '</div>' +
+    '<button class="btn ghost sm" style="margin-top:.5rem" data-act="vehedit" data-v="">＋ ' + B('Add a hired cab', 'किराये की गाड़ी जोड़ें') + '</button>' +
+    '<label class="l">' + B('Note for this trip', 'इस चक्कर के लिए नोट') + '</label><input class="input" id="tr_note" value="' + esc(e.note || '') + '" placeholder="' + esc(L('e.g. meet at the platform 1 exit', 'जैसे प्लेटफ़ॉर्म 1 के बाहर मिलें')) + '" />' +
+    saveBar('savetrip', '') +
+    (e.v || e.note ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="tripreset">↺ ' + B('Use the suggestion again', 'फिर से सुझाव वाली गाड़ी') + '</button>' : '') +
+    '<button class="call wa" style="display:block;width:100%;text-align:center;margin-top:.8rem;border:0" data-act="tripsend">💬 ' + B('Send car number & driver to these guests', 'गाड़ी नंबर और ड्राइवर इन मेहमानों को भेजें') + (withPh.length ? ' (' + withPh.length + ')' : '') + '</button>' +
+    '<div class="rem">' + L('Save first if you changed anything above.', 'ऊपर कुछ बदला हो तो पहले सेव करें।') + '</div>' +
+    (names.length > withPh.length ? '<div class="rem">' + L('No mobile number saved for: ', 'इनका मोबाइल नंबर नहीं: ') + esc(names.filter(function (n) { return !famPhones(n).length; }).join(', ')) + '</div>' : ''));
+}
+function saveTrip() {
+  var key = S.sheet && S.sheet.trip; if (!key) return;
+  var v = [].slice.call(document.querySelectorAll('.tr_v')).filter(function (c) { return c.checked; }).map(function (c) { return c.value; }), note = val('tr_note');
+  var x = findTrip(key), seats = v.map(vehByName).filter(Boolean).reduce(function (t, q) { return t + q.seats; }, 0);
+  var o = carCfg(); if (v.length || note) o.trips[key] = { v: v, note: note }; else delete o.trips[key];
+  closeSheet(true); S.sheet = null; saveCarCfg(o, x && x.p && seats && seats < x.p ? L('Saved. Only ' + seats + ' seats for ' + x.p + ' people!', 'सेव हुआ। ' + x.p + ' लोगों के लिए सिर्फ़ ' + seats + ' सीट!') : L('Saved for everyone ✓', 'सबके लिए सेव ✓'));
+}
+function tripSend(key) {
+  var x = findTrip(key); if (!x) return;
+  var items = []; tripNames(x).forEach(function (n) { var g = guestByName(n), ph = famPhones(n)[0]; if (!ph) return; items.push({ name: n, phone: ph.num, gid: g ? g.id : '', text: tripMsg(x, S.lang === 'hi'), note: x.what }); });
+  if (!items.length) { toast(L('No mobile numbers saved for these guests', 'इन मेहमानों के मोबाइल नंबर नहीं हैं'), true); return; }
+  startRun({ kind: 'car', title: L('Car details', 'गाड़ी की जानकारी') + ' · ' + wdDate(x.d) + ' ' + slotTime(x), items: items, i: 0, sent: 0, skipped: 0 });
+}
+function openVehicle(id) {
+  var v = id ? vehicles().filter(function (q) { return (q.id && q.id === id) || q.n === id; })[0] : null, own = !!(v && v.own);
+  var back = S.sheet && S.sheet.trip; S.sheet = { veh: 1, back: back, vname: v ? v.n : '' };
+  showSheet('<h3>' + (v ? esc(v.label) : B('Add a hired cab', 'किराये की गाड़ी जोड़ें')) + '</h3>' +
+    (own ? '<div class="rem">' + L('One of our sure cars · ', 'हमारी पक्की गाड़ी · ') + v.seats + ' ' + L('seats with luggage', 'सीट सामान के साथ') + '</div>' :
+      '<label class="l">' + B('Name', 'नाम') + '</label><input class="input" id="vh_name" value="' + esc(v ? v.n : '') + '" placeholder="' + esc(L('e.g. Innova (Jyothi Travels)', 'जैसे इनोवा (ज्योति ट्रैवल्स)')) + '" />' +
+      '<div class="two"><div><label class="l">' + B('Seats with luggage', 'सीट (सामान के साथ)') + '</label><input class="input" id="vh_seats" inputmode="numeric" value="' + esc(v ? v.seats : '') + '" placeholder="5" /></div><div><label class="l">' + B('Cost per trip ₹', 'हर चक्कर ₹') + '</label><input class="input" id="vh_cost" inputmode="numeric" value="' + esc(v && v.cost ? v.cost : '') + '" placeholder="2300" /></div></div>') +
+    '<label class="l">' + B('Car number', 'गाड़ी नंबर') + '</label><input class="input" id="vh_num" value="' + esc(v ? v.num : '') + '" placeholder="AP 31 AB 1234" style="text-transform:uppercase" />' +
+    '<label class="l">' + B('Driver name and mobile', 'ड्राइवर का नाम और मोबाइल') + '</label><input class="input" id="vh_drv" value="' + esc(v ? v.driver : '') + '" placeholder="' + esc(L('e.g. Ramesh 98480 12345', 'जैसे रमेश 98480 12345')) + '" />' +
+    '<label class="l">' + B('Note', 'नोट') + '</label><input class="input" id="vh_note" value="' + esc(v ? v.notes : '') + '" />' +
+    saveBar('savevehicle', v && v.id ? v.id : '') + (v && v.id && !own ? '<button class="delbtn" data-act="delvehicle" data-id="' + esc(v.id) + '">🗑 ' + B('Remove this vehicle', 'यह गाड़ी हटाएँ') + '</button>' : ''));
+}
+function saveVehicle(id) {
+  var sh = S.sheet || {}, own = CARS.some(function (c) { return nkey(c.n) === nkey(sh.vname); }), name = own ? sh.vname : val('vh_name');
+  if (!name) { toast(L('Please give the vehicle a name', 'गाड़ी का नाम लिखें'), true); return; }
+  var f = { name: name, kind: 'Vehicle', side: 'Shrijeet', beds: val('vh_num').toUpperCase(), contact: val('vh_drv'), notes: val('vh_note') };
+  if (!own) { f.rooms = val('vh_seats') || '4'; f.cost = val('vh_cost') || '0'; }
+  var back = sh.back; closeSheet(true); S.sheet = null;
+  rowSave('stays', id || '', f, L('Vehicle saved ✓', 'गाड़ी सेव ✓'));
+  if (back) setTimeout(function () { openTrip(back); }, 250);
+}
+function vehCard() {
+  var V = vehicles();
+  return '<div class="card" style="margin-top:.8rem"><div class="tbl-title">' + B('Vehicles & drivers', 'गाड़ियाँ और ड्राइवर') + '</div><div class="tbl-note">' + L('Add the car number and driver for each vehicle. Then tap any trip below to pick its vehicles and send the details to those guests.', 'हर गाड़ी का नंबर और ड्राइवर लिखें। फिर नीचे किसी भी चक्कर पर दबाकर उसकी गाड़ी चुनें और मेहमानों को भेजें।') + '</div>' +
+    V.map(function (v) { return '<button data-act="vehedit" data-v="' + esc(v.id || v.n) + '" style="display:block;width:100%;text-align:left;font:inherit;color:inherit;border:0;border-top:1px solid #f1e7d6;padding:.6rem .95rem;background:transparent;cursor:pointer"><b>' + (v.own ? '🚗 ' : '🚐 ') + esc(v.label) + '</b> <span class="rem">' + v.seats + ' ' + L('seats', 'सीट') + (v.cost ? ' · ' + rs(v.cost) + L('/trip', '/चक्कर') : '') + '</span><div class="rem" style="margin:0;color:' + (vehLine(v) ? 'inherit' : '#8a5a00') + '">' + esc(vehLine(v) || L('Tap to add car number and driver', 'नंबर और ड्राइवर जोड़ने के लिए दबाएँ')) + '</div></button>'; }).join('') +
+    '<button class="btn ghost sm" style="margin:.5rem .95rem .8rem" data-act="vehedit" data-v="">＋ ' + B('Add a hired cab', 'किराये की गाड़ी जोड़ें') + '</button></div>';
+}
 function carRow(x) {
-  return '<div style="display:flex;gap:.7rem;padding:.6rem .9rem;border-top:1px solid #f1e7d6;font-size:.92rem"><div style="flex:none;width:4.2rem;font-weight:700;color:var(--navy)">' + esc(slotTime(x)) + (x.d2 && x.d2 !== x.d ? '<div class="rem" style="margin:0;font-weight:400">' + L('till ', 'तक ') + niceDate(x.d2) + '</div>' : '') + '</div><div style="min-width:0;flex:1"><div style="display:flex;justify-content:space-between;gap:.5rem"><b>' + esc(x.what) + '</b><span class="amt" style="flex:none">' + (x.p !== '' ? x.p + ' 👤' : '') + '</span></div>' + (x.who ? '<div class="rem" style="margin:.1rem 0 0">' + esc(x.who) + '</div>' : '') + (x.note ? '<div class="rem" style="margin:.1rem 0 0">' + esc(x.note) + '</div>' : '') +
-    '<div style="margin-top:.2rem;font-weight:600;color:' + (x.open ? '#8a4b00' : x.own ? '#2a6a38' : 'var(--navy)') + '">' + (x.open ? '⏳ ' : x.own ? '🚗 ' : '🚐 ') + esc(x.v) + (x.own ? ' <span class="rem" style="margin:0;font-weight:400">' + L('(no hire)', '(किराये की ज़रूरत नहीं)') + '</span>' : '') + (x.cost ? ' <span class="rem" style="margin:0;font-weight:400">≈ ' + rs(x.cost) + '</span>' : '') + '</div></div></div>';
+  var tap = x.kind !== 'sb' && x.key;
+  return '<div' + (tap ? ' data-act="tripedit" data-v="' + esc(x.key) + '"' : '') + ' style="display:flex;gap:.7rem;padding:.6rem .9rem;border-top:1px solid #f1e7d6;font-size:.92rem' + (tap ? ';cursor:pointer' : '') + '"><div style="flex:none;width:4.2rem;font-weight:700;color:var(--navy)">' + esc(slotTime(x)) + (x.d2 && x.d2 !== x.d ? '<div class="rem" style="margin:0;font-weight:400">' + L('till ', 'तक ') + niceDate(x.d2) + '</div>' : '') + '</div><div style="min-width:0;flex:1"><div style="display:flex;justify-content:space-between;gap:.5rem"><b>' + esc(x.what) + '</b><span class="amt" style="flex:none">' + (x.p !== '' ? x.p + ' 👤' : '') + '</span></div>' + (x.who ? '<div class="rem" style="margin:.1rem 0 0">' + esc(x.who) + '</div>' : '') + (x.note ? '<div class="rem" style="margin:.1rem 0 0">' + esc(x.note) + '</div>' : '') +
+    '<div style="margin-top:.2rem;font-weight:600;color:' + (x.open ? '#8a4b00' : x.own ? '#2a6a38' : 'var(--navy)') + '">' + (x.open ? '⏳ ' : x.own ? '🚗 ' : '🚐 ') + esc(x.v) + (x.own ? ' <span class="rem" style="margin:0;font-weight:400">' + L('(no hire)', '(किराये की ज़रूरत नहीं)') + '</span>' : '') + (x.cost ? ' <span class="rem" style="margin:0;font-weight:400">≈ ' + rs(x.cost) + '</span>' : '') + (x.ovr ? ' <span class="badge b-warn">' + L('your choice', 'आपकी पसंद') + '</span>' : '') + '</div>' +
+    (x.veh ? x.veh.filter(function (v) { return vehLine(v); }).map(function (v) { return '<div class="rem" style="margin:0">' + esc(v.label + ': ' + vehLine(v)) + '</div>'; }).join('') : '') +
+    (tap ? '<div class="rem" style="margin:.15rem 0 0;color:var(--navy)">✎ ' + L('Change vehicle · send details', 'गाड़ी बदलें · जानकारी भेजें') + '</div>' : '') + '</div></div>';
 }
 function viewCars() {
   if (!S.rsvp && (!S.rsvpAt || Date.now() - S.rsvpAt > 30000)) loadRsvp();
-  var O = carOptions(), cur = S.carMode || 'bal', o = O.filter(function (x) { return x.mode === cur; })[0], sv = tripPlan('Shivangi', cur);
+  var O = carOptions(), cur = curMode(), o = O.filter(function (x) { return x.mode === cur; })[0], sv = tripPlan('Shivangi', cur);
   var h = '<div class="hero"><div class="sub">' + B('Cars plan', 'गाड़ियों की योजना') + '</div><div class="stats" style="margin-top:.5rem">' + CARS.map(function (c) { return '<div class="stat">🚗 ' + esc(carName(c)) + (c.from ? ' · ' + niceDate(c.from) + (c.fromH != null ? ' ' + niceTime(pad(c.fromH) + ':00') : '') + (c.to ? ' – ' + niceDate(c.to) : '') : '') + '</div>'; }).join('') + '</div>' +
     '<div class="sub" style="margin-top:.5rem">' + L('Standby 30 Nov – 3 Dec: ', 'हमेशा तैयार 30 नवंबर – 3 दिसंबर: ') + CARS.filter(function (c) { return c.sb; }).map(carName).join(' + ') + '</div></div>';
-  h += '<div class="card" style="margin-top:.8rem"><div class="tbl-title">' + B('Three ways to run it', 'तीन तरीके') + '</div><div class="tbl-note">' + L('Hire costs are Vizag local rates (4 hr / 40 km a trip, 8 hr / 80 km a day, driver allowance included); night charge before 6 AM, tolls and parking extra. Tap one to see its plan.', 'किराया विज़ाग के लोकल रेट से (हर चक्कर 4 घंटे / 40 km, पूरा दिन 8 घंटे / 80 km, ड्राइवर भत्ता शामिल); सुबह 6 से पहले नाइट चार्ज, टोल, पार्किंग अलग। योजना देखने के लिए दबाएँ।') + '</div>' +
-    O.map(function (x) { var on = x.mode === cur; return '<button data-act="carmode" data-v="' + x.mode + '" style="display:block;width:100%;text-align:left;font:inherit;color:inherit;border:0;border-top:1px solid #f1e7d6;padding:.75rem .95rem;cursor:pointer;background:' + (on ? '#f3faf4' : 'transparent') + '"><div style="display:flex;justify-content:space-between;gap:.6rem;align-items:baseline"><b>' + (on ? '● ' : '○ ') + esc(L(CAR_MODES[x.mode].n, CAR_MODES[x.mode].hi)) + (x.mode === 'bal' ? ' <span class="badge b-ok">' + L('Suggested', 'सुझाव') + '</span>' : '') + '</b><span class="amt" style="flex:none">' + rs(x.hire) + '</span></div><div class="rem" style="margin:.15rem 0 0">' +
+  h += '<div class="card" style="margin-top:.8rem"><div class="tbl-title">' + B('Choose a plan', 'योजना चुनें') + '</div><div class="tbl-note">' + L('Tap a plan to use it. Everyone in the family sees the plan you choose, and the trip list below changes with it. Hire costs are Vizag local rates (4 hr / 40 km a trip, 8 hr / 80 km a day, driver allowance included); night charge before 6 AM, tolls and parking extra. Tap one to see its plan.', 'किराया विज़ाग के लोकल रेट से (हर चक्कर 4 घंटे / 40 km, पूरा दिन 8 घंटे / 80 km, ड्राइवर भत्ता शामिल); सुबह 6 से पहले नाइट चार्ज, टोल, पार्किंग अलग। योजना देखने के लिए दबाएँ।') + '</div>' +
+    O.map(function (x) { var on = x.mode === cur; return '<button data-act="carmode" data-v="' + x.mode + '" style="display:block;width:100%;text-align:left;font:inherit;color:inherit;border:0;border-top:1px solid #f1e7d6;padding:.75rem .95rem;cursor:pointer;background:' + (on ? '#f3faf4' : 'transparent') + '"><div style="display:flex;justify-content:space-between;gap:.6rem;align-items:baseline"><b>' + (on ? '◉ ' : '○ ') + esc(L(CAR_MODES[x.mode].n, CAR_MODES[x.mode].hi)) + (x.mode === 'bal' ? ' <span class="badge b-ok">' + L('Suggested', 'सुझाव') + '</span>' : '') + (on ? ' <span class="badge" style="background:#2a6a38;color:#fff">' + L('In use', 'चुनी गई') + '</span>' : '') + '</b><span class="amt" style="flex:none">' + rs(x.hire) + '</span></div><div class="rem" style="margin:.15rem 0 0">' +
       [x.nb + ' ' + L('hired bookings', 'किराये की बुकिंग'), L('friend’s SUV ' + (x.friend ? x.friend + ' trips on ' + x.friendDays.length + ' days' : 'not needed'), 'दोस्त की SUV ' + (x.friend ? x.friendDays.length + ' दिन, ' + x.friend + ' चक्कर' : 'ज़रूरत नहीं')), L(x.early + ' family-car runs before 6 AM', '6 बजे से पहले ' + x.early + ' बार हमारी गाड़ी'), x.waits.length ? L(x.waits.length + ' group' + (x.waits.length > 1 ? 's wait' : ' waits') + ' 15–30 min', x.waits.length + ' बार 15–30 मिनट इंतज़ार') : L('no waiting', 'इंतज़ार नहीं')].join(' · ') + '</div></button>'; }).join('') + '</div>';
+  h += vehCard();
   if (o.days.length) h += '<div class="card" style="margin-top:.8rem;padding:.7rem .95rem"><b>' + B('17-seater on day hire', '17 सीट गाड़ी पूरे दिन') + '</b>' + o.days.map(function (d) { var z = o.dh[d]; return '<div style="margin-top:.35rem"><b>' + wdDate(d) + ' · ' + hhmm(z.from) + ' – ' + hhmm(z.to) + '</b> <span class="rem" style="margin:0">' + rs(z.cost) + '</span><div class="rem" style="margin:.1rem 0 0;white-space:pre-line">' + esc(dayHireLines(d, z).join('\n')) + '</div></div>'; }).join('') + '</div>';
   var last = '';
   o.rows.forEach(function (x) { if (x.d !== last) { h += (last ? '</div>' : '') + '<h2 class="sec">' + wdDate(x.d) + '</h2><div class="card">'; last = x.d; } h += carRow(x); });
@@ -1753,7 +1850,7 @@ function defInvMsg(code) {
   return '🙏 *Shri Ganeshaya Namah* 🙏\n\nWith immense joy, we invite you and your family to ' + (i.full ? 'the wedding celebrations of *' + c + '* — 30 November to 2 December 2026.' : 'the wedding of *' + c + '* on Wednesday, 2 December 2026.') + '\n\nYour invitation 👇\n' + invUrl(code) +
     '\n\n*🙏 Kindly fill the RSVP — it takes just 1 minute and helps us plan your stay and welcome you better:*\n👉 ' + rsvpUrl(code);
 }
-(function () { if (LS.get('pl_im_ver') === '9') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah', 'shrijeet/reception', 'shrijeet/reception/hindi', 'shivangi/reception', 'shivangi/reception/hindi'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '9'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
+(function () { if (LS.get('pl_im_ver') === '10') return; ['shrijeet/parivaar', 'shrijeet/shubh-vivah', 'shrijeet/reception', 'shrijeet/reception/hindi', 'shivangi/reception', 'shivangi/reception/hindi'].forEach(function (c) { LS.set('pl_im_' + c, ''); }); LS.set('pl_rm_en', ''); LS.set('pl_im_ver', '10'); })();   // 20 Oct: Shrijeet's own invite wording replaces older edits on every phone
 function invMsg(code) { return LS.get('pl_im_' + code) || defInvMsg(code); }
 var RANKS = ['lt cdr', 'lt col', 'wing cdr', 'wing cmdr', 'radm', 'vadm', 'admiral', 'cmde', 'capt', 'cdr', 'slt', 'lt', 'col', 'maj', 'prof', 'dr'];
 var HONS = ['sir', 'ma\'am', 'maam', 'mam', 'madam', 'ji', 'bhabhi', 'bhaiya', 'bhai', 'didi', 'di', 'mama', 'mami', 'mausi', 'chacha', 'chachi', 'uncle', 'aunty', 'fua', 'papa', 'dadi', 'nana', 'nani'];
@@ -1780,7 +1877,7 @@ function personal(text, nm) {   // put the guest's name in front of the greeting
 var REM_TOKEN = '{RSVP link}', INV_TOKEN = '{Invite link}';
 function defRemMsg(hi) {
   if (hi) return 'नमस्ते 🙏\nआशा है आपने *श्रीजीत एवं शिवांगी* के विवाह का निमंत्रण देख लिया होगा।\n\n*कृपया RSVP अवश्य भरें — सिर्फ़ 1 मिनट लगेगा।* इससे हमें आपके ठहरने और स्वागत की बेहतर व्यवस्था करने में मदद मिलेगी:\n👉 ' + REM_TOKEN + '\n\nआपके आगमन की प्रतीक्षा रहेगी 🙏';
-  return 'Namaste 🙏\n\n⚓ *All set to sail — we’d love to know if you’re on board!*\nIf we are not lucky enough to host you this time, your blessings will still sail with us forever 💛\n\nKindly spare a minute to RSVP and share your blessings 👇\n' + REM_TOKEN + '\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
+  return 'Good evening 🙏\n\n⚓ *All set to sail — we’d love to know if you’re on board!*\nIf we are not lucky enough to host you this time, your blessings will still sail with us forever 💛\n\nKindly spare a minute to RSVP, or to share your blessings if you are unable to grace the occasion 👇\n' + REM_TOKEN + '\n\nWarm regards,\n*Lt Cdr Shrijeet Mishra*';
 }
 function remMsg(hi) { return LS.get(hi ? 'pl_rm_hi' : 'pl_rm_en') || defRemMsg(hi); }
 function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_TOKEN).join(rsvpUrl(g.invLink)).split(INV_TOKEN).join(i.ok ? invUrl(g.invLink) : SITE); }
@@ -2347,7 +2444,14 @@ document.addEventListener('click', function (e) {
     case 'vt': S.vtab = v; render(); window.scrollTo(0, 0); return;
     case 'gt': S.tab = 'guests'; S.gtab = v; S.gq = ''; render(); window.scrollTo(0, 0); return;
     case 'gpick': S.gpick = v === '1'; render(); return;
-    case 'carmode': S.carMode = v; LS.set('pl_carmode', v); render(); return;
+    case 'carmode': S.carMode = v; LS.set('pl_carmode', v); var cc0 = carCfg(); cc0.mode = v; saveCarCfg(cc0, L('Plan chosen for everyone ✓', 'सबके लिए यह योजना चुनी ✓')); return;
+    case 'tripedit': openTrip(v); return;
+    case 'savetrip': saveTrip(); return;
+    case 'tripreset': var cc1 = carCfg(); delete cc1.trips[S.sheet.trip]; closeSheet(true); S.sheet = null; saveCarCfg(cc1, L('Back to the suggestion ✓', 'फिर से सुझाव वाली गाड़ी ✓')); return;
+    case 'tripsend': tripSend(S.sheet.trip); return;
+    case 'vehedit': openVehicle(v); return;
+    case 'savevehicle': saveVehicle(id); return;
+    case 'delvehicle': closeSheet(true); S.sheet = null; rowDel('stays', id, L('Vehicle removed', 'गाड़ी हटाई')); return;
     case 'gopick': S.tab = 'guests'; S.gtab = 'arr'; S.gpick = true; render(); window.scrollTo(0, 0); return;
     case 'goarr': S.tab = 'guests'; S.gtab = 'arr'; S.gpick = false; render(); window.scrollTo(0, 0); return;
     case 'gocat': S.tab = 'tasks'; S.ttab = 'list'; S.fCat = v; S.fStatus = 'open'; S.fPrio = 'all'; S.fOwner = 'all'; S.gq = ''; document.getElementById('gq').value = ''; render(); window.scrollTo(0, 0); return;
@@ -2649,7 +2753,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b45';
+var BUILD = 'b46';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
