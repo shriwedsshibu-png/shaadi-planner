@@ -563,7 +563,41 @@ function mwkText(m, w, k) {   // "1 man · 1 woman · 2 children = 4 people"
 function gp(g) { var a = num(g.adults), c = num(g.children); return (a || c) ? a + c : 1; }   // people in this entry (1 if not filled)
 function people(arr) { return arr.reduce(function (s, g) { return s + gp(g); }, 0); }
 function yes(v) { return /^(y|yes|haan|ha|true|1)/i.test(String(v || '').trim()); }
-function rsvpList() { return S.rsvp || []; }
+function rsvpList() { return (S.rsvp || []).concat(manualRsvps()); }
+/* replies people gave on WhatsApp / phone, noted in the app ("They replied"): saved in the guest's "RSVP Phone" cell as
+   "Told us: Yes · 2 men · 1 women · 0 children" or "Told us: No". Counted like a website reply unless the guest also filled the website form. */
+function toldInfo(g) {
+  var t = String(g.rsvp || ''); if (!/^told/i.test(t)) return null;
+  var att = /:\s*no\b/i.test(t) ? 'No' : /:\s*yes\b/i.test(t) ? 'Yes' : '', n = function (re) { var m = re.exec(t); return m ? +m[1] : 0; };
+  return { att: att, m: n(/(\d+) men/i), w: n(/(\d+) women/i), k: n(/(\d+) child/i) };
+}
+function manualRsvps() {
+  var web = S.rsvp || [], out = [];
+  S.guests.forEach(function (g) {
+    var t = toldInfo(g); if (!t || !t.att) return;
+    var p = last10(g.phone), k = nkey(g.name);
+    if (web.some(function (r) { var q = last10(r.phone); return (q && p && q === p) || (k && nkey(r.name) === k); })) return;   // they also filled the website form: that wins
+    var i = invInfo(g.invLink), yesC = t.att === 'Yes';
+    out.push({ name: g.name, phone: p, attending: t.att, men: yesC ? t.m : 0, women: yesC ? t.w : 0, children: yesC ? t.k : 0, total: yesC ? t.m + t.w + t.k : 0, arrDate: '', room: '', note: L('Told us on WhatsApp / phone', 'WhatsApp / फ़ोन पर बताया'),
+      invite: i.rec ? 'Reception' : i.full ? '3-day' : 'Wedding day', functions: i.full ? FUNCTIONS.filter(function (f) { return f.date; }).map(function (f) { return f.n; }).join(' | ') : i.rec ? '' : CATER.bigFn, updated: g.at || '', manual: true, gid: g.id });
+  });
+  return out;
+}
+function openTold(id) {
+  var g = S.guests.filter(function (x) { return x.id === id; })[0]; if (!g) return;
+  var t = toldInfo(g) || { att: '', m: 1, w: 0, k: 0 }; if (!t.att) { t.m = t.m || 1; }
+  S.sheet = { told: id, att: t.att || 'Yes' };
+  var st = function (key, label, v) { return '<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.5rem .2rem;border-top:1px solid #f1e7d6"><b>' + label + '</b><div style="display:flex;align-items:center;gap:.6rem"><button class="call" data-act="tstep" data-v="' + key + ':-1" style="min-width:2.6rem;font-size:1.3rem">−</button><span id="td_' + key + '" style="min-width:1.6rem;text-align:center;font-size:1.3rem;font-weight:700">' + v + '</span><button class="call" data-act="tstep" data-v="' + key + ':1" style="min-width:2.6rem;font-size:1.3rem">+</button></div></div>'; };
+  showSheet('<h3>' + B('Reply received', 'जवाब मिला') + '</h3><div class="rem">' + esc(g.name) + (g.phone ? ' · ' + esc(g.phone) : '') + (g.invLink ? ' · ' + esc(invLabel(g.invLink)) : '') + '</div>' +
+    '<label class="l">' + B('Are they coming?', 'क्या वे आएँगे?') + '</label>' + segOf('td_att', [['Yes', 'Yes, coming', 'हाँ, आएँगे'], ['No', 'Not coming', 'नहीं आएँगे']], S.sheet.att) +
+    '<div id="td_cnt" style="margin-top:.6rem' + (S.sheet.att === 'No' ? ';display:none' : '') + '"><label class="l">' + B('How many?', 'कितने लोग?') + '</label>' + st('m', L('Men', 'पुरुष'), t.m) + st('w', L('Women', 'महिलाएँ'), t.w) + st('k', L('Children (below 12)', 'बच्चे (12 से कम)'), t.k) +
+    '<div class="rem" id="td_sum" style="margin-top:.4rem"></div></div>' +
+    saveBar('savetold', id) + (toldInfo(g) ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="untold" data-id="' + esc(id) + '">↺ ' + B('Back to waiting', 'फिर से जवाब बाकी') + '</button>' : ''));
+  toldSum();
+}
+function toldVal(k) { var e = document.getElementById('td_' + k); return e ? num(e.textContent) : 0; }
+function toldSum() { var e = document.getElementById('td_sum'); if (e) e.textContent = mwkText(toldVal('m'), toldVal('w'), toldVal('k')); }
+
 function rsvpInGuests(r) { var p = last10(r.phone); return S.guests.some(function (g) { return (p && (hasPhone(g.phone, p) || last10(g.rsvp) === p)) || (!p && g.name.toLowerCase() === r.name.toLowerCase()); }); }
 function modeIcon(m) { m = String(m || '').toLowerCase(); return /train|rail/.test(m) ? '🚆' : /flight|air|plane/.test(m) ? '✈️' : /bus/.test(m) ? '🚌' : /car|road|cab|drive/.test(m) ? '🚗' : ''; }
 function guestRow(g, opts) {
@@ -1903,12 +1937,13 @@ function invMeta(g) {
 }
 function invRow(g) {
   var st = invState(g), r = st === 'replied' ? replyOf(g) : null, ph = digits(g.phone).length >= 10;
-  var badge = st === 'replied' ? (r ? (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') : '<span class="badge b-ok">' + L('Told us', 'बता दिया') + '</span>')
+  var badge = st === 'replied' ? (r ? (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (r.manual ? ' <span class="rem">' + L('(told us)', '(बताया)') + '</span>' : '') : '<span class="badge b-ok">' + L('Told us', 'बता दिया') + '</span>')
     : st === 'wait' ? '<span class="badge b-warn">' + L('Waiting', 'जवाब बाकी') + '</span>' : '<span class="badge b-info">' + L('Not sent', 'नहीं भेजा') + '</span>';
   var acts = '';
   if (st === 'wait') acts = (ph ? '<a class="call wa" target="_blank" rel="noopener" href="' + esc(waLink(g.phone, personal(remText(g), gnOf({ gid: g.id, name: g.name })))) + '" data-act="remone" data-id="' + esc(g.id) + '">🔔 ' + B('Remind', 'याद दिलाएँ') + '</a>' : '<span class="rem">' + L('No number saved', 'नंबर नहीं है') + '</span>') +
     '<button class="call" data-act="toldus" data-id="' + esc(g.id) + '">✓ ' + B('They replied', 'जवाब मिल गया') + '</button>';
   else if (st === 'none') acts = '<button class="call" data-act="sendone" data-id="' + esc(g.id) + '">📨 ' + B('Send invite', 'निमंत्रण भेजें') + '</button>';
+  else if (st === 'replied' && (!r || r.manual)) acts = '<button class="call" data-act="toldus" data-id="' + esc(g.id) + '">✎ ' + (r ? B('Change their reply', 'जवाब बदलें') : B('Add how many are coming', 'कितने आएँगे, जोड़ें')) + '</button>';
   return '<div class="task" data-act="editguest" data-id="' + esc(g.id) + '"><div class="t">' + esc(g.name) + ' ' + badge + '</div>' +
     '<div class="meta">' + (st === 'none' ? [g.group ? esc(g.group) : '', g.side ? esc(L(g.side, WHO_HI[g.side] || g.side)) : '', g.phone ? esc(g.phone) : L('no number', 'नंबर नहीं')].filter(Boolean).join(' · ') : invMeta(g)) + '</div>' +
     (acts ? '<div class="acts">' + acts + '</div>' : '') + '</div>';
@@ -2427,7 +2462,7 @@ function goTab(t) { S.tab = t; S.gq = ''; var g = document.getElementById('gq');
 document.addEventListener('click', function (e) {
   if (e.target.closest('[data-stop]')) { e.stopPropagation(); return; }    // call / WhatsApp links inside a tappable row
   var seg = e.target.closest('.seg button');
-  if (seg && !seg.getAttribute('data-act')) { var was = seg.classList.contains('on'); seg.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); }); if (!was || !/^(g_|h_side)/.test(seg.parentNode.id)) seg.classList.add('on'); return; }
+  if (seg && !seg.getAttribute('data-act')) { var was = seg.classList.contains('on'); seg.parentNode.querySelectorAll('button').forEach(function (b) { b.classList.remove('on'); }); if (!was || !/^(g_|h_side)/.test(seg.parentNode.id)) seg.classList.add('on'); if (seg.parentNode.id === 'td_att') { var tc = document.getElementById('td_cnt'); if (tc) tc.style.display = seg.getAttribute('data-v') === 'No' ? 'none' : ''; } return; }
   if (e.target.id === 'sheetbg') { closeSheet(); return; }
   var el = e.target.closest('[data-act]'); if (!el) return;
   var act = el.getAttribute('data-act'), id = el.getAttribute('data-id'), v = el.getAttribute('data-v');
@@ -2655,7 +2690,16 @@ document.addEventListener('click', function (e) {
     case 'runskip': runDone(false); showRun(); return;
     case 'runstop': S.run = null; closeSheet(); return;
     case 'remone': var rg = S.guests.filter(function (x) { return x.id === id; })[0]; setTimeout(function () { if (rg) rowSave('guests', rg.id, { remAt: today(), remN: num(rg.remN) + 1 }, L('Reminder noted ✓', 'याद दिलाना लिखा ✓')); }, 500); return;
-    case 'toldus': rowSave('guests', id, { rsvp: 'Told us' }, L('Marked as replied ✓', 'जवाब मिला ✓')); return;
+    case 'toldus': openTold(id); return;
+    case 'tstep': var tp = v.split(':'), te = document.getElementById('td_' + tp[0]); if (te) { te.textContent = Math.max(0, Math.min(30, num(te.textContent) + num(tp[1]))); toldSum(); } return;
+    case 'savetold':
+      var tatt = (document.querySelector('#td_att .on') || {}).getAttribute ? document.querySelector('#td_att .on').getAttribute('data-v') : (S.sheet && S.sheet.att) || 'Yes';
+      var tm = toldVal('m'), tw = toldVal('w'), tk = toldVal('k');
+      if (tatt === 'Yes' && !(tm + tw + tk)) { toast(L('Please add how many are coming', 'कितने लोग आ रहे हैं, यह जोड़ें'), true); return; }
+      closeSheet(true); S.sheet = null;
+      rowSave('guests', id, tatt === 'Yes' ? { rsvp: 'Told us: Yes · ' + tm + ' men · ' + tw + ' women · ' + tk + ' children', adults: String(tm + tw), children: String(tk) } : { rsvp: 'Told us: No' }, tatt === 'Yes' ? L('Saved: coming · ' + mwkText(tm, tw, tk), 'सेव: आएँगे · ' + mwkText(tm, tw, tk)) : L('Saved: not coming. No reminder will go to them.', 'सेव: नहीं आएँगे। इन्हें याद दिलाने का संदेश नहीं जाएगा।'));
+      return;
+    case 'untold': closeSheet(true); S.sheet = null; rowSave('guests', id, { rsvp: '' }, L('Back in “Waiting”', 'फिर से “जवाब बाकी” में')); return;
     case 'remall':
       var wl = S.guests.filter(function (g) { return invState(g) === 'wait' && digits(g.phone).length >= 10; }).sort(function (a, b) { return (a.invSent || '') < (b.invSent || '') ? -1 : 1; });
       if (!wl.length) { toast(L('Nobody to remind', 'याद दिलाने को कोई नहीं'), true); return; }
@@ -2753,7 +2797,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b46';
+var BUILD = 'b47';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
