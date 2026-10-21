@@ -1613,18 +1613,28 @@ function viewDays() {
 function viewRsvp() {
   if (!S.rsvp) return '<div class="card empty">' + L('Loading the replies from the wedding website…', 'वेबसाइट से जवाब आ रहे हैं…') + '</div>';
   if (S.rsvpNote) return '<div class="card empty">' + esc(S.rsvpNote) + '</div>';
-  var R = rsvpList().slice().sort(function (a, b) { return a.updated < b.updated ? 1 : -1; });
+  var byNew = function (a, b) { return a.updated < b.updated ? 1 : -1; };
+  var R = (S.rsvp || []).slice().sort(byNew), M = manualRsvps().sort(byNew);   // R: filled on the website by the guests · M: replies you noted from WhatsApp / phone
   var ry = R.filter(function (r) { return yes(r.attending); }), rn = R.filter(function (r) { return !yes(r.attending); });
-  var h = '<p class="rem">' + L('Replies people sent from the wedding website. Tap “Add to guest list” to plan their room and pickup.', 'वेबसाइट से आए जवाब। कमरा और लेने की व्यवस्था के लिए “सूची में जोड़ें” दबाएँ।') + '</p>';
+  var ppl = function (l) { return l.reduce(function (t, r) { return t + num(r.total); }, 0); };
+  var open = S.rsvpSec || (S.rsvpSec = {});
+  var sec = function (key, icon, en, hi, list, extra) {
+    var on = !!open[key];
+    return '<button data-act="rsvpsec" data-v="' + key + '" style="display:flex;width:100%;justify-content:space-between;align-items:center;gap:.6rem;margin-top:.8rem;padding:.85rem 1rem;border:1.5px solid #eadfcb;border-radius:1rem;background:' + (on ? '#fff8ec' : '#fff') + ';font:inherit;color:var(--navy);text-align:left;cursor:pointer"><span><b>' + icon + ' ' + esc(L(en, hi)) + '</b> <span class="rem" style="margin:0">' + esc(extra) + '</span></span><span style="font-size:1.2rem">' + (on ? '▴' : '▾') + '</span></button>' +
+      (on ? (list.length ? '<div class="card" style="margin-top:.3rem">' + list.map(row).join('') + '</div>' : '<div class="card empty" style="margin-top:.3rem">' + L('Nobody yet.', 'अभी कोई नहीं।') + '</div>') : '');
+  };
+  var h = '<div class="hero" style="padding:1rem 1.1rem"><div class="sub">' + B('Filled on the website', 'वेबसाइट पर भरे गए') + '</div><div class="stats" style="margin-top:.4rem"><div class="stat"><b>' + ry.length + '</b> ' + L('coming', 'आएँगे') + ' (' + ppl(ry) + ' ' + L('people', 'लोग') + ')</div><div class="stat"><b>' + rn.length + '</b> ' + L('can’t come', 'नहीं आ पाएँगे') + '</div></div>' +
+    (M.length ? '<div class="sub" style="margin-top:.4rem">' + L('+ ' + M.length + ' replies you noted from WhatsApp / phone (last section)', '+ ' + M.length + ' जवाब जो आपने WhatsApp / फ़ोन से लिखे (आख़िरी हिस्सा)') + '</div>' : '') + '</div>';
   function row(r) {
     var inG = rsvpInGuests(r);
-    return '<div class="task" style="cursor:default"><div class="t">' + esc(r.name) + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : '') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
+    return '<div class="task" style="cursor:default"><div class="t">' + esc(r.name) + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : /3/.test(r.invite || '') ? '<span class="badge b-info">' + L('3 days', '3 दिन') + '</span> ' : '<span class="badge b-info">' + L('Wedding day', 'शादी का दिन') + '</span> ') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
       (yes(r.attending) ? '<div class="meta">' + esc(mwkText(r.men, r.women, r.children)) + (r.arrDate ? ' · ' + L('arrives ', 'आगमन ') + niceDate(r.arrDate) : '') + (yes(r.room) ? ' · <span class="badge b-warn">' + L('needs room', 'कमरा चाहिए') + '</span>' : '') + '</div><div class="rem">' + esc(r.functions.split(' | ').map(function (f) { return L(f, fnHi(f)); }).join(', ')) + '</div>' : '') +
       (r.note ? '<div class="rem">💬 ' + esc(r.note) + '</div>' : '') +
-      '<div class="acts">' + (yes(r.attending) && !inG ? '<button class="btn sm" data-act="rsvpadd" data-v="' + esc(r.phone || r.name) + '">＋ ' + B('Add to guest list', 'सूची में जोड़ें') + '</button>' : '') + callBtns(r.phone, L('Namaste ', 'नमस्ते ') + r.name + ' ji 🙏') + '</div></div>';
+      '<div class="acts">' + (r.manual ? '<button class="call" data-act="toldus" data-id="' + esc(r.gid) + '">✎ ' + B('Change their reply', 'जवाब बदलें') + '</button>' : '') + (yes(r.attending) && !inG && !r.manual ? '<button class="btn sm" data-act="rsvpadd" data-v="' + esc(r.phone || r.name) + '">＋ ' + B('Add to guest list', 'सूची में जोड़ें') + '</button>' : '') + callBtns(r.phone, L('Namaste ', 'नमस्ते ') + r.name + ' ji 🙏') + '</div></div>';
   }
-  h += '<h2 class="sec">' + B('Coming', 'आएँगे') + ' <span class="n">' + ry.length + '</span></h2>' + (ry.length ? '<div class="card">' + ry.map(row).join('') + '</div>' : '<div class="card empty">' + L('No replies yet.', 'अभी कोई जवाब नहीं।') + '</div>');
-  if (rn.length) h += '<h2 class="sec">' + B('Not coming', 'नहीं आएँगे') + ' <span class="n">' + rn.length + '</span></h2><div class="card">' + rn.map(row).join('') + '</div>';
+  h += sec('yes', '✅', 'Coming', 'आएँगे', ry, ry.length + L(' replies · ', ' जवाब · ') + ppl(ry) + L(' people', ' लोग'));
+  h += sec('no', '🙏', 'Can’t come', 'नहीं आ पाएँगे', rn, rn.length + L(' replies', ' जवाब'));
+  h += sec('told', '📱', 'Told you on WhatsApp / phone', 'WhatsApp / फ़ोन पर बताया', M, M.filter(function (r) { return yes(r.attending); }).length + L(' coming · ', ' आएँगे · ') + M.filter(function (r) { return !yes(r.attending); }).length + L(' can’t come', ' नहीं'));
   h += '<div class="sync"><a href="#" data-act="rsvprefresh" style="color:inherit">' + B('Check for new replies', 'नए जवाब देखें') + '</a></div>';
   return h;
 }
@@ -2628,6 +2638,7 @@ document.addEventListener('click', function (e) {
     case 'confirmdels': closeSheet(true); S.sheet = null; rowDel('shagun', id, L('Deleted', 'हटा दिया')); return;
     /* invites */
     case 'itab': S.itab = v; render(); return;
+    case 'rsvpsec': S.rsvpSec = S.rsvpSec || {}; S.rsvpSec[v] = !S.rsvpSec[v]; render(); return;
     case 'invsend': S.sheet = null; openSend('plan'); return;
     case 'invmark': S.sheet = null; openSend('mark'); return;
     case 'grpadd': S.sheet = null; openSend('plan', v); return;
@@ -2797,7 +2808,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b47';
+var BUILD = 'b48';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
