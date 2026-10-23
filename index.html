@@ -574,7 +574,20 @@ var MEMO = { k: null, c: {}, m: {} }, DV = 0;
 function memoFresh() { var k = [S.alloc, S.guests, S.rsvp, S.flow, S.stays, S.tasks, S.vendors, S.lang, S.carMode, DV]; if (!MEMO.k || k.some(function (x, i) { return x !== MEMO.k[i]; })) MEMO = { k: k, c: {}, m: {} }; return MEMO; }
 function memo(key, fn) { var M = memoFresh(); return Object.prototype.hasOwnProperty.call(M.c, key) ? M.c[key] : (M.c[key] = fn()); }
 function memoBy(name, obj, fn) { var M = memoFresh(), mp = M.m[name] || (M.m[name] = new Map()); if (mp.has(obj)) return mp.get(obj); var v = fn(obj); mp.set(obj, v); return v; }
-function rsvpList() { return memo('rsvpList', function () { return (S.rsvp || []).concat(manualRsvps()); }).slice(); }
+/* corrections to website replies made in the app (wrong form, wrong count, who invited them…): kept as JSON in a Stays row of type "RSVP fixes";
+   the website sheet itself is never changed */
+function fixRow() { return S.stays.filter(function (x) { return /^rsvp fixes$/i.test(String(x.kind || '')); })[0] || null; }
+function rsvpFixes() { var r = fixRow(), o = {}; try { o = JSON.parse((r && r.notes) || '{}') || {}; } catch (e) { o = {}; } return o; }
+function fixKey(r) { var p = last10(r.phone); return p ? 'p' + p : 'n' + nkey(r.name); }
+function saveFixes(o, ok) { var r = fixRow(), n = JSON.stringify(o); if (r) rowSave('stays', r.id, { notes: n }, ok); else rowSave('stays', '', { name: 'RSVP corrections (set in the app)', kind: 'RSVP fixes', side: 'Both', notes: n }, ok); }
+function fnsAll() { return FUNCTIONS.filter(function (f) { return f.date; }).map(function (f) { return f.n; }).join(' | '); }
+function applyFix(r, fx) {
+  if (!fx) return r;
+  var yesC = fx.att !== 'No', m = yesC ? num(fx.m) : 0, w = yesC ? num(fx.w) : 0, k = yesC ? num(fx.k) : 0;
+  return Object.assign({}, r, { attending: fx.att || r.attending, men: m, women: w, children: k, total: m + w + k, functions: yesC ? (fx.days === 'all' ? fnsAll() : fx.days === 'wed' ? CATER.bigFn : r.functions) : '',
+    room: fx.room || r.room, arrDate: fx.days === 'wed' && fx.room !== 'Yes' ? '' : r.arrDate, fixWho: fx.who || 'auto', fixFam: fx.fam || '', fixed: fx, orig: r });
+}
+function rsvpList() { return memo('rsvpList', function () { var fx = rsvpFixes(); return (S.rsvp || []).map(function (r) { return applyFix(r, fx[fixKey(r)]); }).concat(manualRsvps()); }).slice(); }
 /* replies people gave on WhatsApp / phone, noted in the app ("They replied"): saved in the guest's "RSVP Phone" cell as
    "Told us: Yes · 2 men · 1 women · 0 children" or "Told us: No". Counted like a website reply unless the guest also filled the website form. */
 function toldInfo(g) {
@@ -606,6 +619,26 @@ function openTold(id) {
     '<div id="td_cnt" style="margin-top:.6rem' + (S.sheet.att === 'No' ? ';display:none' : '') + '"><label class="l">' + B('How many?', 'कितने लोग?') + '</label>' + st('m', L('Men', 'पुरुष'), t.m) + st('w', L('Women', 'महिलाएँ'), t.w) + st('k', L('Children (below 12)', 'बच्चे (12 से कम)'), t.k) +
     '<div class="rem" id="td_sum" style="margin-top:.4rem"></div></div>' +
     saveBar('savetold', id) + (toldInfo(g) ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="untold" data-id="' + esc(id) + '">↺ ' + B('Back to waiting', 'फिर से जवाब बाकी') + '</button>' : ''));
+  toldSum();
+}
+function openFix(key) {
+  var r = (S.rsvp || []).filter(function (x) { return fixKey(x) === key; })[0]; if (!r) return;
+  var fx = rsvpFixes()[key] || {}, cur = applyFix(r, rsvpFixes()[key]), att = fx.att || (yes(r.attending) ? 'Yes' : 'No');
+  var m = fx.m != null ? fx.m : num(r.men), w = fx.w != null ? fx.w : num(r.women), k = fx.k != null ? fx.k : num(r.children); if (att === 'Yes' && !(m + w + k)) m = Math.max(1, num(r.total));
+  var days = fx.days || (papaAllEv(r) ? 'all' : 'wed'), room = fx.room || (yes(r.room) ? 'Yes' : 'No'), who = fx.who || 'auto', auto = replyBucket(Object.assign({}, r));
+  S.sheet = { rsvpfix: key, att: att };
+  var st = function (kk, label, v) { return '<div style="display:flex;align-items:center;justify-content:space-between;gap:.6rem;padding:.5rem .2rem;border-top:1px solid #f1e7d6"><b>' + label + '</b><div style="display:flex;align-items:center;gap:.6rem"><button class="call" data-act="tstep" data-v="' + kk + ':-1" style="min-width:2.6rem;font-size:1.3rem">−</button><span id="td_' + kk + '" style="min-width:1.6rem;text-align:center;font-weight:800;font-size:1.15rem">' + v + '</span><button class="call" data-act="tstep" data-v="' + kk + ':1" style="min-width:2.6rem;font-size:1.3rem">+</button></div></div>'; };
+  var autoTxt = { plan: L('already in the room plan', 'योजना में'), ours: L('yours, on top', 'आपके, ऊपर से'), shiv: L('Shivangi’s side', 'शिवांगी की ओर'), papa: L(LOCAL.who + '’s list', LOCAL.whoHi + ' की सूची') }[auto] || '';
+  var fams = famList().filter(function (f) { return !isVendor(f.name); });
+  showSheet('<h3>' + B('Correct this reply', 'जवाब सुधारें') + '</h3><div class="rem">' + esc(r.name) + (r.phone ? ' · ' + esc(r.phone) : '') + '<br>' + L('They filled: ', 'उन्होंने भरा: ') + esc((yes(r.attending) ? L('coming', 'आएँगे') + ' · ' + mwkText(r.men, r.women, r.children) + ' · ' + (r.functions || '') + (r.arrDate ? ' · ' + L('arrives ', 'आगमन ') + niceDate(r.arrDate) : '') + (yes(r.room) ? ' · ' + L('needs room', 'कमरा चाहिए') : '') : L('not coming', 'नहीं आएँगे'))) + '</div>' +
+    '<label class="l">' + B('Are they coming?', 'क्या वे आएँगे?') + '</label>' + segOf('td_att', [['Yes', 'Yes, coming', 'हाँ, आएँगे'], ['No', 'Not coming', 'नहीं आएँगे']], att) +
+    '<div id="td_cnt" style="margin-top:.6rem' + (att === 'No' ? ';display:none' : '') + '"><label class="l">' + B('How many?', 'कितने लोग?') + '</label>' + st('m', L('Men', 'पुरुष'), m) + st('w', L('Women', 'महिलाएँ'), w) + st('k', L('Children (below 12)', 'बच्चे (12 से कम)'), k) + '<div class="rem" id="td_sum" style="margin-top:.4rem"></div>' +
+    '<label class="l">' + B('Which days?', 'कौन से दिन?') + '</label>' + segOf('rf_days', [['wed', 'Wedding evening only', 'सिर्फ़ शादी की शाम'], ['all', 'All functions', 'सभी कार्यक्रम']], days) +
+    '<label class="l">' + B('Needs a room?', 'कमरा चाहिए?') + '</label>' + segOf('rf_room', [['No', 'No (local / own stay)', 'नहीं (स्थानीय / अपना इंतज़ाम)'], ['Yes', 'Yes', 'हाँ']], room) + '</div>' +
+    '<label class="l">' + B('Count them where?', 'कहाँ गिनें?') + '</label>' + segOf('rf_who', [['auto', 'Auto (' + autoTxt + ')', 'अपने आप (' + autoTxt + ')'], ['ours', 'Mine, on top', 'मेरे, ऊपर से'], ['papa', LOCAL.who + '’s list', LOCAL.whoHi + ' की सूची'], ['shiv', 'Shivangi’s side', 'शिवांगी की ओर'], ['plan', 'Already in the room plan', 'पहले से योजना में']], who) +
+    '<label class="l">' + B('If already in the room plan: which family?', 'अगर योजना में हैं: कौन सा परिवार?') + '</label><select class="input" id="rf_fam"><option value="">—</option>' + fams.map(function (f) { return '<option value="' + esc(f.key) + '"' + (f.key === (fx.fam || (cur.fixFam || ((rsvpFam(r) || {}).key || ''))) ? ' selected' : '') + '>' + esc(f.name) + ' (' + f.people + ')</option>'; }).join('') + '</select>' +
+    '<div class="rem" style="margin-top:.5rem">' + L('Only the planner’s count changes. The website reply stays as they filled it.', 'सिर्फ़ प्लानर की गिनती बदलेगी। वेबसाइट का जवाब जैसा भरा, वैसा रहेगा।') + '</div>' +
+    saveBar('saverf', key) + (rsvpFixes()[key] ? '<button class="btn ghost block" style="width:100%;margin-top:.6rem" data-act="unrf" data-v="' + esc(key) + '">↺ ' + B('Remove my correction', 'मेरा सुधार हटाएँ') + '</button>' : ''));
   toldSum();
 }
 function toldVal(k) { var e = document.getElementById('td_' + k); return e ? num(e.textContent) : 0; }
@@ -710,7 +743,7 @@ function nightsText(a, b) {
 }
 function isHelp(s) { return /^helpline$/i.test(String(s.kind || '')); }
 function places() { return memo('places', _places).slice(); }
-function _places() { return S.stays.filter(function (s) { return !isHelp(s) && !/^(vehicle|cars plan)$/i.test(String(s.kind || '')); }); }
+function _places() { return S.stays.filter(function (s) { return !isHelp(s) && !/^(vehicle|cars plan|rsvp fixes)$/i.test(String(s.kind || '')); }); }
 function helpRow() { return S.stays.filter(isHelp)[0] || null; }
 function stayOf(name) { var k = nkey(name); if (!k) return null; var ix = memo('stayIdx', function () { var o = {}; places().forEach(function (s) { var x = nkey(s.name); if (x && !o[x]) o[x] = s; }); return o; }); return ix[k] || null; }
 function isBooked(s) { return !!(s && num(s.rooms) > 0); }
@@ -1061,6 +1094,7 @@ function famMembers(f) { return String(f.name || '').replace(/^[^:]*:/, '').spli
 function nameToks(s) { return String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\b(ji|family|parivar|couple|kids?|mr|mrs|smt|shri|dr)\b/g, ' ').split(/[^a-zऀ-ॿ]+/).filter(function (w) { return w.length > 1; }); }
 function rsvpFam(r) { return memoBy('rsvpFam', r, _rsvpFam); }
 function _rsvpFam(r) {   // the room-plan family this website reply belongs to (same mobile number, or the same first and last name), so nobody is counted or listed twice
+  if (r.fixWho && r.fixWho !== 'auto') return r.fixWho === 'plan' ? famList().filter(function (f) { return f.key === r.fixFam; })[0] || null : null;   // corrected in the app
   var p = last10(r.phone), rt = nameToks(r.name), hit = null, shivTag = /\[shivangi side\]/i.test(String(r.note || ''));
   var me = rt.length ? rt[0].replace(/(.)\1+/g, '$1') : '';   // the bride or groom filling their own form ("Shivangiiii", "Shibu", "Shrijeet"): they are already in the room plan
   if (/^(shivangi|shibu)$/.test(me) || /^shr[ie]j[ie]?et$/.test(me)) { var mine = famList().filter(function (f) { return /^shivangi|^shibu/.test(me) ? f.side === 'Shivangi' && /shivangi priya|bride/i.test(f.name) : /shrijeet mishra/i.test(f.name); })[0]; if (mine) return mine; }
@@ -1091,7 +1125,7 @@ function ourGuestOf(r) {
   });
 }
 function replyBucket(r) { return memoBy('bucket', r, _replyBucket); }
-function _replyBucket(r) { return rsvpFam(r) ? 'plan' : isShivReply(r) ? 'shiv' : ourGuestOf(r) ? 'ours' : 'papa'; }
+function _replyBucket(r) { if (r.fixWho && r.fixWho !== 'auto' && r.fixWho !== 'plan') return r.fixWho; return rsvpFam(r) ? 'plan' : isShivReply(r) ? 'shiv' : ourGuestOf(r) ? 'ours' : 'papa'; }
 function papaAllEv(r) { return String(r.functions || '').split('|').some(function (x) { x = x.trim(); return x && x !== CATER.bigFn; }); }   // Papa's guest who comes to the day functions too (not only the wedding night)
 function rsvpOthers(fn) { return memo('ro|' + (fn || ''), function () { return _rsvpOthers(fn); }); }
 function _rsvpOthers(fn) {   // "yes" replies from Shivangi's and Papa's own invites: shown, but inside their lists (not added on top)
@@ -1697,10 +1731,10 @@ function viewRsvp() {
     (M.length ? '<div class="sub" style="margin-top:.4rem">' + L('+ ' + M.length + ' replies you noted from WhatsApp / phone (last section)', '+ ' + M.length + ' जवाब जो आपने WhatsApp / फ़ोन से लिखे (आख़िरी हिस्सा)') + '</div>' : '') + '</div>';
   function row(r) {
     var inG = rsvpInGuests(r);
-    return '<div class="task" style="cursor:default"><div class="t">' + esc(r.name) + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : /3/.test(r.invite || '') ? '<span class="badge b-info">' + L('3 days', '3 दिन') + '</span> ' : '<span class="badge b-info">' + L('Wedding day', 'शादी का दिन') + '</span> ') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (function () { var bk = replyBucket(r); return bk === 'ours' ? ' <span class="badge b-ok">' + L('counted on top', 'ऊपर से गिने') + '</span>' : bk === 'shiv' ? ' <span class="badge b-info">' + L('Shivangi’s side', 'शिवांगी की ओर') + '</span>' : bk === 'papa' ? ' <span class="badge b-warn">' + (papaAllEv(r) ? L(LOCAL.who + '’s locals · every function', LOCAL.whoHi + ' के स्थानीय · हर कार्यक्रम') : L(LOCAL.who + '’s locals · wedding night', LOCAL.whoHi + ' के स्थानीय · शादी की रात')) + '</span>' : ' <span class="badge b-info">' + L('in room plan', 'योजना में') + '</span>'; })() + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
+    return '<div class="task" style="cursor:default"><div class="t">' + (r.manual ? esc(r.name) : '<span data-act="rsvpfix" data-v="' + esc(fixKey(r)) + '" style="cursor:pointer;text-decoration:underline dotted">' + esc(r.name) + '</span>') + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : (yes(r.attending) ? papaAllEv(r) : /3/.test(r.invite || '')) ? '<span class="badge b-info">' + L('3 days', '3 दिन') + '</span> ' : '<span class="badge b-info">' + L('Wedding day', 'शादी का दिन') + '</span> ') + (r.fixed ? '<span class="badge b-warn">✎ ' + L('corrected', 'सुधारा') + '</span> ' : '') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (function () { var bk = replyBucket(r); return bk === 'ours' ? ' <span class="badge b-ok">' + L('counted on top', 'ऊपर से गिने') + '</span>' : bk === 'shiv' ? ' <span class="badge b-info">' + L('Shivangi’s side', 'शिवांगी की ओर') + '</span>' : bk === 'papa' ? ' <span class="badge b-warn">' + (papaAllEv(r) ? L(LOCAL.who + '’s locals · every function', LOCAL.whoHi + ' के स्थानीय · हर कार्यक्रम') : L(LOCAL.who + '’s locals · wedding night', LOCAL.whoHi + ' के स्थानीय · शादी की रात')) + '</span>' : ' <span class="badge b-info">' + L('in room plan', 'योजना में') + '</span>'; })() + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
       (yes(r.attending) ? '<div class="meta">' + esc(mwkText(r.men, r.women, r.children)) + (r.arrDate ? ' · ' + L('arrives ', 'आगमन ') + niceDate(r.arrDate) : '') + (yes(r.room) ? ' · <span class="badge b-warn">' + L('needs room', 'कमरा चाहिए') + '</span>' : '') + '</div><div class="rem">' + esc(r.functions.split(' | ').map(function (f) { return L(f, fnHi(f)); }).join(', ')) + '</div>' : '') +
       (r.note ? '<div class="rem">💬 ' + esc(r.note) + '</div>' : '') +
-      '<div class="acts">' + (r.manual ? '<button class="call" data-act="toldus" data-id="' + esc(r.gid) + '">✎ ' + B('Change their reply', 'जवाब बदलें') + '</button>' : '') + (yes(r.attending) && !inG && !r.manual ? '<button class="btn sm" data-act="rsvpadd" data-v="' + esc(r.phone || r.name) + '">＋ ' + (replyBucket(r) === 'papa' ? B('Mine: count on top', 'मेरे: ऊपर से गिनें') : B('Add to guest list', 'सूची में जोड़ें')) + '</button>' : '') + (function () { if (!yes(r.attending) || r.manual) return ''; var fromR = rsvpMadeRows(r); if (!fromR.length) return ''; var tg = fromR.some(papaTagged);
+      '<div class="acts">' + (r.manual ? '<button class="call" data-act="toldus" data-id="' + esc(r.gid) + '">✎ ' + B('Change their reply', 'जवाब बदलें') + '</button>' : '<button class="call" data-act="rsvpfix" data-v="' + esc(fixKey(r)) + '">✎ ' + B('Correct', 'सुधारें') + '</button>') + (yes(r.attending) && !inG && !r.manual ? '<button class="btn sm" data-act="rsvpadd" data-v="' + esc(r.phone || r.name) + '">＋ ' + (replyBucket(r) === 'papa' ? B('Mine: count on top', 'मेरे: ऊपर से गिनें') : B('Add to guest list', 'सूची में जोड़ें')) + '</button>' : '') + (function () { if (!yes(r.attending) || r.manual) return ''; var fromR = rsvpMadeRows(r); if (!fromR.length) return ''; var tg = fromR.some(papaTagged);
         return '<button class="btn sm ghost" data-act="papaguest" data-v="' + esc(r.phone || r.name) + '" data-on="' + (tg ? 0 : 1) + '">' + (tg ? B('Mine: count on top', 'मेरे: ऊपर से गिनें') : B(LOCAL.who + '’s guest, not mine', LOCAL.whoHi + ' के मेहमान, मेरे नहीं')) + '</button>'; })() + callBtns(r.phone, L('Namaste ', 'नमस्ते ') + r.name + ' ji 🙏') + '</div></div>';
   }
   h += sec('yes', '✅', 'Coming', 'आएँगे', ry, ry.length + L(' replies · ', ' जवाब · ') + ppl(ry) + L(' people', ' लोग'));
@@ -2790,6 +2824,15 @@ document.addEventListener('click', function (e) {
       closeSheet(true); S.sheet = null;
       rowSave('guests', id, tatt === 'Yes' ? { rsvp: 'Told us: Yes · ' + tm + ' men · ' + tw + ' women · ' + tk + ' children', adults: String(tm + tw), children: String(tk) } : { rsvp: 'Told us: No' }, tatt === 'Yes' ? L('Saved: coming · ' + mwkText(tm, tw, tk), 'सेव: आएँगे · ' + mwkText(tm, tw, tk)) : L('Saved: not coming. No reminder will go to them.', 'सेव: नहीं आएँगे। इन्हें याद दिलाने का संदेश नहीं जाएगा।'));
       return;
+    case 'rsvpfix': openFix(v); return;
+    case 'saverf':
+      var rk = el.getAttribute('data-id') || (S.sheet && S.sheet.rsvpfix); if (!rk) return;
+      var ratt = segVal('td_att') || 'Yes', rm = toldVal('m'), rw = toldVal('w'), rkk = toldVal('k'), rwho = segVal('rf_who') || 'auto', rfam = (document.getElementById('rf_fam') || {}).value || '';
+      if (ratt === 'Yes' && !(rm + rw + rkk)) { toast(L('Please add how many are coming', 'कितने लोग आ रहे हैं, यह जोड़ें'), true); return; }
+      if (rwho === 'plan' && !rfam) { toast(L('Pick the room-plan family', 'योजना का परिवार चुनें'), true); return; }
+      var allFx = rsvpFixes(); allFx[rk] = { att: ratt, m: rm, w: rw, k: rkk, days: segVal('rf_days') || 'wed', room: segVal('rf_room') || 'No', who: rwho, fam: rwho === 'plan' ? rfam : '', by: S.me, at: today() };
+      closeSheet(true); S.sheet = null; saveFixes(allFx, L('Corrected', 'सुधार सेव हुआ')); return;
+    case 'unrf': var ufx = rsvpFixes(); delete ufx[v]; closeSheet(true); S.sheet = null; saveFixes(ufx, L('Back to what they filled', 'जैसा उन्होंने भरा, वैसा')); return;
     case 'untold': closeSheet(true); S.sheet = null; rowSave('guests', id, { rsvp: '' }, L('Back in “Waiting”', 'फिर से “जवाब बाकी” में')); return;
     case 'remall':
       var wl = S.guests.filter(function (g) { return invState(g) === 'wait' && digits(g.phone).length >= 10; }).sort(function (a, b) { return (a.invSent || '') < (b.invSent || '') ? -1 : 1; });
@@ -2888,7 +2931,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b53';
+var BUILD = 'b54';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
