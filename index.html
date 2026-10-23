@@ -587,7 +587,8 @@ function applyFix(r, fx) {
   return Object.assign({}, r, { attending: fx.att || r.attending, men: m, women: w, children: k, total: m + w + k, functions: yesC ? (fx.days === 'all' ? fnsAll() : fx.days === 'wed' ? CATER.bigFn : r.functions) : '',
     room: fx.room || r.room, arrDate: fx.days === 'wed' && fx.room !== 'Yes' ? '' : r.arrDate, fixWho: fx.who || 'auto', fixFam: fx.fam || '', fixed: fx, orig: r });
 }
-function rsvpList() { return memo('rsvpList', function () { var fx = rsvpFixes(); return (S.rsvp || []).map(function (r) { return applyFix(r, fx[fixKey(r)]); }).concat(manualRsvps()); }).slice(); }
+function rsvpList() { return memo('rsvpList', function () { var fx = rsvpFixes(); return (S.rsvp || []).map(function (r) { var f = fx[fixKey(r)]; if (!f && /^from vizag/i.test(String(r.note || '')) && (yes(r.room) || r.arrDate)) return Object.assign({}, r, { room: '', arrDate: '', orig: r });   // local ("From Vizag"): never a room or an arrival
+    return applyFix(r, f); }).concat(manualRsvps()); }).slice(); }
 /* replies people gave on WhatsApp / phone, noted in the app ("They replied"): saved in the guest's "RSVP Phone" cell as
    "Told us: Yes · 2 men · 1 women · 0 children" or "Told us: No". Counted like a website reply unless the guest also filled the website form. */
 function toldInfo(g) {
@@ -1729,6 +1730,7 @@ function viewRsvp() {
         line(LOCAL.who + '’s locals, every function', LOCAL.whoHi + ' के स्थानीय, हर कार्यक्रम', B4.papaAll, LOCAL.allEv) +
         line(LOCAL.who + '’s locals, wedding night', LOCAL.whoHi + ' के स्थानीय, शादी की रात', B4.papaWed, LOCAL.n - LOCAL.shiv - LOCAL.staff - LOCAL.allEv) + '</div>'; })() +
     (M.length ? '<div class="sub" style="margin-top:.4rem">' + L('+ ' + M.length + ' replies you noted from WhatsApp / phone (last section)', '+ ' + M.length + ' जवाब जो आपने WhatsApp / फ़ोन से लिखे (आख़िरी हिस्सा)') + '</div>' : '') + '</div>';
+  h += '<button class="btn block" style="width:100%;margin-top:.8rem" data-act="schopen">📅 ' + B('Send the programme to everyone coming', 'आने वाले सभी को कार्यक्रम भेजें') + '</button>';
   function row(r) {
     var inG = rsvpInGuests(r);
     return '<div class="task" style="cursor:default"><div class="t">' + (r.manual ? esc(r.name) : '<span data-act="rsvpfix" data-v="' + esc(fixKey(r)) + '" style="cursor:pointer;text-decoration:underline dotted">' + esc(r.name) + '</span>') + ' ' + (isRecReply(r) ? '<span class="badge b-info">' + L('Reception', 'समारोह') + '</span> ' : (yes(r.attending) ? papaAllEv(r) : /3/.test(r.invite || '')) ? '<span class="badge b-info">' + L('3 days', '3 दिन') + '</span> ' : '<span class="badge b-info">' + L('Wedding day', 'शादी का दिन') + '</span> ') + (r.fixed ? '<span class="badge b-warn">✎ ' + L('corrected', 'सुधारा') + '</span> ' : '') + (yes(r.attending) ? '<span class="badge b-ok">' + L('Coming', 'आएँगे') + ' · ' + r.total + '</span>' : '<span class="badge b-no">' + L('Not coming', 'नहीं आएँगे') + '</span>') + (function () { var bk = replyBucket(r); return bk === 'ours' ? ' <span class="badge b-ok">' + L('counted on top', 'ऊपर से गिने') + '</span>' : bk === 'shiv' ? ' <span class="badge b-info">' + L('Shivangi’s side', 'शिवांगी की ओर') + '</span>' : bk === 'papa' ? ' <span class="badge b-warn">' + (papaAllEv(r) ? L(LOCAL.who + '’s locals · every function', LOCAL.whoHi + ' के स्थानीय · हर कार्यक्रम') : L(LOCAL.who + '’s locals · wedding night', LOCAL.whoHi + ' के स्थानीय · शादी की रात')) + '</span>' : ' <span class="badge b-info">' + L('in room plan', 'योजना में') + '</span>'; })() + (inG ? ' <span class="badge b-info">' + L('In guest list', 'सूची में है') + '</span>' : '') + '</div>' +
@@ -2196,7 +2198,7 @@ function showRun() {
       '<button class="btn block" style="width:100%;margin-top:1rem" data-act="closesheet">' + K('Close', 'बंद करें') + '</button>');
     return;
   }
-  var it = r.items[r.i], ok = digits(it.phone).length >= 10, pers = r.kind === 'inv' || r.kind === 'rem', gn = pers ? gnOf(it) : '';
+  var it = r.items[r.i], ok = digits(it.phone).length >= 10, pers = r.kind === 'inv' || r.kind === 'rem' || r.kind === 'sch', gn = pers ? gnOf(it) : '';
   if (pers) it.ptext = personal(it.text, gn);
   showSheet('<div class="rem">' + esc(r.title) + '</div><h3 style="margin:.2rem 0 0">' + (r.i + 1) + ' / ' + r.items.length + '</h3>' +
     '<div class="card" style="padding:1.1rem;margin:.8rem 0;text-align:center"><div style="font-size:1.35rem;font-weight:700;color:var(--navy)">' + esc(it.name || it.phone) + '</div><div class="rem" style="margin-top:.2rem">' + esc(it.phone || '') + (it.note ? ' · ' + esc(it.note) : '') + '</div></div>' +
@@ -2213,6 +2215,7 @@ function runDone(sent) {
     if (r.kind === 'inv') markInvited(it, r.code);
     else if (r.kind === 'rem') { var g = S.guests.filter(function (x) { return x.id === it.gid; })[0]; if (g) rowSave('guests', g.id, { remAt: today(), remN: num(g.remN) + 1 }); }
     else if (r.kind === 'stay') markStaySent(it.phone);
+    else if (r.kind === 'sch') { var sm = schSent(); sm[last10(it.phone)] = 1; LS.set('pl_sch_sent', JSON.stringify(sm)); }
     else if (r.kind === 'day') { var key = 'pl_ds_' + r.date, m = {}; try { m = JSON.parse(LS.get(key) || '{}'); } catch (e) {} m[last10(it.phone)] = 1; LS.set(key, JSON.stringify(m)); }
   } else r.skipped++;
   r.i++;
@@ -2259,6 +2262,66 @@ function openRemEdit() {
     '<div style="display:flex;gap:.6rem;margin-top:1rem"><button class="btn ghost" style="flex:1" data-act="remreset">↺ ' + B('Default', 'पहले वाला') + '</button><button class="btn" style="flex:2" data-act="closesheet">' + K('Done', 'हो गया') + '</button></div>');
 }
 
+/* the programme, personalised: each family who is coming gets only the functions they attend (+ their stay), with their name before "Namaste" */
+var SCH_TOK = { prog: '{Programme}', stay: '{Stay}', map: '{Map}', help: '{Helpline}' };
+function schKeys() { var out = []; FUNCTIONS.filter(function (f) { return f.date; }).forEach(function (f) { if (f.n === CATER.bigFn) out.push({ k: 'baraat', n: 'Baraat', hi: 'बारात', date: f.date, with: f.n }); out.push({ k: nkey(f.n), n: f.n, hi: f.hi, date: f.date }); }); return out; }
+function schDefLine(x, hi) {
+  var icon = { faldaan: '🌼', mehndi: '🌿', engagementsangeet: '💃', haldi: '💛', baraat: '🐎' }[x.k] || '💍';
+  var fl = S.flow.filter(function (f) { return f.date === x.date && f.fn === x.n && f.start; }).sort(function (a, b) { return flowMin(a) - flowMin(b); })[0];
+  var d = new Date(dayNum(x.date) * 864e5), wd = (hi ? WD_HI : WD)[d.getUTCDay()], dn = +x.date.slice(8, 10) + ' ' + (hi ? MON_HI[+x.date.slice(5, 7) - 1] : ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][+x.date.slice(5, 7) - 1]);
+  var t = x.k === 'baraat' ? (hi ? 'समय जल्द बताएँगे' : 'time to be shared') : fl ? niceTime(fl.start) : '';
+  return icon + ' *' + (hi ? x.hi : x.n) + '* · ' + wd + ', ' + dn + (t ? ' · ' + t : '');
+}
+function schLine(x, hi) { return LS.get('pl_sl_' + x.k + (hi ? '_hi' : '_en')) || schDefLine(x, hi); }
+function defSchMsg(hi) {
+  if (hi) return 'नमस्ते 🙏\n*श्रीजीत एवं शिवांगी* के विवाह में आपका आना हमारे लिए सौभाग्य है ⚓\n\n*आपका कार्यक्रम*\n' + SCH_TOK.prog + '\n\n📍 स्थान: Aarif Seaside Resort, विशाखापट्टनम\n' + SCH_TOK.map + '\n' + SCH_TOK.stay + '\n📞 परिवार हेल्पलाइन: ' + SCH_TOK.help + '\n\nआपकी प्रतीक्षा रहेगी 🌸\n— मिश्रा परिवार';
+  return 'Namaste 🙏\nWe are delighted you will be with us for *Shrijeet & Shivangi*\'s wedding ⚓\n\n*Your programme*\n' + SCH_TOK.prog + '\n\n📍 Venue: Aarif Seaside Resort, Vizag\n' + SCH_TOK.map + '\n' + SCH_TOK.stay + '\n📞 Family helpline: ' + SCH_TOK.help + '\n\nSee you soon! 🌸\n— Mishra family';
+}
+function schMsg(hi) { return LS.get(hi ? 'pl_sm_hi' : 'pl_sm_en') || defSchMsg(hi); }
+function schSent() { try { return JSON.parse(LS.get('pl_sch_sent') || '{}'); } catch (e) { return {}; } }
+function schList() {
+  var seen = {}, out = [], fl = fnList().filter(function (f) { return f.date <= CATER.to; });
+  var add = function (o) { var k = last10(o.phone) || nkey(o.name); if (!k || seen[k] || !o.fns.length) return; seen[k] = 1; out.push(o); };
+  famList().forEach(function (f) {
+    if (f.side === 'Shivangi' || f.maybe || f.home || isVendor(f.name)) return;
+    var ph = famPhones(f.name)[0], g = f.g || {};
+    var st = f.rows.filter(function (a) { return a.from && a.from <= '2026-12-02' && (a.to || a.from) >= '2026-11-30' && !isHomePlace(a.stay); })[0];
+    add({ name: g.name || f.name, phone: ph ? ph.d : '', gid: g.id || '', hi: !!(g.invLink && invInfo(g.invLink).hi), p: f.people, fns: fl.filter(function (fn) { return famRowsAt(f, fn).length; }).map(function (fn) { return fn.fn; }), stay: st ? (function () { var rm = String(st.room || '').replace(/\s*\(.*$/, '').trim(); if (/^room$/i.test(rm)) rm = ''; return String(st.stay).replace(/\s*\((shrijeet|shivangi)\)\s*$/i, '') + (rm ? ', ' + (/^\d/.test(rm) ? 'Room ' : '') + rm : ''); })() : '' });
+  });
+  rsvpWed().forEach(function (r) {
+    if (!yes(r.attending) || replyBucket(r) === 'plan') return;
+    var g = guestByPhone(r.phone) || {}, fs = String(r.functions || '').split('|').map(function (x) { return x.trim(); }).filter(Boolean);
+    if (!fs.length) fs = [CATER.bigFn];
+    add({ name: r.name, phone: r.phone, gid: g.id || '', hi: !!(g.invLink && invInfo(g.invLink).hi), p: num(r.total), fns: fs, stay: '' });
+  });
+  return out.sort(function (a, b) { return String(a.name).localeCompare(String(b.name)); });
+}
+function schText(it, tpl) {
+  var hi = it.hi, keys = schKeys(), prog = keys.filter(function (x) { return it.fns.indexOf(x.with || x.n) >= 0; }).map(function (x) { return schLine(x, hi); }).join('\n');
+  var ar = places().filter(function (p) { return /aarif/i.test(p.name) && p.map; })[0], help = (S.stays.filter(isHelp)[0] || {}).contact || '';
+  var val = {}; val[SCH_TOK.prog] = prog; val[SCH_TOK.map] = ar ? ar.map : ''; val[SCH_TOK.help] = help; val[SCH_TOK.stay] = it.stay ? (hi ? '🏨 आपका ठहराव: ' : '🏨 Your stay: ') + it.stay : '';
+  return String(tpl).split('\n').map(function (ln) { var drop = false; Object.keys(val).forEach(function (k) { if (ln.indexOf(k) >= 0) { if (val[k]) ln = ln.split(k).join(val[k]); else drop = true; } }); return drop ? null : ln; }).filter(function (ln) { return ln !== null; }).join('\n').replace(/\n{3,}/g, '\n\n');
+}
+function openSched() {
+  S.sheet = { sched: 1 };
+  var list = schList(), sent = schSent(), left = list.filter(function (x) { return !sent[last10(x.phone)]; }), noPh = list.filter(function (x) { return digits(x.phone).length < 10; }).length, ppl = list.reduce(function (t, x) { return t + x.p; }, 0);
+  var ex = list.filter(function (x) { return x.stay; })[0] || list[0];
+  var keys = schKeys();
+  var h = '<h3>📅 ' + B('Programme for everyone coming', 'आने वालों को कार्यक्रम') + '</h3>' +
+    '<div class="card" style="padding:.9rem 1rem;margin-top:.6rem"><b style="font-size:1.15rem">' + list.length + '</b> ' + L('families (' + ppl + ' people): our room-plan families + everyone who said yes on the website or WhatsApp. Each gets only the functions they come for, and their stay.', 'परिवार (' + ppl + ' लोग): कमरों की योजना के हमारे परिवार + वेबसाइट / WhatsApp पर “हाँ” कहने वाले। हर किसी को सिर्फ़ उनके कार्यक्रम और ठहराव।') +
+    (list.length - left.length ? '<div class="rem">' + L((list.length - left.length) + ' already sent', (list.length - left.length) + ' को भेज दिया') + '</div>' : '') + (noPh ? '<div class="rem">' + L(noPh + ' without a mobile number (they will be skipped)', noPh + ' का नंबर नहीं (छोड़ दिए जाएँगे)') + '</div>' : '') + '</div>' +
+    '<label class="l">' + B('Message', 'संदेश') + ' · English</label><textarea class="input" id="sm_en" style="min-height:12rem;font-size:.92rem">' + esc(schMsg(false)) + '</textarea>' +
+    '<label class="l">' + B('Message', 'संदेश') + ' · हिंदी</label><textarea class="input" id="sm_hi" style="min-height:12rem;font-size:.92rem">' + esc(schMsg(true)) + '</textarea>' +
+    '<div class="rem">' + L('Keep ' + SCH_TOK.prog + ', ' + SCH_TOK.stay + ', ' + SCH_TOK.map + ' and ' + SCH_TOK.help + ' where you want them: they are filled for each family (a line is left out when it has nothing, e.g. no stay). The name goes before “Namaste” and you can change it for each person while sending.', SCH_TOK.prog + ', ' + SCH_TOK.stay + ', ' + SCH_TOK.map + ', ' + SCH_TOK.help + ' हर परिवार के लिए भर जाते हैं (खाली हो तो वह लाइन हट जाती है)। “नमस्ते” से पहले नाम भेजते समय बदल सकते हैं।') + '</div>' +
+    '<details class="card" style="padding:.7rem 1rem;margin-top:.8rem"><summary style="font-weight:700;cursor:pointer">✎ ' + B('Programme lines (times, Baraat)', 'कार्यक्रम की लाइनें (समय, बारात)') + '</summary>' +
+    keys.map(function (x) { return '<label class="l">' + esc(L(x.n, x.hi)) + '</label><input class="input" id="sl_' + x.k + '_en" value="' + esc(schLine(x, false)) + '" /><input class="input" id="sl_' + x.k + '_hi" style="margin-top:.3rem" value="' + esc(schLine(x, true)) + '" />'; }).join('') +
+    '<div class="rem" style="margin-top:.4rem">' + L('Baraat goes to everyone coming on the wedding evening.', 'बारात की लाइन शादी की शाम आने वाले सभी को जाती है।') + '</div></details>' +
+    (ex ? '<label class="l">' + B('Preview', 'झलक') + ' · ' + esc(ex.name) + '</label><div class="card" id="sm_prev" style="padding:.8rem 1rem;white-space:pre-wrap;font-size:.9rem">' + esc(personal(schText(ex, schMsg(ex.hi)), gnOf(ex))) + '</div>' : '') +
+    '<button class="btn block" style="width:100%;margin-top:1rem;background:linear-gradient(180deg,#2f9e5a,#1f7a43);border-color:#1f7a43" data-act="schgo">💬 ' + B('Send one by one (' + left.length + ' left)', 'एक-एक करके भेजें (' + left.length + ' बाकी)') + '</button>' +
+    (list.length - left.length ? '<button class="btn ghost block" style="width:100%;margin-top:.5rem" data-act="schagain">↻ ' + B('Send again to everyone', 'सबको फिर से भेजें') + '</button>' : '') +
+    '<div style="display:flex;gap:.6rem;margin-top:.6rem"><button class="btn ghost" style="flex:1" data-act="schreset">↺ ' + B('Default text', 'पहले वाला') + '</button><button class="btn ghost" style="flex:1" data-act="closesheet">' + K('Close', 'बंद करें') + '</button></div>';
+  showSheet(h);
+}
 /* event day: everyone who said yes for that day's functions */
 function dayFns(d) { return FUNCTIONS.filter(function (f) { return f.date === d; }); }
 function dayGuests(d) {
@@ -2842,6 +2905,13 @@ document.addEventListener('click', function (e) {
     case 'remedit': e.preventDefault(); openRemEdit(); return;
     case 'remreset': LS.set('pl_rm_en', ''); LS.set('pl_rm_hi', ''); openRemEdit(); return;
     case 'daymsg': loadRsvp(true); openDay(v); return;
+    case 'schopen': openSched(); return;
+    case 'schreset': LS.set('pl_sm_en', ''); LS.set('pl_sm_hi', ''); schKeys().forEach(function (x) { LS.set('pl_sl_' + x.k + '_en', ''); LS.set('pl_sl_' + x.k + '_hi', ''); }); openSched(); return;
+    case 'schgo': case 'schagain':
+      if (act === 'schagain') LS.set('pl_sch_sent', '');
+      var ssm = schSent(), sitems = schList().filter(function (x) { return !ssm[last10(x.phone)]; }).map(function (x) { return Object.assign({}, x, { text: schText(x, schMsg(x.hi)), note: x.p + L(' people', ' लोग') + (x.stay ? ' · ' + x.stay : '') }); });
+      if (!sitems.length) { toast(L('Everyone has been sent the programme', 'सभी को कार्यक्रम भेज दिया'), true); return; }
+      startRun({ kind: 'sch', title: L('Programme', 'कार्यक्रम'), items: sitems, i: 0, sent: 0, skipped: 0 }); return;
     case 'dayreset': e.preventDefault(); LS.set('pl_dm_' + v + '_en', ''); LS.set('pl_dm_' + v + '_hi', ''); openDay(v); return;
     case 'daygo': case 'dayagain':
       if (act === 'dayagain') LS.set('pl_ds_' + v, '');
@@ -2919,6 +2989,9 @@ document.addEventListener('input', function (e) {
   if (e.target.id === 'run_gn' && S.run && S.run.items[S.run.i]) { var rit = S.run.items[S.run.i]; if (rit.gid) LS.set('pl_gn_' + rit.gid, e.target.value.trim() || ' '); rit.ptext = personal(rit.text, e.target.value); var ra = document.getElementById('run_wa'); if (ra) ra.href = waLink(rit.phone, rit.ptext); }
   if (e.target.id === 'gq') { S.gq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { render(); window.scrollTo(0, 0); }, 120); }
   if (e.target.id === 'inv_msg' && S.sheet && S.sheet.send) LS.set('pl_im_' + sheetCode(), e.target.value);
+  if (e.target.id === 'sm_en' || e.target.id === 'sm_hi') LS.set(e.target.id === 'sm_en' ? 'pl_sm_en' : 'pl_sm_hi', e.target.value);
+  if (/^sl_[a-z0-9]+_(en|hi)$/.test(e.target.id || '')) LS.set('pl_' + e.target.id, e.target.value);
+  if (/^(sm_|sl_)/.test(e.target.id || '')) { var pv = document.getElementById('sm_prev'); if (pv) { var sl0 = schList(), ex0 = sl0.filter(function (x) { return x.stay; })[0] || sl0[0]; if (ex0) pv.textContent = personal(schText(ex0, schMsg(ex0.hi)), gnOf(ex0)); } }
   if (e.target.id === 'rm_en' || e.target.id === 'rm_hi') LS.set(e.target.id === 'rm_en' ? 'pl_rm_en' : 'pl_rm_hi', e.target.value);
   if (e.target.id === 'dm_en' || e.target.id === 'dm_hi') LS.set('pl_dm_' + e.target.getAttribute('data-d') + (e.target.id === 'dm_en' ? '_en' : '_hi'), e.target.value);
   if (e.target.id === 'inv_lq' && S.sheet && S.sheet.send) { S.sheet.lq = e.target.value; clearTimeout(searchT); searchT = setTimeout(function () { sendKeep(); openSend(); var i = document.getElementById('inv_lq'); if (i) { i.focus(); var n = i.value.length; try { i.setSelectionRange(n, n); } catch (er) {} } }, 200); }
@@ -2931,7 +3004,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b54';
+var BUILD = 'b55';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
