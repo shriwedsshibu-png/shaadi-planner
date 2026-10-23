@@ -1044,6 +1044,8 @@ function famMembers(f) { return String(f.name || '').replace(/^[^:]*:/, '').spli
 function nameToks(s) { return String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\b(ji|family|parivar|couple|kids?|mr|mrs|smt|shri|dr)\b/g, ' ').split(/[^a-zऀ-ॿ]+/).filter(function (w) { return w.length > 1; }); }
 function rsvpFam(r) {   // the room-plan family this website reply belongs to (same mobile number, or the same first and last name), so nobody is counted or listed twice
   var p = last10(r.phone), rt = nameToks(r.name), hit = null, shivTag = /\[shivangi side\]/i.test(String(r.note || ''));
+  var me = rt.length ? rt[0].replace(/(.)\1+/g, '$1') : '';   // the bride or groom filling their own form ("Shivangiiii", "Shibu", "Shrijeet"): they are already in the room plan
+  if (/^(shivangi|shibu)$/.test(me) || /^shr[ie]j[ie]?et$/.test(me)) { var mine = famList().filter(function (f) { return /^shivangi|^shibu/.test(me) ? f.side === 'Shivangi' && /shivangi priya|bride/i.test(f.name) : /shrijeet mishra/i.test(f.name); })[0]; if (mine) return mine; }
   famList().some(function (f) {
     if (p && famPhones(f.name).some(function (x) { return x.d.slice(-10) === p; })) { hit = f; return true; }
     var g = f.g, gp = g ? [last10(g.rsvp)].concat(phonesOf(g.phone).map(function (x) { return x.d.slice(-10); })) : [];
@@ -2859,7 +2861,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b50';
+var BUILD = 'b51';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
