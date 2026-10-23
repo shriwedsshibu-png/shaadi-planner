@@ -273,6 +273,7 @@ function api(method, payload) {
   }, function (e) { clearTimeout(timer); throw e; });
 }
 function saveCache() { try { LS.set('pl_cache', JSON.stringify({ role: S.role, t: S.tasks, v: S.vendors, p: S.payments, g: S.guests, s: S.shagun, f: S.flow, st: S.stays, al: S.alloc, n: S.names, ver: S.ver, v4: S.v4, v5: S.v5, v6: S.v6, at: S.lastSync || Date.now() })); } catch (e) {} }
+function dataSig() { try { return JSON.stringify([S.role, S.tasks, S.vendors, S.payments, S.guests, S.shagun, S.flow, S.stays, S.alloc]); } catch (e) { return String(Math.random()); } }
 function applyData(d) {
   var role = d.role === 'shagun' ? 'shagun' : 'family';
   if (S.role && S.role !== role) { S.tasks = []; S.vendors = []; S.payments = []; S.guests = []; S.flow = []; S.rsvp = null; LS.set('pl_rsvp', ''); }
@@ -302,8 +303,11 @@ function load(silent, force, fresh) {
   loading = api('GET', 'action=all' + (fresh ? '&fresh=1' : '') + (force || !S.ver || !S.loaded || !S.v5 || !S.v6 ? '' : '&have=' + encodeURIComponent(S.ver))).then(function (d) {
     loading = null; S.offline = false; S.lastSync = Date.now();
     if (Q.length) return;
-    if (!d.same) { applyData(d); saveCache(); }
-    if (!S.sheet) render(); else renderStatus();
+    var changed = !S.shown;
+    if (!d.same) { var before = dataSig(), keep = { tasks: S.tasks, vendors: S.vendors, payments: S.payments, guests: S.guests, shagun: S.shagun, flow: S.flow, stays: S.stays, alloc: S.alloc };
+      applyData(d); saveCache();
+      if (dataSig() === before) Object.assign(S, keep); else changed = true; }   // same data as on screen: keep it (and the worked-out counts)
+    if (!S.sheet && changed) render(); else renderStatus();
   }).catch(function (e) {
     loading = null;
     if (e.message === 'PIN') { S.loaded = false; render(); return; }
@@ -316,7 +320,7 @@ function load(silent, force, fresh) {
 function loadRsvp(force) {
   if (!force && S.rsvp && Date.now() - S.rsvpAt < 120000) return;
   S.rsvpAt = Date.now();
-  api('GET', 'action=rsvp').then(function (d) { S.rsvp = d.rsvp || []; S.rsvpNote = d.note || ''; LS.set('pl_rsvp', JSON.stringify(S.rsvp)); if (!S.sheet && S.tab === 'guests') render(); }).catch(function () {});
+  api('GET', 'action=rsvp').then(function (d) { var nr = JSON.stringify(d.rsvp || []), same = S.rsvp && JSON.stringify(S.rsvp) === nr; S.rsvpNote = d.note || ''; if (same) return; S.rsvp = d.rsvp || []; LS.set('pl_rsvp', nr); if (!S.sheet && S.tab === 'guests') render(); }).catch(function () {});
 }
 
 /* ---------- the save queue ---------- */
@@ -324,8 +328,9 @@ var Q = []; try { Q = JSON.parse(LS.get('pl_q') || '[]') || []; } catch (e) { Q 
 var pumping = false, retryT = 0;
 function saveQ() { LS.set('pl_q', JSON.stringify(Q)); }
 function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
-function enqueue(payload, tmp) { Q.push({ p: Object.assign({ cid: uid() }, payload), tmp: tmp || '' }); saveQ(); saveCache(); pump(); }
+function enqueue(payload, tmp) { DV++; Q.push({ p: Object.assign({ cid: uid() }, payload), tmp: tmp || '' }); saveQ(); saveCache(); pump(); }
 function swapId(tmp, real) {
+  DV++;
   [S.tasks, S.vendors, S.payments, S.guests, S.shagun, S.flow, S.stays, S.alloc].forEach(function (arr) { arr.forEach(function (x) { if (x.id === tmp) x.id = real; if (x.vid === tmp) x.vid = real; }); });
   Q.forEach(function (it) { if (it.p.id === tmp) it.p.id = real; if (it.p.fields && it.p.fields.vid === tmp) it.p.fields.vid = real; });
   if (S.sheet) Object.keys(S.sheet).forEach(function (k) { if (S.sheet[k] === tmp) S.sheet[k] = real; });
@@ -563,7 +568,13 @@ function mwkText(m, w, k) {   // "1 man · 1 woman · 2 children = 4 people"
 function gp(g) { var a = num(g.adults), c = num(g.children); return (a || c) ? a + c : 1; }   // people in this entry (1 if not filled)
 function people(arr) { return arr.reduce(function (s, g) { return s + gp(g); }, 0); }
 function yes(v) { return /^(y|yes|haan|ha|true|1)/i.test(String(v || '').trim()); }
-function rsvpList() { return (S.rsvp || []).concat(manualRsvps()); }
+/* speed: the heavy counts (families, who invited each reply, plates per function) are worked out once and reused
+   until something changes (a save, fresh data from the sheet, a new RSVP, or the language) */
+var MEMO = { k: null, c: {}, m: {} }, DV = 0;
+function memoFresh() { var k = [S.alloc, S.guests, S.rsvp, S.flow, S.stays, S.tasks, S.vendors, S.lang, S.carMode, DV]; if (!MEMO.k || k.some(function (x, i) { return x !== MEMO.k[i]; })) MEMO = { k: k, c: {}, m: {} }; return MEMO; }
+function memo(key, fn) { var M = memoFresh(); return Object.prototype.hasOwnProperty.call(M.c, key) ? M.c[key] : (M.c[key] = fn()); }
+function memoBy(name, obj, fn) { var M = memoFresh(), mp = M.m[name] || (M.m[name] = new Map()); if (mp.has(obj)) return mp.get(obj); var v = fn(obj); mp.set(obj, v); return v; }
+function rsvpList() { return memo('rsvpList', function () { return (S.rsvp || []).concat(manualRsvps()); }).slice(); }
 /* replies people gave on WhatsApp / phone, noted in the app ("They replied"): saved in the guest's "RSVP Phone" cell as
    "Told us: Yes · 2 men · 1 women · 0 children" or "Told us: No". Counted like a website reply unless the guest also filled the website form. */
 function toldInfo(g) {
@@ -571,7 +582,8 @@ function toldInfo(g) {
   var att = /:\s*no\b/i.test(t) ? 'No' : /:\s*yes\b/i.test(t) ? 'Yes' : '', n = function (re) { var m = re.exec(t); return m ? +m[1] : 0; };
   return { att: att, m: n(/(\d+) men/i), w: n(/(\d+) women/i), k: n(/(\d+) child/i) };
 }
-function manualRsvps() {
+function manualRsvps() { return memo('manualRsvps', _manualRsvps).slice(); }
+function _manualRsvps() {
   var web = S.rsvp || [], out = [];
   S.guests.forEach(function (g) {
     var t = toldInfo(g); if (!t || !t.att) return;
@@ -697,9 +709,10 @@ function nightsText(a, b) {
   return niceDate(a) + ' → ' + niceDate(b) + ' · ' + L('check-out ', 'चेक-आउट ') + niceDate(nextDay(b));
 }
 function isHelp(s) { return /^helpline$/i.test(String(s.kind || '')); }
-function places() { return S.stays.filter(function (s) { return !isHelp(s) && !/^(vehicle|cars plan)$/i.test(String(s.kind || '')); }); }
+function places() { return memo('places', _places).slice(); }
+function _places() { return S.stays.filter(function (s) { return !isHelp(s) && !/^(vehicle|cars plan)$/i.test(String(s.kind || '')); }); }
 function helpRow() { return S.stays.filter(isHelp)[0] || null; }
-function stayOf(name) { var k = nkey(name); return k ? places().filter(function (s) { return nkey(s.name) === k; })[0] : null; }
+function stayOf(name) { var k = nkey(name); if (!k) return null; var ix = memo('stayIdx', function () { var o = {}; places().forEach(function (s) { var x = nkey(s.name); if (x && !o[x]) o[x] = s; }); return o; }); return ix[k] || null; }
 function isBooked(s) { return !!(s && num(s.rooms) > 0); }
 function mattressN(a) { var p = num(a.people); if (/^n/i.test(a.mattress || '')) return 0; if (yes(a.mattress)) return Math.max(1, p - 2); return isBooked(stayOf(a.stay)) ? Math.max(0, p - 2) : 0; }   // a double bed takes 2 (only in rooms we book)
 function allocNights(a) { return nightsOf(a.from, a.to); }
@@ -713,18 +726,21 @@ function rangeText(list) {   // ['2026-11-28','2026-11-29'] -> "28 Nov – 29 No
   return parts.join(', ');
 }
 // for one place on one night: rooms booked, rooms used, people, mattresses
-function nightAt(s, n) {
+function nightAt(s, n) { return memo('na|' + s.id + '|' + s.name + '|' + n, function () { return _nightAt(s, n); }); }
+function _nightAt(s, n) {
   var booked = isBooked(s) && s.from && n >= s.from && n <= (s.to || s.from) ? num(s.rooms) : 0;
   var here = S.alloc.filter(function (a) { return nkey(a.stay) === nkey(s.name) && a.from && n >= a.from && n <= (a.to || a.from); });
   var rooms = {}, extra = 0; here.forEach(function (a) { if (a.room) rooms[nkey(a.room)] = 1; else extra++; });
   return { booked: booked, used: Object.keys(rooms).length + extra, people: here.reduce(function (t, a) { return t + num(a.people); }, 0), mat: here.reduce(function (t, a) { return t + mattressN(a); }, 0), list: here };
 }
-function allNights() {
+function allNights() { return memo('allNights', _allNights).slice(); }
+function _allNights() {
   var d = []; places().forEach(function (s) { if (isBooked(s) && s.from) d = d.concat(nightsOf(s.from, s.to)); });
   S.alloc.forEach(function (a) { d = d.concat(allocNights(a)); });
   d = d.filter(function (x, i) { return d.indexOf(x) === i; }).sort(); return d.length ? nightsOf(d[0], d[d.length - 1]) : [];
 }
-function roomIssues() {
+function roomIssues() { return memo('roomIssues', _roomIssues).slice(); }
+function _roomIssues() {
   var out = [];
   S.alloc.forEach(function (a) {
     var o = outsideNights(a), s = stayOf(a.stay);
@@ -979,7 +995,8 @@ var CARS = [   // our sure cars (no hire). s = seats with luggage, s2 = without;
   { n: 'Papa’s extra car 2', hi: 'पापा की अतिरिक्त कार 2', s: 3, s2: 4, kind: 'extra' }];
 var CAR_MODES = { own: { n: 'Our ' + CARS.length + ' cars only', hi: 'सिर्फ़ हमारी ' + CARS.length + ' गाड़ियाँ' }, bal: { n: 'Our ' + CARS.length + ' cars + a hired traveller where needed', hi: 'हमारी ' + CARS.length + ' गाड़ियाँ + ज़रूरत पर किराये की ट्रैवलर' }, few: { n: 'Without the friend’s SUV', hi: 'दोस्त की SUV के बिना' } };
 function isHomePlace(name) { var s = stayOf(name); return !!s && /home/i.test(String(s.kind || '')); }
-function famList() {   // one entry per family in the room plan
+function famList() { return memo('famList', _famList).slice(); }
+function _famList() {   // one entry per family in the room plan
   var by = {}, out = [];
   S.alloc.forEach(function (a) {
     var k = nkey(a.family); if (!k) return;
@@ -1042,7 +1059,8 @@ function famMwk(f) {   // the family at its biggest night
 }
 function famMembers(f) { return String(f.name || '').replace(/^[^:]*:/, '').split(/,|&|\band\b|\+/).map(nameToks).filter(function (t) { return t.length; }); }   // the people named in a room-plan family
 function nameToks(s) { return String(s || '').toLowerCase().replace(/\([^)]*\)/g, ' ').replace(/\b(ji|family|parivar|couple|kids?|mr|mrs|smt|shri|dr)\b/g, ' ').split(/[^a-zऀ-ॿ]+/).filter(function (w) { return w.length > 1; }); }
-function rsvpFam(r) {   // the room-plan family this website reply belongs to (same mobile number, or the same first and last name), so nobody is counted or listed twice
+function rsvpFam(r) { return memoBy('rsvpFam', r, _rsvpFam); }
+function _rsvpFam(r) {   // the room-plan family this website reply belongs to (same mobile number, or the same first and last name), so nobody is counted or listed twice
   var p = last10(r.phone), rt = nameToks(r.name), hit = null, shivTag = /\[shivangi side\]/i.test(String(r.note || ''));
   var me = rt.length ? rt[0].replace(/(.)\1+/g, '$1') : '';   // the bride or groom filling their own form ("Shivangiiii", "Shibu", "Shrijeet"): they are already in the room plan
   if (/^(shivangi|shibu)$/.test(me) || /^shr[ie]j[ie]?et$/.test(me)) { var mine = famList().filter(function (f) { return /^shivangi|^shibu/.test(me) ? f.side === 'Shivangi' && /shivangi priya|bride/i.test(f.name) : /shrijeet mishra/i.test(f.name); })[0]; if (mine) return mine; }
@@ -1072,9 +1090,11 @@ function ourGuestOf(r) {
     return rt.length >= 2 ? (ft[0] === rt[0] && ft.indexOf(rt[rt.length - 1]) >= 0) : nkey(g.name) === nkey(r.name);
   });
 }
-function replyBucket(r) { return rsvpFam(r) ? 'plan' : isShivReply(r) ? 'shiv' : ourGuestOf(r) ? 'ours' : 'papa'; }
+function replyBucket(r) { return memoBy('bucket', r, _replyBucket); }
+function _replyBucket(r) { return rsvpFam(r) ? 'plan' : isShivReply(r) ? 'shiv' : ourGuestOf(r) ? 'ours' : 'papa'; }
 function papaAllEv(r) { return String(r.functions || '').split('|').some(function (x) { x = x.trim(); return x && x !== CATER.bigFn; }); }   // Papa's guest who comes to the day functions too (not only the wedding night)
-function rsvpOthers(fn) {   // "yes" replies from Shivangi's and Papa's own invites: shown, but inside their lists (not added on top)
+function rsvpOthers(fn) { return memo('ro|' + (fn || ''), function () { return _rsvpOthers(fn); }); }
+function _rsvpOthers(fn) {   // "yes" replies from Shivangi's and Papa's own invites: shown, but inside their lists (not added on top)
   var o = { shiv: mwk0(), papa: mwk0(), papaAll: mwk0(), papaWed: mwk0() }; Object.keys(o).forEach(function (k) { o[k].n = 0; });
   rsvpWed().forEach(function (r) {
     if (!yes(r.attending)) return; var b = replyBucket(r); if (b !== 'shiv' && b !== 'papa') return;
@@ -1084,7 +1104,8 @@ function rsvpOthers(fn) {   // "yes" replies from Shivangi's and Papa's own invi
   });
   return o;
 }
-function rsvpMore(fn) {   // "yes" replies counted ON TOP: people we invited (in our Guest List) who are not in the room plan; fn empty = all of them
+function rsvpMore(fn) { return memo('rm|' + (fn || '') + '|' + !!S.rsvp, function () { return _rsvpMore(fn); }); }
+function _rsvpMore(fn) {   // "yes" replies counted ON TOP: people we invited (in our Guest List) who are not in the room plan; fn empty = all of them
   var t = mwk0(); t.n = 0; if (!S.rsvp) return null;
   rsvpWed().forEach(function (r) {
     if (!yes(r.attending) || replyBucket(r) !== 'ours') return; var fs = String(r.functions || '');
@@ -1094,7 +1115,8 @@ function rsvpMore(fn) {   // "yes" replies counted ON TOP: people we invited (in
   });
   return t;
 }
-function fnCount(fn) {   // everyone at one function: room plan (both sides, family at home) + website replies; vendor team and "not confirmed" kept apart
+function fnCount(fn) { return memo('fc|' + fn.fn + '|' + fn.date + '|' + fn.start, function () { return _fnCount(fn); }); }
+function _fnCount(fn) {   // everyone at one function: room plan (both sides, family at home) + website replies; vendor team and "not confirmed" kept apart
   var o = { ours: mwk0(), shiv: mwk0(), all: mwk0(), maybe: 0, vend: 0, noDate: 0 };
   famList().forEach(function (f) {
     var rows = famRowsAt(f, fn); if (!rows.length) return;
@@ -1206,7 +1228,8 @@ function dayCard(d, fams) {
   return '<div class="card" style="margin-top:.9rem' + (isT ? ';border-color:var(--gold);box-shadow:0 0 0 2px #f3d27a' : '') + '"><div class="catHead placeHead" style="font-size:1rem"><span>' + esc(wdDate(d)) + (isT ? ' · ' + L('Today', 'आज') : '') + '</span><small>' + (ht.all ? ht.all + ' ' + L('tonight', 'आज रात') : '') + '</small></div>' + (h || '<div class="empty" style="padding:.6rem .9rem">' + L('Nothing planned', 'कुछ तय नहीं') + '</div>') + '</div>';
 }
 /* things to take care of: worked out from the numbers, ticked off as tasks so they stay done on every phone */
-function planActions() {
+function planActions() { return memo('planActions', _planActions).slice(); }
+function _planActions() {
   var out = [], add = function (pri, cat, title, detail) { out.push({ pri: pri, cat: cat, title: title, detail: detail }); };
   var fams = famList(), guestsF = fams.filter(function (f) { return !f.home && !f.maybe; });
   var pplOf = function (l) { return l.reduce(function (s, f) { return s + f.people; }, 0); };
@@ -1472,7 +1495,8 @@ function tripPlan(side, mode) {   // side: 'Shrijeet' (ours) or 'Shivangi'; mode
 }
 function tripRows() { return tripPlan('Shrijeet').concat(tripPlan('Shivangi')).sort(function (a, b) { return a.d.localeCompare(b.d); }); }
 function slotTime(x) { return x.h == null ? (x.kind === 'sb' || x.kind === 'ud' ? L('All day', 'पूरे दिन') : L('Time ?', 'समय ?')) : niceTime(pad(x.h) + ':00'); }
-function carOption(mode) {   // one way of running the cars, with what it costs in money, favours and early wake-ups
+function carOption(mode) { return memo('car|' + mode, function () { return _carOption(mode); }); }
+function _carOption(mode) {   // one way of running the cars, with what it costs in money, favours and early wake-ups
   var r = applyTripEdits(tripPlan('Shrijeet', mode)), hired = r.filter(function (x) { return x.cost > 0; }), hire = hired.reduce(function (t, x) { return t + x.cost; }, 0), nb = hired.length, dh = mode === 'few' ? dayHire(r) : {};
   Object.keys(dh).forEach(function (d) { var z = dh[d]; hire += z.cost - z.single; nb += 1 - z.steps.filter(function (q) { return !q.sep; }).length; });
   var fr = r.filter(function (x) { return (x.used || []).some(function (n) { return /friend/i.test(n); }); }), frD = {}; fr.forEach(function (x) { frD[x.d] = 1; });
@@ -1605,7 +1629,8 @@ function viewCars() {
 }
 function tripTable() { return '<button class="btn block" style="width:100%;margin-top:1rem" data-act="gt" data-v="cars">🚐 ' + B('Cars plan: day by day, slot by slot', 'गाड़ियों की योजना: दिन और समय से') + ' →</button>'; }
 /* who is coming: only the room plan (families confirmed by the family) and website RSVPs that said yes. Invited people who have not replied are NOT counted. */
-function comingNow() {
+function comingNow() { return memo('coming', _comingNow); }
+function _comingNow() {
   var all = famList().filter(function (f) { return !isVendor(f.name); }), fams = all.filter(function (f) { return !f.maybe; }), maybe = all.filter(function (f) { return f.maybe; });
   var vend = famList().filter(function (f) { return isVendor(f.name); }).reduce(function (t, f) { return t + f.people; }, 0);
   var R = rsvpWed(), yesR = R.filter(function (r) { return yes(r.attending); }), noR = R.filter(function (r) { return !yes(r.attending); });
@@ -1830,7 +1855,8 @@ function shagunText(all, rec) {
 }
 
 /* ---------- SHAGUN DESK (second PIN): find the guest's name, write the envelope / gift ---------- */
-function nkey(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9\u0900-\u097f]/g, ''); }
+var NK = new Map();
+function nkey(s) { s = String(s || ''); var v = NK.get(s); if (v === undefined) { if (NK.size > 20000) NK.clear(); v = s.toLowerCase().replace(/[^a-z0-9\u0900-\u097f]/g, ''); NK.set(s, v); } return v; }
 function shagunNames() {   // guest list + website RSVP names (family view builds the same list from its own data)
   if (S.role === 'shagun') return S.names || [];
   var out = [], seen = {};
@@ -1973,7 +1999,7 @@ function remMsg(hi) { return LS.get(hi ? 'pl_rm_hi' : 'pl_rm_en') || defRemMsg(h
 function remText(g) { var i = invInfo(g.invLink); return remMsg(i.hi).split(REM_TOKEN).join(rsvpUrl(g.invLink)).split(INV_TOKEN).join(i.ok ? invUrl(g.invLink) : SITE); }
 
 function guestByPhone(phone) { var p = last10(phone); return p ? S.guests.filter(function (g) { return hasPhone(g.phone, p) || last10(g.rsvp) === p; })[0] : null; }
-function guestByName(name) { var k = nkey(name); return k ? S.guests.filter(function (g) { return nkey(g.name) === k; })[0] : null; }
+function guestByName(name) { var k = nkey(name); if (!k) return null; var ix = memo('gIdx', function () { var o = {}; S.guests.forEach(function (g) { var x = nkey(g.name); if (x && !o[x]) o[x] = g; }); return o; }); return ix[k] || null; }
 function isRecReply(r) { return /reception/i.test(String(r.invite || '')); }
 function rsvpWed() { return rsvpList().filter(function (r) { return !isRecReply(r); }); }   // wedding replies only (the reception has its own)
 function replyOf(g) {
@@ -2322,6 +2348,7 @@ function render() {
   document.getElementById('hdr').style.display = loggedIn ? 'flex' : 'none';
   document.getElementById('sbar').style.display = loggedIn && S.loaded ? 'block' : 'none';
   document.getElementById('whoBtn').textContent = '👤 ' + S.me;
+  if (loggedIn && S.loaded) S.shown = true;
   document.getElementById('gqx').style.display = S.gq ? 'block' : 'none';
   document.body.classList.toggle('gatebg', !loggedIn);
   if (!loggedIn) { $app.innerHTML = viewGate(); return; }
@@ -2861,7 +2888,7 @@ document.addEventListener('change', function (e) {
 });
 setInterval(function () { if (!document.hidden && S.loaded && !S.sheet && S.pin && S.me) load(true); }, 30000);
 /* app updates: the phone may keep an old copy open for days; check the site for a newer build and offer a one-tap update */
-var BUILD = 'b51';
+var BUILD = 'b52';
 /* fresh numbers on every open: the script keeps a saved copy for hours, and changes made straight in the sheet (or by Claude) don't clear it; a tiny touch on one row does */
 function freshPull() {
   if (!S.loaded || !S.pin || !S.me || !S.v6 || S.sheet) return;
